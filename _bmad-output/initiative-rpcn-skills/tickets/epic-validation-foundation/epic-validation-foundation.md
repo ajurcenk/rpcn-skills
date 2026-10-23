@@ -3,7 +3,7 @@ tracker_id: ""
 type: epic
 title: "Validation foundation"
 parent: initiative-rpcn-skills
-covers: [R8, R9, R12, R13, R16, R17, R19]
+covers: [R8, R9, R12, R13, R16, R17, R19, R20]
 sources: []
 companions:
   - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
@@ -29,6 +29,7 @@ Skill authors get one tested way to check output against the binary, measure tri
 - CI runs the eval harness on every change: a sample skill's trigger and task cases run at least 3 times in a clean environment, and the results are recorded.
 - The hand-off formats, headless status and what-next convention are documented, and the sample skill uses them.
 - The `rpcn-test-skills` project installs the sample skill from a git ref, runs one scenario headless 3 times, and lints the files it produced.
+- One Author or Test scenario runs in all four benchmark arms (ours, the Connect plugin, the skills repo, no skills), and the results file shows the comparison table and the winner.
 
 ## Boundaries
 

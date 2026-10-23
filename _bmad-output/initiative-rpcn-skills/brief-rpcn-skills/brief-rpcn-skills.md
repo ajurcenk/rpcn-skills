@@ -87,6 +87,7 @@ The design note is the contract between Design and Author. Author builds from th
 - **Status on hand-offs:** each hand-off file carries a `status` in its header, and the receiving skill checks a readiness list before using it.
 - **Headless mode:** with no one present, a skill never asks. It ends with a JSON status (`complete` or `blocked`, a reason and file paths), so Test and Migrate can run in CI and evals can grade a fixed output.
 - **Evals:** trigger cases with near-miss negatives, task cases with fixture files, at least 3 runs in a clean environment, and a comparison against the bare model.
+- **Benchmark against the existing skill sets:** comparable scenarios also run with only the `redpanda-data/connect` plugin installed, and with only `redpanda-data/skills`. The same checks score every arm. When another arm gives the better answer, we find out why and copy and adapt what made it better into our skill. Installing all three sets together is not tested in version 1.
 - **Versioning:** one version per release, stamped with the RPCN release the references were generated from, so a skill warns when the installed binary is newer. A list of retired and renamed skills means no name is reused. A CI validator checks names, descriptions and file references.
 - **"What next":** each skill closes by naming the next skill.
 - **Naming:** skills use the `rpcn-` prefix, checked against `/rpcn:*` and `/redpanda:*`.

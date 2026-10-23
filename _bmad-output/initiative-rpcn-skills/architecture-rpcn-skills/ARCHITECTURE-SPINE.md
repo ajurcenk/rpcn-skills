@@ -8,7 +8,7 @@ scope: 'The RPCN Skills plugin repo: seven lifecycle skills, their shared files,
 status: final
 created: '2026-10-22'
 updated: '2026-10-23'
-binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R15, R16, R17, R18, R19]
+binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R15, R16, R17, R18, R19, R20]
 sources:
   - _bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md
 companions:
@@ -218,7 +218,7 @@ flowchart LR
 - **Prevents:** collisions with `redpanda-data/connect` (`/rpcn:*`) and `redpanda-data/skills` (`/redpanda:*`), and case folders that can't be parsed
 - **Rule:**
   - **Names:** skills are `rpcn-<job>` (design, author, test, tune, scale, deploy, migrate), and the plugin is `rpcn-skills`.
-  - **Clash list:** `tools/clash-list.txt` lists every skill and command name in both coexisting sets. The validator fails on a name in it or in `retired.toml`.
+  - **Clash list:** `tools/clash-list.txt` lists every skill and command name in the two existing sets. The validator fails on a name in it or in `retired.toml`.
   - **Eval case folders:** `evals/<skill>__<case>/`, with a double underscore between skill and case.
 
 ### AD-11 — References and failure modes
@@ -249,7 +249,7 @@ flowchart LR
 
 ### AD-13 — Evals
 
-- **Binds:** R8, R12, R15, R17
+- **Binds:** R8, R12, R15, R17, R20
 - **Prevents:** one skill measured by different rules than another, and an accuracy gate that the tool cannot actually enforce
 - **Rule:**
   - **Trigger evals** stay in this repo. Cases use `claude plugin eval` (Claude Code ≥ 2.1.269): `evals/<skill>__<case>/` with `prompt.md`, `case.yaml` and `graders/`.
@@ -266,7 +266,15 @@ flowchart LR
       4. runs the installed skill's `rpcn_check.py lint`/`blobl`/`hash` over the files left on disk
       5. parses the final AD-8 block
     - **Chains** (Design then Author then Test) run each step as a fresh headless session on the same folder. That proves R16.
-    - **Coexistence:** coexistence scenarios also install the two coexisting skill sets, and assert which skill ran (or that none did), so R12's coexistence check runs here.
+    - **Benchmark arms (R20):** each scenario marked `compare = true` in `expect.toml` runs in four arms, each in its own fresh folder:
+      - `ours`: `rpcn-skills`
+      - `connect-plugin`: the `redpanda-data/connect` plugin only
+      - `skills-repo`: `redpanda-data/skills` only
+      - `bare`: nothing installed
+    - **Scoring:** every arm is scored by the same objective checks, using our `rpcn_check` (lint, Bloblang output, fields present in the binary), plus a quality judgement and the turns, time and tokens used.
+    - **Results:** the runner writes a per-scenario comparison table with the winner into the results file.
+    - **Benchmark sources:** the benchmark sets are installed from their local folders at a recorded commit. They are never copied into `rpcn-skills`.
+    - **Installing all three together** is not tested in version 1.
     - **Source code:** the test project never holds skill source. Installed skills there are gitignored.
     - `[ASSUMPTION: the install-from-ref command and the headless flags are verified in epic 1]`
   - **Repetition:** each trigger case and each scenario runs at least 3 times.
@@ -354,6 +362,7 @@ rpcn-skills/
 | R10 Failure modes | `references/failure-modes.md` | AD-11 |
 | R11 Release sync | `gen_refs`, weekly job, validator | AD-11, AD-14 |
 | R12 Evals | `evals/` (triggers), `rpcn-test-skills` (scenarios) | AD-13 |
+| R20 Benchmark | `rpcn-test-skills` arms | AD-13 |
 | R13 Install | `.claude-plugin/`, `skills/` | AD-1 |
 | R16 Hand-offs | user project | AD-6, AD-7 |
 | R17 Headless | every SKILL.md, `binary`, scenario runner | AD-8, AD-13 |

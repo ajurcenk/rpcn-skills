@@ -5,7 +5,7 @@ id = 1
 slug = "epic-validation-foundation"
 title = "Validation foundation"
 description = "The plugin installs through Claude Code and npx skills; check scripts wrap rpk connect with JSON results; the eval harness runs trigger and task cases; hand-off file formats, headless status and the what-next convention are defined and used by a sample skill; a CI pipeline runs the evals and check scripts on every change."
-covers = ["R8", "R9", "R12", "R13", "R16", "R17", "R19"]
+covers = ["R8", "R9", "R12", "R13", "R16", "R17", "R19", "R20"]
 
 [[epic]]
 id = 2
