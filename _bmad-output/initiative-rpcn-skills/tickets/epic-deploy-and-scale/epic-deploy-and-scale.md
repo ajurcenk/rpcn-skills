@@ -5,8 +5,7 @@ title: "Deploy and Scale skills"
 parent: initiative-rpcn-skills
 covers: [R5, R6]
 sources: []
-companions:
-  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
 after: []
 refined: false
 risk: high

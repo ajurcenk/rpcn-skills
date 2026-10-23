@@ -1,0 +1,133 @@
+# Epic 1, Validation foundation: stories in build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: rpcn-test installs both ways and reports the binary"
+description = "Repo scaffold with .gitignore for .claude/skills and .agents/skills plus skills-lock.json (AD-1), plugin manifest, SOURCES.md, a minimal rpcn-test SKILL.md, and rpcn_check.py with the schema-1 envelope, binary lookup and the full binary subcommand (version, headless, plugin_version) in tools/shared/rpcn_check/ with a hand copy in skills/rpcn-test/scripts/ that story 3's sync adopts. A one-job GitHub Actions workflow runs the binary unit test; later stories add their CI steps. Pushed so both install channels work."
+verify = "On a clean machine, `npx skills add ajurcenk/rpcn-skills` and the Claude Code marketplace install offer only rpcn-test; asking it to check the binary prints the JSON with path and version; the CI job is green on main."
+covers = ["R1", "R2", "R11"]
+after = []
+hitl = true # you push to GitHub and install rpk with Redpanda Connect 4.100.0 and the newest release locally
+risk = "medium"
+
+[[entry]]
+id = 2
+type = "story"
+title = "rpcn_check lint: text parsing, exit codes and flags on both binaries"
+description = "lint subcommand parsing rpk connect lint text into errors, exit codes 0/1/2 and the fixed flags, with unit tests against 4.100.0 and the newest release; verifies the rpk connect install --connect-version command (AD-14) and adds both versions to the CI job."
+verify = "Unit tests pass on both binaries locally and in CI: a valid recipe returns ok, a broken one returns its errors with exit 1, a missing or too-old binary returns exit 2."
+covers = ["R2", "R11"]
+after = [1]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Shared files synced into each skill with a drift check"
+description = "tools/shared as the single source, sync_shared.py driven by each skill's shared.txt (adopting rpcn-test's hand copy), and a drift-check CI step."
+verify = "Editing a copied file in a skill makes the drift check fail locally and in CI; running sync_shared makes it pass."
+covers = ["R3", "R11"]
+after = [2]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Hand-off formats and the hash check"
+description = "Shared header and readiness rules, design-note format and test-report format in tools/shared/formats, synced into rpcn-test; the rpcn_check hash subcommand with tests."
+verify = "A test report whose recorded input hash no longer matches the pipeline is reported as not ready."
+covers = ["R4", "R2"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Lint-only rpcn-test explains errors and writes a test report"
+description = "rpcn-test lints a pipeline via rpcn_check, explains each error with a fix, writes <name>.test-report.md in the epic's format, ends with a Next step, and emits the AD-8 status block when headless (story 8 parses it). Lint guidance copied and adapted from redpanda-data/skills connect-debugging, recorded in SOURCES.md."
+verify = "Given a broken recipe, rpcn-test names each cause and a fix, the fixed file lints clean, the report is ready, and a headless run ends with a valid status block."
+covers = ["R5"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "rpcn-test-skills scenario runner"
+description = "Creates the sibling rpcn-test-skills project; scenario format (prompt.md, fixtures, expect.toml); install from a local path or a git ref; headless Claude Code run; lint of produced files with the installed rpcn_check; parsing of the AD-8 status block from story 5; 3 runs. Verifies the AD-13 install-from-ref command and headless flags."
+verify = "One rpcn-test scenario passes 3 headless runs installed from a local path, and again installed from a pushed git ref, with its produced files linted."
+covers = ["R8"]
+after = [5]
+hitl = true # you create the rpcn-test-skills folder's git repo if wanted, and push the branch the git-ref install uses
+risk = "high"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Trigger evals and the accuracy gate for rpcn-test"
+description = "claude plugin eval trigger cases with near-miss negatives, run with ablation none, and eval_gate.py computing suite accuracy."
+verify = "eval_gate reports at least 90% accuracy over 3 runs, with no negative triggering a skill."
+covers = ["R7"]
+after = [5]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 8
+type = "story"
+title = "rpcn_check blobl, list, fields, run and test"
+description = "The remaining subcommands with unit tests on both binaries, added to the CI job; field and Bloblang helpers copied and adapted from the redpanda-data/connect plugin after a per-file licence check, recorded in SOURCES.md."
+verify = "Unit tests pass on both binaries for each subcommand, including run's timeout and fields for a known component."
+covers = ["R2"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "Skill validator with the base rules"
+description = "validate_skills.py with tools/clash-list.txt and retired.toml checks name and prefix, clash list, retired names, description format, size, file references and the Next step; added as a CI step."
+verify = "A fixture skill breaking each rule is rejected with that rule named; rpcn-test passes locally and in CI."
+covers = ["R6", "R11"]
+after = [5]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 10
+type = "story"
+title = "Benchmark arms and the first comparison"
+description = "The runner's four arms (ours, redpanda-data/connect plugin, redpanda-data/skills, bare) installed from local clones at a recorded commit, shared scoring, and a comparison table; the first lint scenario seeded from the Connect plugin fixtures after checking them against the binary."
+verify = "One lint scenario runs in all four arms and the results file shows the comparison table and the winner."
+covers = ["R9"]
+after = [6]
+hitl = true # you confirm the local clones of both reference repos and their commits
+risk = "medium"
+
+[[entry]]
+id = 11
+type = "story"
+title = "Local eval runner and the eval-record check"
+description = "run_evals.py runs the trigger evals and scenarios and writes evals/results/<date>-<skills-hash>.json; a CI step rejects skill-content changes without a passing record; branch protection makes the CI checks required."
+verify = "A pull request that changes rpcn-test without a matching passing record cannot merge; with a fresh record it can."
+covers = ["R10", "R11"]
+after = [7, 10]
+hitl = true # you enable branch protection with required checks on GitHub
+risk = "medium"
+
+[[entry]]
+id = 12
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from plans and review findings the epic deferred."
+verify = "All epic checks still pass after the cleanup."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+hitl = false
+risk = "low"

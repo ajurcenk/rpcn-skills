@@ -5,8 +5,7 @@ title: "Design skill"
 parent: initiative-rpcn-skills
 covers: [R1, R15]
 sources: []
-companions:
-  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
 after: []
 refined: false
 risk: medium

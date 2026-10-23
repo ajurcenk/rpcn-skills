@@ -5,8 +5,7 @@ title: "Author and Test skills"
 parent: initiative-rpcn-skills
 covers: [R2, R3]
 sources: []
-companions:
-  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
 after: []
 refined: false
 risk: medium
@@ -16,7 +15,7 @@ risk: medium
 
 ## Description
 
-Delivers `rpcn-author` and `rpcn-test`. Author writes pipeline YAML and Bloblang from the installed binary's fields, building from a design note when one exists. Test lints, runs samples, does dry runs, writes `rpk connect test` cases and diagnoses failures.
+Delivers `rpcn-author`, and extends the lint-only `rpcn-test` from epic 1. Author writes pipeline YAML and Bloblang from the installed binary's fields, building from a design note when one exists. Test lints, runs samples, does dry runs, writes `rpk connect test` cases and diagnoses failures.
 
 ## Outcome
 
@@ -38,3 +37,7 @@ RPCN developers get pipelines that lint clean on their binary and come with samp
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
 - architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-4, AD-6, AD-7, AD-8, AD-9
+
+## Notes
+
+- Decision (2026-10-23): `rpcn-test` starts in epic 1 as a lint-only skill. This epic extends it with samples, dry runs, `rpk connect test` cases and failure diagnosis.

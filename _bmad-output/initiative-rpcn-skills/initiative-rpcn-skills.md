@@ -2,11 +2,8 @@
 type: initiative
 title: "RPCN developers design, build, test, tune, scale, deploy and migrate pipelines with binary-checked agent skills"
 parent: none
-sources:
-  - _bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md
-companions:
-  - _bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md
-  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
+sources: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md]
+companions: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md, _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
 after: []
 risk: medium
 ---

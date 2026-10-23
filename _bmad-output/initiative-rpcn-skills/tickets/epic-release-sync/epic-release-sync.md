@@ -5,8 +5,7 @@ title: "Release sync, versioning and failure modes"
 parent: initiative-rpcn-skills
 covers: [R10, R11, R18]
 sources: []
-companions:
-  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
 after: []
 refined: false
 risk: medium
