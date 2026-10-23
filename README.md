@@ -40,10 +40,20 @@ To use a specific binary, set `RPCN_BINARY` to its path.
 
 ```bash
 uv run tools/shared/rpcn_check/tests/test_rpcn_check.py
+uv run tools/tests/test_sync_shared.py
 ```
 
-`tools/shared/rpcn_check/rpcn_check.py` is the canonical check script; each
-skill carries a byte-identical copy in `scripts/`. The output contract is in
+`tools/shared/rpcn_check/rpcn_check.py` is the canonical check script. Files
+under `tools/shared/` are copied into each skill as listed in its
+`skills/<skill>/shared.txt`; never edit a copy by hand. After changing a
+source, sync the copies, and check them the way CI does:
+
+```bash
+uv run tools/sync_shared.py          # copy every listed file into its skill
+uv run tools/sync_shared.py --check  # exit 1 if any copy is missing or differs
+```
+
+The output contract is in
 [`tools/shared/rpcn_check/SCHEMA.md`](tools/shared/rpcn_check/SCHEMA.md).
 
 ## Licence

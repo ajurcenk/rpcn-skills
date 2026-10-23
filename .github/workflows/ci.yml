@@ -15,6 +15,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.3.0
 
+      - name: Shared-file copies match their sources (drift check, AD-2)
+        run: uv run tools/sync_shared.py --check
+
       - name: Cache Redpanda Connect binaries
         uses: actions/cache@v6
         with:
@@ -36,5 +39,5 @@ jobs:
           RPCN_TEST_BINARIES: ${{ steps.fetch.outputs.binaries }}
         run: uv run tools/shared/rpcn_check/tests/test_rpcn_check.py
 
-      - name: Skill copies match the canonical rpcn_check.py
-        run: cmp tools/shared/rpcn_check/rpcn_check.py skills/rpcn-test/scripts/rpcn_check.py
+      - name: sync_shared tests
+        run: uv run tools/tests/test_sync_shared.py
