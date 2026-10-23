@@ -80,7 +80,6 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 
 - Open question: What capacity model backs Scale, and is there internal benchmark data? R5 waits on this. Deferred until after version 1 and settled when the Scale epic is refined (Decision 2026-10-22).
 - Open question: Should teams get one org-facts file (registry, secret store, naming rules) that every skill reads?
-- Unknown: How `npx skills` lays out sibling skills on disk. This decides whether one shared `rpcn-tools` skill holds the binary wrappers, or each skill carries its own. Epic 1 waits on this.
 - Decision (2026-10-22): Failure-mode cases come from `redpanda-data/connect` GitHub issues first. Aleksej curates them and adds more sources and cases later (R10).
 - Decision (2026-10-22): In version 1 this set coexists with the two existing skill sets. Replacing them or offering this set upstream is decided after version 1, based on eval results.
 - Decision (2026-10-22): The question of whether `rpk connect mcp-server` stays long term is dropped. Running an MCP server is out of scope.
@@ -91,3 +90,4 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - Decision (2026-10-22): Author and Test (epic 2) are built before Design (epic 3), because R1's check needs Author to build from the design note. The brief lists Design first; that is the user's flow, not the build order.
 - Decision (2026-10-22): R9, R12, R16, R17 and R19 are owned by epic 1, which delivers the convention, harness and CI. Each skill epic meets them for its own skills in its Done when.
 - Decision (2026-10-23): The initiative covers skills development only. All VS Code extension integration is out: R14 (editor parity) is retired, the earlier code-sharing decision no longer applies, and 4.112.0 is no longer tested. The tested binaries are 4.100.0 and the newest release.
+- Decision (2026-10-23): The `npx skills` layout question is answered. Each skill folder installs on its own, with no dependencies between skills, so every skill carries its own copy of the check scripts (architecture AD-2). Epic 1 no longer waits on this.

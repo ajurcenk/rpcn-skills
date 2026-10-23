@@ -43,4 +43,4 @@ Skill authors get one tested way to check output against the binary, measure tri
 
 ## Notes
 
-- Unknown: How `npx skills` lays out sibling skills on disk. This decides whether one shared `rpcn-tools` skill holds the check scripts. The first story should be a spike that answers it.
+- Decision (2026-10-23): The `npx skills` layout is answered (each skill installs alone, no dependencies). Every skill carries a synced copy of the shared files (architecture AD-2), so no spike is needed.
