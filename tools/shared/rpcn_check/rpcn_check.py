@@ -18,6 +18,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 
@@ -26,6 +27,8 @@ PLUGIN_VERSION = "0.1.0"
 REFS_VERSION: str | None = None  # set by the release stamp once references exist
 MIN_VERSION_STR = "4.100.0"
 VERSION_TIMEOUT_S = 10
+LINT_TIMEOUT_S = 60
+LINT_ARGS = ("lint", "--deprecated", "--skip-env-var-check")  # fixed by AD-4
 
 EXIT_OK = 0
 EXIT_CHECK_FAILED = 1
@@ -38,6 +41,9 @@ INSTALL_HINT = (
 )
 
 _VERSION_RE = re.compile(r"^\s*Version:\s*v?(\d+)\.(\d+)\.(\d+)(\S*)\s*$", re.MULTILINE)
+# Greedy file part: a path containing parentheses still splits on the last `(line,col)`.
+_LINT_LINE_RE = re.compile(r"^(?P<file>.+)\((?P<line>\d+),(?P<col>\d+)\) (?P<message>.*)$")
+_GLOB_CHARS = "\\*?[]{}"
 
 
 class UsageError(Exception):
@@ -229,6 +235,132 @@ def cmd_binary(_args: argparse.Namespace) -> int:
     return _emit(_envelope("binary", True, binary, [], data), EXIT_OK)
 
 
+def escape_glob(path: str) -> str:
+    """Escape glob characters so the binary lints exactly this file, not a pattern."""
+    return "".join("\\" + ch if ch in _GLOB_CHARS else ch for ch in path)
+
+
+def parse_lint_output(text: str) -> list[dict]:
+    """Turn `rpk connect lint` text into schema-1 errors, sorted by file, line, column.
+
+    A line `<file>(<line>,<col>) <message>` becomes a file-bound error; any other
+    non-empty line becomes an error with file, line and column null. Sorting makes
+    the order the same on every RPCN version.
+    """
+    errors = []
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if not line.strip():
+            continue
+        m = _LINT_LINE_RE.match(line)
+        if m:
+            errors.append(
+                {
+                    "file": m.group("file"),
+                    "line": int(m.group("line")),
+                    "column": int(m.group("col")),
+                    "message": m.group("message"),
+                }
+            )
+        else:
+            errors.append(_error(line.strip()))
+    errors.sort(
+        key=lambda e: (
+            e["file"] is None,
+            e["file"] or "",
+            e["line"] if e["line"] is not None else -1,
+            e["column"] if e["column"] is not None else -1,
+            e["message"],
+        )
+    )
+    return errors
+
+
+def _run_bounded(cmd: list[str], timeout: float, env: dict) -> tuple[int, str, str]:
+    """Run cmd in its own process group; on timeout kill the whole group.
+
+    Killing only the direct child could leave a grandchild (for example the
+    Connect plugin started by `rpk`) holding the output pipes open.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
+        raise
+    return proc.returncode, stdout, stderr
+
+
+def _unique(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(items))
+
+
+def cmd_lint(args: argparse.Namespace) -> int:
+    targets: list[str] = args.files
+    resources = _unique(args.resources or [])
+    env_file: str | None = args.env_file
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int, count: int = 0) -> int:
+        return _emit(
+            _envelope("lint", ok, binary, errors, {"files": targets, "error_count": count}), code
+        )
+
+    # Check files first: the binary reports a missing file as an ordinary lint
+    # error (exit 1), which would hide "the check could not run" (exit 2).
+    to_check = [("file", t) for t in targets] + [("resources file", r) for r in resources]
+    if env_file:
+        to_check.append(("env file", env_file))
+    missing = [
+        _error(f"{kind} not found: {path}", file=path)
+        for kind, path in to_check
+        if not os.path.exists(path)
+    ]
+    if missing:
+        return result(False, None, missing, EXIT_ENV)
+
+    try:
+        found = require_binary()
+    except EnvError as exc:
+        return result(False, exc.binary, [_error(str(exc))], EXIT_ENV)
+    binary = {"path": found["path"], "version": found["version"]}
+
+    cmd = [*found["argv"], *LINT_ARGS]
+    for res in resources:
+        cmd += ["--resources", escape_glob(res)]
+    if env_file:
+        cmd += ["--env-file", env_file]
+    cmd += [escape_glob(t) for t in _unique(targets)]
+
+    try:
+        returncode, stdout, stderr = _run_bounded(cmd, LINT_TIMEOUT_S, {**os.environ, "NO_COLOR": "1"})
+    except subprocess.TimeoutExpired:
+        return result(False, binary, [_error(f"lint timed out after {LINT_TIMEOUT_S}s")], EXIT_ENV)
+    except OSError as exc:
+        return result(False, binary, [_error(f"could not run lint: {exc}")], EXIT_ENV)
+
+    errors = parse_lint_output(f"{stdout}\n{stderr}")
+    if errors:
+        return result(False, binary, errors, EXIT_CHECK_FAILED, len(errors))
+    if returncode != 0:
+        return result(
+            False, binary, [_error(f"lint exited {returncode} with no output")], EXIT_ENV
+        )
+    return result(True, binary, [], EXIT_OK)
+
+
 def build_parser() -> _Parser:
     parser = _Parser(
         prog="rpcn_check.py",
@@ -238,6 +370,13 @@ def build_parser() -> _Parser:
     sub.required = True
     p_binary = sub.add_parser("binary", help="find the Redpanda Connect binary and report its version")
     p_binary.set_defaults(func=cmd_binary)
+    p_lint = sub.add_parser("lint", help="lint pipeline config files")
+    p_lint.add_argument("files", nargs="+", metavar="<file>", help="config files to lint")
+    p_lint.add_argument(
+        "--resources", action="append", metavar="<file>", help="resources file (repeatable)"
+    )
+    p_lint.add_argument("--env-file", metavar="<file>", help="dotenv file for interpolations")
+    p_lint.set_defaults(func=cmd_lint)
     return parser
 
 
@@ -245,7 +384,15 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     parser = build_parser()
     try:
-        args = parser.parse_args(argv)
+        args, extra = parser.parse_known_args(argv)
+        # `lint a.yaml --resources r.yaml b.yaml`: argparse leaves `b.yaml` over,
+        # because positionals are taken in one run. Keep later file arguments.
+        if extra and isinstance(getattr(args, "files", None), list) and not any(
+            e.startswith("-") for e in extra
+        ):
+            args.files.extend(extra)
+        elif extra:
+            parser.error(f"unrecognized arguments: {' '.join(extra)}")
     except _ParserExit as exc:  # --help on any parser: help already on stderr
         return exc.status
     except UsageError as exc:

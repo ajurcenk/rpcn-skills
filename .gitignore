@@ -12,4 +12,5 @@ _bmad/render/
 __pycache__/
 *.pyc
 .venv/
+.cache/
 .DS_Store

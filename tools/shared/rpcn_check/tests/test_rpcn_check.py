@@ -5,13 +5,20 @@
 """Unit tests for rpcn_check.py, using fake binaries and a controlled PATH.
 
 Run: uv run tools/shared/rpcn_check/tests/test_rpcn_check.py
-No real Redpanda Connect binary is needed.
+No real Redpanda Connect binary is needed. The real-binary tests run only when
+RPCN_TEST_BINARIES lists binary paths (separated by `:`), for example the ones
+printed by `uv run tools/fetch_rpcn.py`; otherwise they are skipped.
 """
 
 from __future__ import annotations
 
+import contextlib
+import importlib.util
+import io
 import json
 import os
+import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -21,6 +28,11 @@ import unittest
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent.parent / "rpcn_check.py"
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+FIXED_LINT_ARGS = ["lint", "--deprecated", "--skip-env-var-check"]
+# Fake binaries run with a PATH holding only fakes, so they call these by path.
+CAT = shutil.which("cat") or "/bin/cat"
+SLEEP = shutil.which("sleep") or "/bin/sleep"
 
 
 def write_exe(directory: Path, name: str, body: str) -> Path:
@@ -61,7 +73,9 @@ def fake_rpcn(directory: Path, version_line: str, name: str = "redpanda-connect"
     return write_exe(directory, name, body)
 
 
-class RpcnCheckTest(unittest.TestCase):
+class CheckTestBase(unittest.TestCase):
+    """A temp PATH holding only fake binaries, and helpers to run the script."""
+
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         root = Path(self._tmp.name)
@@ -110,6 +124,10 @@ class RpcnCheckTest(unittest.TestCase):
                 "headless": headless,
             },
         )
+
+
+class RpcnCheckTest(CheckTestBase):
+    """`binary` and the shared argument handling."""
 
     # --- matrix rows -------------------------------------------------------
 
@@ -271,6 +289,394 @@ class RpcnCheckTest(unittest.TestCase):
         self.assertEqual(code, 2, out)
         self.assertFalse(out["ok"])
         self.assertIn("usage:", out["errors"][0]["message"])
+
+
+
+def fake_lint_rpk(
+    directory: Path,
+    log_dir: Path,
+    output: str = "",
+    exit_code: int = 0,
+    stream: str = "stderr",
+    sleep: int = 0,
+) -> Path:
+    """An `rpk` at 4.112.0 whose `connect lint` prints canned output and exits exit_code.
+
+    It writes its argv (one argument per line) to log_dir/argv and NO_COLOR to
+    log_dir/no_color, so tests can assert exactly how it was called.
+    """
+    (log_dir / "output").write_text(output)
+    redirect = ">&2" if stream == "stderr" else ""
+    body = f"""\
+        if [ "$1" = "connect" ] && [ "$2" = "--version" ]; then
+          echo "Version: 4.112.0"
+          exit 0
+        fi
+        : > "{log_dir}/argv"
+        for a in "$@"; do printf '%s\\n' "$a" >> "{log_dir}/argv"; done
+        printf '%s' "${{NO_COLOR-unset}}" > "{log_dir}/no_color"
+        if [ {sleep} -gt 0 ]; then exec "{SLEEP}" {sleep}; fi
+        "{CAT}" "{log_dir}/output" {redirect}
+        exit {exit_code}
+        """
+    return write_exe(directory, "rpk", body)
+
+
+class LintTest(CheckTestBase):
+    """`lint` against a fake `rpk`: parsing, exit codes and the exact argv."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.work = Path(self._tmp.name) / "work"
+        self.log = Path(self._tmp.name) / "log"
+        self.work.mkdir()
+        self.log.mkdir()
+
+    def make(self, name: str, text: str = "input:\n  stdin: {}\n") -> str:
+        path = self.work / name
+        path.write_text(text)
+        return str(path)
+
+    def argv(self) -> list[str] | None:
+        f = self.log / "argv"
+        return f.read_text().splitlines() if f.exists() else None
+
+    def lint(self, *args: str, env: dict[str, str] | None = None) -> tuple[int, dict]:
+        code, out = self.run_check("lint", *args, env=env)
+        self.assertEnvelope(out, "lint")
+        return code, out
+
+    def test_valid(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        f = self.make("p.yaml")
+        code, out = self.lint(f)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["ok"])
+        self.assertEqual(out["errors"], [])
+        self.assertEqual(out["data"], {"files": [f], "error_count": 0})
+        self.assertEqual(out["binary"]["version"], "4.112.0")
+
+    def test_several_errors_sorted(self) -> None:
+        f = self.make("p.yaml")
+        output = (
+            f"{f}(18,1) field wrong_key not recognised\n"
+            f"{f}(5,1) field not_a_field not recognised\n"
+            f"{f}(13,1) field bogus_option not recognised\n"
+            f"{f}(9,29) required: expected method or field path\n"
+        )
+        fake_lint_rpk(self.path_dir, self.log, output, exit_code=1)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["ok"])
+        self.assertEqual(
+            [(e["file"], e["line"], e["column"]) for e in out["errors"]],
+            [(f, 5, 1), (f, 9, 29), (f, 13, 1), (f, 18, 1)],
+        )
+        self.assertEqual(out["errors"][0]["message"], "field not_a_field not recognised")
+        self.assertEqual(out["data"], {"files": [f], "error_count": 4})
+
+    def test_errors_on_stdout_are_parsed_too(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"{f}(2,1) component kafka is deprecated\n", 1, "stdout")
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["errors"][0]["message"], "component kafka is deprecated")
+
+    def test_several_files_sorted_by_file(self) -> None:
+        a, b = self.make("a.yaml"), self.make("b.yaml")
+        output = f"{b}(3,1) field x not recognised\n{a}(1,1) yaml: line 1: did not find expected key\n"
+        fake_lint_rpk(self.path_dir, self.log, output, exit_code=1)
+        code, out = self.lint(b, a)
+        self.assertEqual(code, 1, out)
+        self.assertEqual([e["file"] for e in out["errors"]], [a, b])
+        self.assertEqual(out["data"], {"files": [b, a], "error_count": 2})
+
+    def test_unparsed_line_is_fileless_error(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, "something went wrong\n\n", exit_code=1)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["errors"],
+            [{"file": None, "line": None, "column": None, "message": "something went wrong"}],
+        )
+        self.assertEqual(out["data"]["error_count"], 1)
+
+    def test_unparsed_lines_sort_after_file_errors(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"oops\n{f}(1,1) bad\n", exit_code=1)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual([e["file"] for e in out["errors"]], [f, None])
+
+    def test_output_with_exit_zero_is_failure(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"{f}(1,1) bad\n", exit_code=0)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["ok"])
+
+    def test_invalid_utf8_output(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, "", exit_code=1)
+        (self.log / "output").write_bytes(f"{f}(1,1) bad\n".encode() + b"\xff\xfe not utf-8\n")
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["errors"][0]["line"], 1)
+        self.assertIn("\ufffd", out["errors"][1]["message"])
+
+    def test_duplicate_targets_linted_once(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"{f}(1,1) bad\n", exit_code=1)
+        code, out = self.lint(f, f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(self.argv(), ["connect", *FIXED_LINT_ARGS, f])
+        self.assertEqual(out["data"], {"files": [f, f], "error_count": 1})
+
+    def test_path_with_parentheses(self) -> None:
+        f = self.make("p(1,2).yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"{f}(7,3) field x not recognised\n", exit_code=1)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["errors"],
+            [{"file": f, "line": 7, "column": 3, "message": "field x not recognised"}],
+        )
+
+    def test_silent_failure(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, "", exit_code=3)
+        code, out = self.lint(f)
+        self.assertEqual(code, 2, out)
+        self.assertFalse(out["ok"])
+        self.assertIn("exited 3", out["errors"][0]["message"])
+
+    def test_missing_target(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        good = self.make("p.yaml")
+        missing = str(self.work / "nope.yaml")
+        code, out = self.lint(good, missing)
+        self.assertEqual(code, 2, out)
+        self.assertFalse(out["ok"])
+        self.assertEqual(len(out["errors"]), 1)
+        self.assertEqual(out["errors"][0]["file"], missing)
+        self.assertIn(missing, out["errors"][0]["message"])
+        self.assertIsNone(self.argv(), "binary must not run")
+
+    def test_missing_resources_file(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        f = self.make("p.yaml")
+        missing = str(self.work / "res.yaml")
+        code, out = self.lint(f, "--resources", missing)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["errors"][0]["file"], missing)
+        self.assertIsNone(self.argv(), "binary must not run")
+
+    def test_missing_env_file(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        f = self.make("p.yaml")
+        missing = str(self.work / ".env")
+        code, out = self.lint(f, "--env-file", missing)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["errors"][0]["file"], missing)
+        self.assertIsNone(self.argv(), "binary must not run")
+
+    def test_no_targets(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        code, out = self.lint()
+        self.assertEqual(code, 2, out)
+        self.assertFalse(out["ok"])
+        self.assertIn("usage:", out["errors"][0]["message"])
+        self.assertIsNone(self.argv())
+
+    def test_no_binary(self) -> None:
+        f = self.make("p.yaml")
+        code, out = self.lint(f)
+        self.assertEqual(code, 2, out)
+        self.assertIsNone(out["binary"])
+        self.assertIn("rpk connect install", out["errors"][0]["message"])
+
+    def test_old_binary(self) -> None:
+        rpk = fake_rpk(self.path_dir, "Version: 4.99.0")
+        f = self.make("p.yaml")
+        code, out = self.lint(f)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["binary"], {"path": str(rpk), "version": "4.99.0"})
+        self.assertIn("4.100.0", out["errors"][0]["message"])
+
+    def test_flags_exact(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        a, b = self.make("a.yaml"), self.make("b.yaml")
+        r1, r2 = self.make("r1.yaml"), self.make("r2.yaml")
+        env = self.make(".env", "LIMIT=3\n")
+        code, out = self.lint(
+            a, "--resources", r1, "--env-file", env, "--resources", r2, b, "--resources", r1
+        )
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            self.argv(),
+            ["connect", *FIXED_LINT_ARGS, "--resources", r1, "--resources", r2, "--env-file", env, a, b],
+        )
+        self.assertEqual(out["data"]["files"], [a, b])
+        self.assertEqual((self.log / "no_color").read_text(), "1")
+
+    def test_flags_minimal(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        f = self.make("p.yaml")
+        code, out = self.lint(f)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.argv(), ["connect", *FIXED_LINT_ARGS, f])
+
+    def test_redpanda_connect_runs_without_connect(self) -> None:
+        f = self.make("p.yaml")
+        body = f"""\
+            if [ "$1" = "--version" ]; then echo "Version: v4.100.0"; exit 0; fi
+            for a in "$@"; do printf '%s\\n' "$a" >> "{self.log}/argv"; done
+            exit 0
+            """
+        write_exe(self.path_dir, "redpanda-connect", body)
+        code, out = self.lint(f)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.argv(), [*FIXED_LINT_ARGS, f])
+
+    def test_glob_characters_escaped(self) -> None:
+        f = self.make("a[1].yaml")
+        star = self.make("b*?{x}.yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"{f}(5,1) field x not recognised\n", exit_code=1)
+        code, out = self.lint(f, star)
+        self.assertEqual(code, 1, out)
+        work = str(self.work)
+        self.assertEqual(
+            self.argv()[-2:], [f"{work}/a\\[1\\].yaml", f"{work}/b\\*\\?\\{{x\\}}.yaml"]
+        )
+        self.assertEqual(out["errors"][0]["file"], f)
+        self.assertEqual(out["data"]["files"], [f, star])
+
+    def test_never_passes_banned_flags(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        f = self.make("p.yaml")
+        self.lint(f, "--resources", self.make("r.yaml"))
+        for banned in ("-v", "--verbose", "-", "--chilled"):
+            self.assertNotIn(banned, self.argv())
+
+    def test_unknown_lint_flag(self) -> None:
+        fake_lint_rpk(self.path_dir, self.log)
+        code, out = self.lint(self.make("p.yaml"), "--verbose")
+        self.assertEqual(code, 2, out)
+        self.assertIn("usage:", out["errors"][0]["message"])
+        self.assertIsNone(self.argv())
+
+    def test_timeout(self) -> None:
+        """Runs in-process with a 1 s timeout instead of the real 60 s."""
+        fake_lint_rpk(self.path_dir, self.log, sleep=30)
+        f = self.make("p.yaml")
+        spec = importlib.util.spec_from_file_location("rpcn_check_under_test", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.LINT_TIMEOUT_S = 1
+        out_buf = io.StringIO()
+        saved = dict(os.environ)
+        try:
+            os.environ.clear()
+            os.environ.update({"PATH": str(self.path_dir), "HOME": self._tmp.name})
+            with contextlib.redirect_stdout(out_buf):
+                code = module.main(["lint", f])
+        finally:
+            os.environ.clear()
+            os.environ.update(saved)
+        out = json.loads(out_buf.getvalue())
+        self.assertEqual(code, 2, out)
+        self.assertEnvelope(out, "lint")
+        self.assertFalse(out["ok"])
+        self.assertIn("timed out", out["errors"][0]["message"])
+        self.assertEqual(module.LINT_TIMEOUT_S, 1)
+
+
+def _real_binaries() -> list[str]:
+    raw = os.environ.get("RPCN_TEST_BINARIES", "")
+    return [os.path.abspath(p) for p in raw.split(os.pathsep) if p.strip()]
+
+
+# Expected results for each fixture: (file, line, column, message substring).
+# The same sorted list must come back from every tested binary.
+_MULTI = [
+    (5, 1, "not_a_field"),
+    (9, 29, "expected method or field path"),
+    (13, 1, "bogus_option"),
+    (18, 1, "wrong_key"),
+]
+REAL_CASES: dict[str, tuple[list[str], int, list[tuple[str, int, int, str]]]] = {
+    "valid": (["valid.yaml"], 0, []),
+    "multi_error": (["multi_error.yaml"], 1, [("multi_error.yaml", *e) for e in _MULTI]),
+    "deprecated": (["deprecated.yaml"], 1, [("deprecated.yaml", 2, 1, "component kafka is deprecated")]),
+    "bad_yaml": (["bad_yaml.yaml"], 1, [("bad_yaml.yaml", 1, 1, "yaml")]),
+    "several_files": (
+        ["multi_error.yaml", "bad_yaml.yaml"],
+        1,
+        [("bad_yaml.yaml", 1, 1, "yaml")] + [("multi_error.yaml", *e) for e in _MULTI],
+    ),
+    "env_var": (["env_var.yaml"], 0, []),
+    "glob_name": (["a[1].yaml"], 1, [("a[1].yaml", *e) for e in _MULTI]),
+}
+
+
+@unittest.skipUnless(
+    _real_binaries(),
+    "real-binary tests skipped: set RPCN_TEST_BINARIES to binary paths (see tools/fetch_rpcn.py)",
+)
+class RealBinaryLintTest(unittest.TestCase):
+    """Runs the fixtures through `lint` on each binary in RPCN_TEST_BINARIES."""
+
+    def lint(self, binary: str, files: list[str]) -> tuple[int, dict]:
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "lint", *files],
+            capture_output=True,
+            text=True,
+            cwd=FIXTURES,
+            env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", ""), "RPCN_BINARY": binary},
+            timeout=120,
+        )
+        try:
+            return proc.returncode, json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            self.fail(f"stdout is not JSON:\n{proc.stdout}\nstderr:\n{proc.stderr}")
+
+    def test_fixtures(self) -> None:
+        binaries = _real_binaries()
+        for name, (files, want_code, want) in REAL_CASES.items():
+            per_binary = {}
+            for binary in binaries:
+                with self.subTest(fixture=name, binary=binary):
+                    code, out = self.lint(binary, files)
+                    self.assertEqual(code, want_code, out)
+                    self.assertEqual(out["ok"], want_code == 0)
+                    self.assertEqual(out["binary"]["path"], binary)
+                    folder = re.search(r"/\.cache/rpcn/([^/]+)/[^/]+$", binary)
+                    if folder:
+                        self.assertEqual(out["binary"]["version"], folder.group(1))
+                    got = out["errors"]
+                    self.assertEqual(
+                        [(e["file"], e["line"], e["column"]) for e in got],
+                        [(f, line, col) for f, line, col, _ in want],
+                        got,
+                    )
+                    for err, (_, _, _, fragment) in zip(got, want):
+                        self.assertIn(fragment, err["message"])
+                    self.assertEqual(out["data"], {"files": files, "error_count": len(want)})
+                    per_binary[binary] = got
+            if len(per_binary) > 1:
+                with self.subTest(fixture=name, check="same errors on every binary"):
+                    first, *rest = per_binary.values()
+                    for other in rest:
+                        self.assertEqual(other, first)
+
+    def test_missing_file_not_passed_to_binary(self) -> None:
+        for binary in _real_binaries():
+            with self.subTest(binary=binary):
+                code, out = self.lint(binary, ["valid.yaml", "does-not-exist.yaml"])
+                self.assertEqual(code, 2, out)
+                self.assertEqual(out["errors"][0]["file"], "does-not-exist.yaml")
+                self.assertIsNone(out["binary"], "binary must not run")
 
 
 if __name__ == "__main__":

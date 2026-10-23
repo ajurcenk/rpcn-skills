@@ -15,7 +15,25 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.3.0
 
-      - name: rpcn_check unit tests
+      - name: Cache Redpanda Connect binaries
+        uses: actions/cache@v6
+        with:
+          path: .cache/rpcn
+          key: rpcn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/rpcn_versions.txt') }}
+
+      - name: Fetch the tested Redpanda Connect versions
+        id: fetch
+        run: |
+          paths="$(uv run tools/fetch_rpcn.py)"
+          echo "$paths"
+          # JSON list -> PATH-style list, without jq (AD-3)
+          joined="$(printf '%s' "$paths" | tr -d '[]" ' | tr ',' ':')"
+          test -n "$joined" || { echo "fetch_rpcn printed no binaries" >&2; exit 1; }
+          echo "binaries=$joined" >> "$GITHUB_OUTPUT"
+
+      - name: rpcn_check tests (fake binaries and every tested version)
+        env:
+          RPCN_TEST_BINARIES: ${{ steps.fetch.outputs.binaries }}
         run: uv run tools/shared/rpcn_check/tests/test_rpcn_check.py
 
       - name: Skill copies match the canonical rpcn_check.py

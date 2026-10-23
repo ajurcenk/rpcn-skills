@@ -1,0 +1,5 @@
+input:
+  generate:
+    mapping: 'root = {}'
+   interval: 1s
+  output: [

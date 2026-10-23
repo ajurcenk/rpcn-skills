@@ -36,8 +36,8 @@ path, and the script runs it as `rpk connect`. `binary.version` has no leading
 | Code | When |
 |---|---|
 | 0 | `ok` is `true` |
-| 1 | A check failed (reserved for `lint` and later subcommands) |
-| 2 | Usage or environment error: bad arguments, no binary, binary below 4.100.0 |
+| 1 | A check failed: used by `lint` when the binary reports errors |
+| 2 | Usage or environment error: bad arguments, a missing input file, no binary, binary below 4.100.0, or a check that could not run (timeout, silent failure) |
 
 ## Binary lookup
 
@@ -71,3 +71,57 @@ The version is read from the `Version:` line of `--version`, with a leading
 
 `data` is filled even when `ok` is `false`, so a skill can still tell whether
 it runs headless.
+
+## `lint`
+
+```
+rpcn_check.py lint <file>... [--resources <file>]... [--env-file <file>]
+```
+
+Options and files may be mixed in any order. The binary is always called as:
+
+```
+<binary> lint --deprecated --skip-env-var-check [--resources <f>]... [--env-file <f>] <file>...
+```
+
+- `--resources` once per unique file, in the order first given.
+- Glob characters (`\ * ? [ ] { }`) in targets and resources files are escaped with
+  `\`, so `a[1].yaml` lints exactly that file.
+- `NO_COLOR=1` is set. `-v`, `--verbose`, `-` and `--chilled` are never passed.
+- Every target, resources file and env file is checked before the binary runs.
+  A missing one is exit 2, with one error per missing file (its `file` set);
+  the binary is not run and `binary` is `null`.
+- The lint is bounded to 60 s.
+
+`data`:
+
+```json
+{"files": ["pipeline.yaml"], "error_count": 0}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `files` | array of str | The targets as given on the command line |
+| `error_count` | int | Number of errors the binary reported; `0` when lint passed or did not run |
+
+`data` is `{}` on a usage error (for example no targets).
+
+**Errors.** `rpk connect lint` has no JSON output, so its text (stdout and
+stderr) is parsed line by line:
+
+- A line matching `^(?P<file>.+)\((?P<line>\d+),(?P<col>\d+)\) (?P<message>.*)$`
+  becomes `{"file", "line", "column", "message"}`. The file part is greedy, so a
+  path with parentheses splits on the last `(line,col)`. `file` is the path as
+  the binary printed it, which is the target as given.
+- Any other non-empty line becomes an error with `file`, `line` and `column`
+  `null`.
+- Errors are sorted by file, then line, then column, then message, with
+  file-less errors last, so every RPCN version gives the same order.
+
+**Exit codes:**
+
+| Code | When |
+|---|---|
+| 0 | The binary exited 0 and printed nothing that parsed as an error |
+| 1 | The binary reported errors (any parsed line, whatever its exit code) |
+| 2 | No targets, a missing target, resources or env file, no usable binary, a timeout ("timed out"), or a non-zero exit with no output (the message gives the exit code) |

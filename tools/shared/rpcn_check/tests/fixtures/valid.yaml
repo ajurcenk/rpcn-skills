@@ -1,0 +1,15 @@
+input:
+  generate:
+    mapping: 'root = {"id": counter()}'
+    interval: 1s
+    count: 3
+
+pipeline:
+  processors:
+    - mapping: |
+        root = this
+        root.seen = now()
+
+output:
+  stdout:
+    codec: lines

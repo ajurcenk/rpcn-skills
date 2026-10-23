@@ -1,0 +1,8 @@
+input:
+  kafka:
+    addresses: [ localhost:9092 ]
+    topics: [ orders ]
+    consumer_group: orders-reader
+
+output:
+  stdout: {}

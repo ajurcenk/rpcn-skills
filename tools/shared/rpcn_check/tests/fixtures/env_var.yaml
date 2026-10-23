@@ -1,0 +1,9 @@
+input:
+  generate:
+    mapping: 'root = {"id": counter()}'
+    interval: 1s
+    count: ${LIMIT}
+
+output:
+  stdout:
+    codec: lines

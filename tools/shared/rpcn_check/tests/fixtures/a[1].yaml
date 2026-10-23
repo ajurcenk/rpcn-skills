@@ -1,0 +1,18 @@
+input:
+  generate:
+    mapping: 'root = {"id": counter()}'
+    interval: 1s
+    not_a_field: true
+
+pipeline:
+  processors:
+    - mapping: 'root = this.'
+    - log:
+        level: INFO
+        message: hello
+        bogus_option: 1
+
+output:
+  stdout:
+    codec: lines
+    wrong_key: x
