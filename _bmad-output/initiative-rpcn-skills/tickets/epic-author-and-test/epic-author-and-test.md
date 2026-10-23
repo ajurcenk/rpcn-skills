@@ -5,7 +5,8 @@ title: "Author and Test skills"
 parent: initiative-rpcn-skills
 covers: [R2, R3]
 sources: []
-companions: []
+companions:
+  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
 after: []
 refined: false
 risk: medium
@@ -36,3 +37,4 @@ RPCN developers get pipelines that lint clean on their binary and come with samp
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-4, AD-6, AD-7, AD-8, AD-9

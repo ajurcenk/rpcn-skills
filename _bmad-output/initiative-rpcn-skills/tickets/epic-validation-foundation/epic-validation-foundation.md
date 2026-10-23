@@ -5,7 +5,8 @@ title: "Validation foundation"
 parent: initiative-rpcn-skills
 covers: [R8, R9, R12, R13, R16, R17, R19]
 sources: []
-companions: []
+companions:
+  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
 after: []
 refined: false
 risk: high
@@ -38,6 +39,7 @@ Skill authors get one tested way to check output against the binary, measure tri
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-8, AD-9, AD-10, AD-13, AD-14
 
 ## Notes
 

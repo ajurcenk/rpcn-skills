@@ -5,9 +5,9 @@ purpose: build-substrate
 altitude: initiative
 paradigm: 'pipes-and-filters over a file-based artifact chain, with one binary adapter'
 scope: 'The RPCN Skills plugin repo: seven lifecycle skills, their shared files, hand-off files, evals, CI and release'
-status: draft
+status: final
 created: '2026-10-22'
-updated: '2026-10-22'
+updated: '2026-10-23'
 binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R15, R16, R17, R18, R19]
 sources:
   - _bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md
@@ -133,7 +133,7 @@ flowchart LR
     |---|---|
     | `<name>.design.md` | rpcn-design (and Deviations entries from rpcn-author, AD-7) |
     | `<name>.yaml`, `<name>.resources.yaml`, `<name>.<label>.blobl`, `.env.example` | rpcn-author updates; rpcn-migrate only creates new ones |
-    | `<name>_benthos_test.yaml` (`rpk connect test` cases) | rpcn-test. `[ASSUMPTION: test-file suffix, verify in epic 2]` |
+    | `<name>_benthos_test.yaml` (`rpk connect test` cases) | rpcn-test (epic 2 confirms `rpk connect test` finds it by default) |
     | `<name>.samples.json` | rpcn-test (format in `formats/samples-format.md`) |
     | `<name>.test-report.md` | rpcn-test |
     | `<name>.capacity.md` | rpcn-scale |
@@ -366,8 +366,8 @@ rpcn-skills/
 - **Deployment specifics** (Helm chart source, BYOC API or CLI, layout inside `<name>.deploy/`): epic 5, within AD-6.
 - **Migrate mapping tables:** epic 7, producing AD-6 files and the AD-8 status.
 - **VS Code extension integration:** out of scope (initiative decision 2026-10-23).
-- **Windows support:** not tested in version 1. `[ASSUMPTION]`
 - **Failure-mode sources beyond GitHub:** later, using the AD-11 entry shape.
 - **When evals and scenarios run in CI** (every PR, path filters, nightly, forks and API-key secrets): epic 1 decides, within R12's rule that every change affecting a skill runs them.
 - **How `rpcn-skills` CI gets `rpcn-test-skills`** (a sibling GitHub repo checked out at `main`, or a pinned ref): epic 1 decides once that project has a remote.
+- **Windows:** out of scope. Skills, scripts and CI target Linux and macOS only.
 - **Telemetry:** out of scope.

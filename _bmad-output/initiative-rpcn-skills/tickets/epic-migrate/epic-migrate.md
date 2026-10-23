@@ -5,7 +5,8 @@ title: "Migrate skill (Kafka Connect)"
 parent: initiative-rpcn-skills
 covers: [R7]
 sources: []
-companions: []
+companions:
+  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
 after: []
 refined: false
 risk: medium
@@ -36,3 +37,4 @@ Teams leaving Kafka Connect get working RPCN pipelines without rewriting configs
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-4, AD-6, AD-8; Deferred: Migrate mapping tables

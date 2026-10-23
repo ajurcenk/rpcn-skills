@@ -6,6 +6,7 @@ sources:
   - _bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md
 companions:
   - _bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md
+  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
 after: []
 risk: medium
 ---
@@ -73,6 +74,7 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 
 - brief — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md`, sections The Solution (including Artifacts and hand-offs), Success Criteria, Scope
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`: prior art summary table, landscape, companion product seams, BMAD-METHOD patterns
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-1 to AD-14, conventions, structural seed, deferred list
 
 ## Notes
 

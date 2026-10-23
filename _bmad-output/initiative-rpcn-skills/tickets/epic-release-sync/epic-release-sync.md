@@ -5,7 +5,8 @@ title: "Release sync, versioning and failure modes"
 parent: initiative-rpcn-skills
 covers: [R10, R11, R18]
 sources: []
-companions: []
+companions:
+  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
 after: []
 refined: false
 risk: medium
@@ -37,3 +38,4 @@ Developers can trust that the skills match the current RPCN release and know rea
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-5, AD-11, AD-12, AD-14

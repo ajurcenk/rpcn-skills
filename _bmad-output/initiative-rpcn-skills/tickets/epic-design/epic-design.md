@@ -5,7 +5,8 @@ title: "Design skill"
 parent: initiative-rpcn-skills
 covers: [R1, R15]
 sources: []
-companions: []
+companions:
+  - _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
 after: []
 refined: false
 risk: medium
@@ -36,3 +37,4 @@ A developer new to RPCN goes from a described pipeline to a linted, tested one i
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-6, AD-7, AD-9
