@@ -282,14 +282,15 @@ flowchart LR
     - `validate_skills.py`, owned by epic 1; epic 4 adds its deprecated scan and version checks. It covers names, descriptions, size, file references, the clash list, retired names, stamps and the deprecated scan.
     - the `sync_shared` drift check
     - the `rpcn_check` unit tests on every AD-5 version
-    - the trigger eval gate, and the `rpcn-test-skills` scenarios run against this commit
+    - the eval-record check: the change carries a passing result file from `tools/run_evals.py` for its current commit's skill content
+  - **Evals run locally, not in CI.** One command, `uv run tools/run_evals.py`, runs the trigger evals and the `rpcn-test-skills` scenarios with the developer's logged-in Claude Code. It writes `evals/results/<date>-<skills-hash>.json`, which is committed with the change. CI holds no Claude credentials. [ADOPTED]
   - **CI environment:** rpk and uv are installed outside `$HOME` (the eval sandbox can't read `$HOME`), with each version via `rpk connect install --connect-version <v>`. Linux runners add bubblewrap and socat. CI is GitHub Actions on the repo. [ADOPTED] `[ASSUMPTION: the install command is verified in epic 1]`
   - **Weekly job:** it detects a new RPCN release, runs `gen_refs`, rolls the newest pin, and opens a PR within one week.
   - **Release** runs only from a green `main` (AD-12).
 
 ```mermaid
 flowchart LR
-  PR[Pull request] --> V[validate_skills] --> D[sync_shared drift] --> U[rpcn_check tests x versions] --> E[eval gate] --> M[merge to main]
+  PR[Pull request] --> V[validate_skills] --> D[sync_shared drift] --> U[rpcn_check tests x versions] --> E[eval-record check] --> M[merge to main]
   R[New RPCN release] --> G[weekly job: gen_refs + pin roll PR] --> PR
   M --> REL[stamp commit + tag]
 ```
@@ -367,7 +368,6 @@ rpcn-skills/
 - **Migrate mapping tables:** epic 7, producing AD-6 files and the AD-8 status.
 - **VS Code extension integration:** out of scope (initiative decision 2026-10-23).
 - **Failure-mode sources beyond GitHub:** later, using the AD-11 entry shape.
-- **When evals and scenarios run in CI** (every PR, path filters, nightly, forks and API-key secrets): epic 1 decides, within R12's rule that every change affecting a skill runs them.
-- **How `rpcn-skills` CI gets `rpcn-test-skills`** (a sibling GitHub repo checked out at `main`, or a pinned ref): epic 1 decides once that project has a remote.
+- **Running evals in CI** (a Claude subscription token or company credentials): later, when others contribute. AD-14's local runner and eval-record check stay valid either way.
 - **Windows:** out of scope. Skills, scripts and CI target Linux and macOS only.
 - **Telemetry:** out of scope.
