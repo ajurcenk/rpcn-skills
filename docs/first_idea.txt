@@ -1,0 +1,21 @@
+If I were starting over, I’d build one RPCN plugin made of small, task-focused skills that check their own work against the real rpk connect binary. The weakest point today is the gaps around the plugin: debugging, migration, deployment, and custom components.
+
+1. Validate everything against the binary. Every skill should check its output by running rpk connect lint, rpk connect blobl, and rpk connect list, and should read component fields from the installed version. This is the strongest idea in the current plugin, since /rpcn:blobl tests its scripts until they work [1]. It keeps answers tied to the user’s actual version and avoids invented config fields.
+
+2. Split skills by the job the developer is doing, not by component type.
+
+Author: pipeline YAML and Bloblang. The current plugin already covers this.
+Debug: read logs, metrics and traces, and do dry-runs. This now lives only in the separate redpanda-data/skills repo [2].
+Migrate: convert Kafka Connect configs to RPCN, which the team has asked for [3]. Converting Benthos configs fits here too.
+Deploy: Kubernetes, streams mode, secrets, and BYOC specifics. These are the most common questions from the field [4][5].
+Extend: build custom Go components and Python RPC plugins.
+
+3. Keep each skill short and load detail on demand. A brief SKILL.md should state when the skill applies, with references/ files that the agent pulls in only when needed, such as per-connector CDC notes or known edge cases like mysql_cdc with parquet_encode. The redpanda-data/skills repo already works this way [2].
+
+4. Turn support threads into reference material. Every resolved Slack or Zendesk issue becomes a “known failure mode” entry. That gives the plugin knowledge a general-purpose model doesn’t have.
+
+5. Have one home and keep it in sync with the source. Pick either the Connect repo or the redpanda-data/skills repo, not both. Then add CI that regenerates component references on every RPCN release and fails if a skill mentions a removed feature, such as the MCP server dropped in v4.88 [6]. The skills repo’s generator → critic → human-merge loop is a good model for this [2].
+
+6. Test the skills like code. Keep a small set of evaluation prompts, such as “build Postgres CDC to Iceberg” or “fix this lint error”, that must produce output passing lint. Run them on every change so regressions are caught. One example from the demos: a zsh parse error in a helper script [1].
+
+Suggested order: start with Author and Debug, since they have the most users and the most proven value. Add Migrate next, because it drives customer wins. Add Deploy and Extend after that.

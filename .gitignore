@@ -1,0 +1,15 @@
+# Dev-only skills (BMad). npx skills scans these folders, so they must not be
+# published; restore them with `npx skills install` from skills-lock.json.
+.claude/skills/
+.agents/skills/
+
+# BMad personal settings and generated render cache
+_bmad/custom/*.user.toml
+_bmad/render/
+
+# Local backups and caches
+.v6-v7-migration-backup-*/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store

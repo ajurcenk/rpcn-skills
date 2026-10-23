@@ -1,0 +1,56 @@
+# RPCN Skills: epics in build order. Version 1 = epics 1-4.
+
+[[epic]]
+id = 1
+slug = "epic-validation-foundation"
+title = "Validation foundation"
+description = "The plugin installs through Claude Code and npx skills; check scripts wrap rpk connect with JSON results; the eval harness runs trigger and task cases; hand-off file formats, headless status and the what-next convention are defined and used by a sample skill; a CI pipeline runs the evals and check scripts on every change."
+covers = ["R8", "R9", "R12", "R13", "R16", "R17", "R19"]
+
+[[epic]]
+id = 2
+slug = "epic-author-and-test"
+title = "Author and Test skills"
+description = "A developer gets pipeline YAML and Bloblang that lint clean on the tested binaries, plus samples, unit tests and a test report. Author builds from a design note in the epic 1 format and updates it when it deviates; Test checks the pipeline against the note."
+covers = ["R2", "R3"]
+after = [{ epic = 1, needs = "check scripts, eval harness, hand-off formats and headless status" }]
+
+[[epic]]
+id = 3
+slug = "epic-design"
+title = "Design skill"
+description = "A developer gets a design note applying RPCN best practices that Author builds into a passing pipeline, and a newcomer reaches a linted, tested pipeline in under 10 minutes."
+covers = ["R1", "R15"]
+after = [{ epic = 2, needs = "Author reading the design note and Test checking against it" }]
+
+[[epic]]
+id = 4
+slug = "epic-release-sync"
+title = "Release sync, versioning and failure modes"
+description = "References regenerate within a week of each RPCN release, CI blocks removed components and invalid skills, releases are version-stamped, and failure-mode entries mined from GitHub issues ship in the skills."
+covers = ["R10", "R11", "R18"]
+after = [{ epic = 1, needs = "plugin layout and CI" }, { epic = 2, needs = "skills with references to regenerate" }, { epic = 3, needs = "the Design skill, so release sync covers every version 1 skill" }]
+
+[[epic]]
+id = 5
+slug = "epic-deploy-and-scale"
+title = "Deploy and Scale skills"
+description = "A developer or DevOps engineer gets a capacity plan and a Kubernetes, streams-mode or BYOC deployment whose reference workload stays within 20% of the plan with no out-of-memory restarts."
+covers = ["R5", "R6"]
+after = [{ epic = 2, needs = "linted pipelines and test reports as input" }, { epic = 4, needs = "release-sync CI and validator that new skills register with" }]
+
+[[epic]]
+id = 6
+slug = "epic-tune"
+title = "Tune skill"
+description = "A developer gets metric-backed recommendations that measurably raise throughput or cut latency on a reference pipeline with a known bottleneck."
+covers = ["R4"]
+after = [{ epic = 5, needs = "a deployed reference pipeline to measure" }]
+
+[[epic]]
+id = 7
+slug = "epic-migrate"
+title = "Migrate skill (Kafka Connect)"
+description = "Sample Kafka Connect connector configs convert to RPCN pipelines that pass lint, with every unmapped field reported."
+covers = ["R7"]
+after = [{ epic = 2, needs = "Author conventions and Test checks for converted pipelines" }, { epic = 4, needs = "release-sync CI and validator that new skills register with" }]
