@@ -3,7 +3,7 @@ title: 'Hand-off formats and the hash check'
 type: 'feature'
 ticket: '4'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: 'bb8ee06ab91a3d4a51c0e0c26770f9dc1ea83ecc'
 route: 'full'
 route_source: 'auto'
