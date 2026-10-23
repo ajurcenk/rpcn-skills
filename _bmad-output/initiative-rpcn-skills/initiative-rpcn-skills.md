@@ -64,6 +64,7 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - Out: running an MCP server.
 - Out: any integration with the Pipeline Designer VS Code extension.
 - Touch point: the `rpk connect` binary, tested at v4.100.0 and the newest release. Check scripts call `lint`, `blobl`, `list` and `test`. Owner: epic-validation-foundation.
+- Touch point: the `rpcn-test-skills` test project (`../rpcn-test-skills`). It installs the skills the way a user would and runs end-to-end scenarios. Owner: epic-validation-foundation.
 - Touch point: `redpanda-data/connect` GitHub issues, mined for failure-mode entries. Owner: epic-release-sync.
 - Touch point: Kubernetes/Helm and Redpanda Cloud BYOC, the deployment targets. Owner: epic-deploy-and-scale.
 - Tracer path: a developer describes a pipeline, Design shapes it, Author writes it, Test proves it lints and runs, Scale sizes it, Deploy ships it to Kubernetes or BYOC, Tune adjusts it from metrics, and Migrate brings in Kafka Connect configs.

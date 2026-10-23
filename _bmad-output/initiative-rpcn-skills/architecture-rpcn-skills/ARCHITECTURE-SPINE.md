@@ -252,21 +252,26 @@ flowchart LR
 - **Binds:** R8, R12, R15, R17
 - **Prevents:** one skill measured by different rules than another, and an accuracy gate that the tool cannot actually enforce
 - **Rule:**
-  - **Format:** cases use `claude plugin eval` (Claude Code ≥ 2.1.269): `evals/<skill>__<case>/` with `prompt.md`, `case.yaml` and `graders/`.
+  - **Trigger evals** stay in this repo. Cases use `claude plugin eval` (Claude Code ≥ 2.1.269): `evals/<skill>__<case>/` with `prompt.md`, `case.yaml` and `graders/`.
   - **Trigger cases** run with `--ablation none`, so `tool_used` graders count toward the score:
     - a positive case asserts `tool: Skill` with `input_match` on the skill name
     - a near-miss negative, for each sibling in the skill's "Not for" lines, uses `min: 0, max: 0`
     - `tools/eval_gate.py` computes suite accuracy from `aggregate-result.json`
-  - **Task cases:**
-    - each one requires the skill to run `rpcn_check.py lint`/`blobl` itself
-    - a `tool_used` grader on Bash checks the call
-    - a `regex` grader checks the AD-8 block for `"lint": "pass"`
-    - Bash is granted narrowly (`Bash(uv run *)`)
-    - the baseline arm is on
-  - **Repetition:** each case runs at least 3 times.
-  - **Coexistence:** a fixture case lists the two coexisting plugins, vendored under `evals/fixtures/plugins/`, under `plugins:`.
-  - **Env vars:** cases use only `EVAL_`-prefixed env vars.
-  - **Gate:** trigger accuracy is at least 90%, out-of-scope negatives trigger no skill, and every task case's lint passes.
+  - **Task, hand-off and install checks** run in the separate test project `rpcn-test-skills` (sibling folder, not in this repo):
+    - **Scenarios:** each lives in `scenarios/<skill>__<case>/` with `prompt.md`, an input `fixtures/` folder and `expect.toml` (the files that must exist, their `status`, and the AD-8 block that is expected).
+    - **Runner:** `uv run run_scenarios.py` handles each scenario in turn:
+      1. copies the scenario into a fresh temp folder
+      2. installs `rpcn-skills` there the way a user would, from a local path in development or a git ref in CI
+      3. runs Claude Code headless with the prompt
+      4. runs the installed skill's `rpcn_check.py lint`/`blobl`/`hash` over the files left on disk
+      5. parses the final AD-8 block
+    - **Chains** (Design then Author then Test) run each step as a fresh headless session on the same folder. That proves R16.
+    - **Coexistence:** coexistence scenarios also install the two coexisting skill sets, and assert which skill ran (or that none did), so R12's coexistence check runs here.
+    - **Source code:** the test project never holds skill source. Installed skills there are gitignored.
+    - `[ASSUMPTION: the install-from-ref command and the headless flags are verified in epic 1]`
+  - **Repetition:** each trigger case and each scenario runs at least 3 times.
+  - **Env vars:** native cases use only `EVAL_`-prefixed env vars.
+  - **Gate:** trigger accuracy is at least 90%, out-of-scope negatives trigger no skill, and every scenario's produced files lint clean and match `expect.toml`.
 
 ### AD-14 — CI and release
 
@@ -277,8 +282,7 @@ flowchart LR
     - `validate_skills.py`, owned by epic 1; epic 4 adds its deprecated scan and version checks. It covers names, descriptions, size, file references, the clash list, retired names, stamps and the deprecated scan.
     - the `sync_shared` drift check
     - the `rpcn_check` unit tests on every AD-5 version
-    - the eval gate
-  - **Eval scope:** evals run on PRs from branches in this repo when `skills/`, `tools/shared/` or `evals/` change, and on a nightly full run. PRs from forks skip evals. `[ASSUMPTION: eval scope and secrets]`
+    - the trigger eval gate, and the `rpcn-test-skills` scenarios run against this commit
   - **CI environment:** rpk and uv are installed outside `$HOME` (the eval sandbox can't read `$HOME`), with each version via `rpk connect install --connect-version <v>`. Linux runners add bubblewrap and socat. CI is GitHub Actions on the repo. [ADOPTED] `[ASSUMPTION: the install command is verified in epic 1]`
   - **Weekly job:** it detects a new RPCN release, runs `gen_refs`, rolls the newest pin, and opens a PR within one week.
   - **Release** runs only from a green `main` (AD-12).
@@ -329,7 +333,6 @@ rpcn-skills/
     sync_shared.py  gen_refs.py  validate_skills.py  eval_gate.py
     clash-list.txt
   evals/<skill>__<case>/
-  evals/fixtures/plugins/
   retired.toml
   .github/workflows/
 ```
@@ -349,10 +352,10 @@ rpcn-skills/
 | R9, R19 Shape, Next | every SKILL.md | AD-9 |
 | R10 Failure modes | `references/failure-modes.md` | AD-11 |
 | R11 Release sync | `gen_refs`, weekly job, validator | AD-11, AD-14 |
-| R12 Evals | `evals/`, `eval_gate.py` | AD-13 |
+| R12 Evals | `evals/` (triggers), `rpcn-test-skills` (scenarios) | AD-13 |
 | R13 Install | `.claude-plugin/`, `skills/` | AD-1 |
 | R16 Hand-offs | user project | AD-6, AD-7 |
-| R17 Headless | every SKILL.md, `binary` | AD-8, AD-13 |
+| R17 Headless | every SKILL.md, `binary`, scenario runner | AD-8, AD-13 |
 | R18 Versioning | `plugin.json`, stamps, `retired.toml` | AD-10, AD-12 |
 
 ## Deferred
@@ -365,4 +368,6 @@ rpcn-skills/
 - **VS Code extension integration:** out of scope (initiative decision 2026-10-23).
 - **Windows support:** not tested in version 1. `[ASSUMPTION]`
 - **Failure-mode sources beyond GitHub:** later, using the AD-11 entry shape.
+- **When evals and scenarios run in CI** (every PR, path filters, nightly, forks and API-key secrets): epic 1 decides, within R12's rule that every change affecting a skill runs them.
+- **How `rpcn-skills` CI gets `rpcn-test-skills`** (a sibling GitHub repo checked out at `main`, or a pinned ref): epic 1 decides once that project has a remote.
 - **Telemetry:** out of scope.

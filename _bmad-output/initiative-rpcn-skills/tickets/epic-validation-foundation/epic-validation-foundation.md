@@ -27,6 +27,7 @@ Skill authors get one tested way to check output against the binary, measure tri
 - The check scripts return JSON and a non-zero exit on lint and Bloblang failures against both tested binaries (4.100.0 and the newest release), and their unit tests pass.
 - CI runs the eval harness on every change: a sample skill's trigger and task cases run at least 3 times in a clean environment, and the results are recorded.
 - The hand-off formats, headless status and what-next convention are documented, and the sample skill uses them.
+- The `rpcn-test-skills` project installs the sample skill from a git ref, runs one scenario headless 3 times, and lints the files it produced.
 
 ## Boundaries
 
