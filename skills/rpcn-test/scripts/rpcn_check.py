@@ -14,6 +14,7 @@ skills/*/scripts/ must stay byte-identical; edit the source, never a copy.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -361,6 +362,255 @@ def cmd_lint(args: argparse.Namespace) -> int:
     return result(True, binary, [], EXIT_OK)
 
 
+# --- hash: file hashes and the hand-off staleness check (AD-6) ----------------
+
+# Hand-off formats this copy can read: artifact -> the one major it knows. Later
+# epics add an entry next to their own `tools/shared/formats/<artifact>-format.md`.
+KNOWN_FORMATS = {"design": 1, "test-report": 1}
+
+HANDOFF_SCALAR_KEYS = (
+    "artifact", "format", "pipeline", "status", "produced_by", "rpcn_version", "updated",
+)
+HANDOFF_STATUSES = ("draft", "ready", "superseded")
+_HASH_CHUNK = 1 << 16
+_HEADER_KEY_RE = re.compile(r"^(?P<key>[a-z_]+):(?:[ \t]+(?P<value>.*?))?[ \t]*$")
+_INPUT_FILE_RE = re.compile(r"^  - file:[ \t]+(?P<value>.*?)[ \t]*$")
+_INPUT_SHA_RE = re.compile(r"^    sha256:[ \t]+(?P<value>.*?)[ \t]*$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_FORMAT_RE = re.compile(r"^(?P<artifact>[a-z][a-z0-9-]*)@(?P<major>\d+)$")
+_VERDICT_RE = re.compile(r"^\*\*Verdict:\*\*[ \t]+(?P<verdict>pass|fail)[ \t]*$", re.MULTILINE)
+
+
+class HeaderError(Exception):
+    """A hand-off header that does not follow the strict syntax."""
+
+    def __init__(self, message: str, line: int | None) -> None:
+        super().__init__(message)
+        self.line = line
+
+
+def sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(_HASH_CHUNK), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _unquote(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+        return value[1:-1]
+    return value
+
+
+def parse_handoff_header(text: str) -> dict:
+    """Parse the strict hand-off frontmatter (see formats/handoff-header.md).
+
+    Returns {"fields": {key: value}, "lines": {key: line}, "inputs": [{"file",
+    "sha256", "line"}], "body": text after the closing `---`}. Raises HeaderError with a 1-based line number. This is
+    a fixed subset, not YAML: one `key: value` per line, and `inputs:` followed
+    by `  - file: <path>` / `    sha256: <64 hex>` pairs (or `inputs: []`).
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].lstrip("\ufeff").rstrip() != "---":
+        raise HeaderError("no frontmatter: the first line must be `---`", 1)
+    end = next((i for i in range(1, len(lines)) if lines[i].rstrip() == "---"), None)
+    if end is None:
+        raise HeaderError("frontmatter is not closed: no second `---` line", len(lines))
+
+    fields: dict[str, str] = {}
+    key_lines: dict[str, int] = {}
+    inputs: list[dict] = []
+    in_inputs = False
+    pending: dict | None = None  # an input item still waiting for its sha256 line
+
+    for idx in range(1, end):
+        n = idx + 1  # 1-based line number in the file
+        line = lines[idx]
+        if not line.strip():
+            continue
+        if pending is not None:
+            m = _INPUT_SHA_RE.match(line)
+            if not m:
+                raise HeaderError("an `inputs` item needs `    sha256: <64 hex>` on the next line", n)
+            sha = _unquote(m.group("value"))
+            if not _SHA256_RE.match(sha):
+                raise HeaderError(f"bad sha256 {sha!r}: expected 64 lowercase hex characters", n)
+            pending["sha256"] = sha
+            inputs.append(pending)
+            pending = None
+            continue
+        if line.startswith(" "):
+            if not in_inputs:
+                raise HeaderError(f"unexpected indented line: {line.strip()!r}", n)
+            m = _INPUT_FILE_RE.match(line)
+            if not m:
+                raise HeaderError(
+                    "an `inputs` item must be exactly `  - file: <path>` then `    sha256: <64 hex>`", n
+                )
+            path = _unquote(m.group("value"))
+            if not path:
+                raise HeaderError("an `inputs` item has an empty `file`", n)
+            if os.path.isabs(path):
+                raise HeaderError(
+                    f"input file {path!r} must be relative to the hand-off file's folder", n
+                )
+            pending = {"file": path, "sha256": "", "line": n}
+            continue
+
+        in_inputs = False
+        m = _HEADER_KEY_RE.match(line)
+        if not m:
+            raise HeaderError(f"expected `key: value`, got {line.strip()!r}", n)
+        key, value = m.group("key"), m.group("value") or ""
+        if key in fields or (key == "inputs" and "inputs" in key_lines):
+            raise HeaderError(f"duplicate key `{key}` (first on line {key_lines[key]})", n)
+        if key == "inputs":
+            key_lines["inputs"] = n
+            if value == "[]":
+                continue
+            if value:
+                raise HeaderError("`inputs:` takes block items on the next lines, or `[]`", n)
+            in_inputs = True
+            continue
+        if key not in HANDOFF_SCALAR_KEYS:
+            raise HeaderError(f"unknown key `{key}`", n)
+        value = _unquote(value)
+        if not value:
+            raise HeaderError(f"`{key}` has no value", n)
+        if key == "status" and value not in HANDOFF_STATUSES:
+            raise HeaderError(f"bad status {value!r}: expected one of {', '.join(HANDOFF_STATUSES)}", n)
+        fields[key] = value
+        key_lines[key] = n
+
+    if pending is not None:
+        raise HeaderError("an `inputs` item needs `    sha256: <64 hex>` on the next line", end + 1)
+    missing = [k for k in (*HANDOFF_SCALAR_KEYS, "inputs") if k not in key_lines]
+    if missing:
+        raise HeaderError(f"missing key(s): {', '.join(missing)}", end + 1)
+    body = "\n".join(lines[end + 1:])
+    return {"fields": fields, "lines": key_lines, "inputs": inputs, "body": body}
+
+
+def report_verdict(artifact: str, body: str) -> str | None:
+    """The first `**Verdict:** pass|fail` line of a test report body; None otherwise."""
+    if artifact != "test-report":
+        return None
+    m = _VERDICT_RE.search(body)
+    return m.group("verdict") if m else None
+
+
+def format_known(artifact: str, fmt: str) -> bool:
+    """`fmt` is `<artifact>@<major>`, names this artifact, and its major is the known one."""
+    m = _FORMAT_RE.match(fmt)
+    if not m or m.group("artifact") != artifact:
+        return False
+    return KNOWN_FORMATS.get(artifact) == int(m.group("major"))
+
+
+def _hash_files(files: list[str]) -> int:
+    missing = [
+        _error(f"not a file: {f}" if os.path.exists(f) else f"file not found: {f}", file=f)
+        for f in files
+        if not os.path.isfile(f)
+    ]
+    if missing:
+        return _emit(_envelope("hash", False, None, missing, {"hashes": []}), EXIT_ENV)
+    hashes, errors = [], []
+    for f in files:
+        try:
+            hashes.append({"file": f, "sha256": sha256_file(f)})
+        except OSError as exc:
+            errors.append(_error(f"cannot read {f}: {exc.strerror or exc}", file=f))
+    if errors:
+        return _emit(_envelope("hash", False, None, errors, {"hashes": []}), EXIT_ENV)
+    return _emit(_envelope("hash", True, None, [], {"hashes": hashes}), EXIT_OK)
+
+
+def _check_handoff(handoff: str) -> int:
+    def fail(message: str, line: int | None = None) -> int:
+        err = {"file": handoff, "line": line, "column": None, "message": message}
+        return _emit(_envelope("hash", False, None, [err], {}), EXIT_ENV)
+
+    if not os.path.isfile(handoff):
+        what = "is not a file" if os.path.exists(handoff) else "not found"
+        return fail(f"hand-off file {what}: {handoff}")
+    try:
+        with open(handoff, encoding="utf-8") as fh:
+            text = fh.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        return fail(f"cannot read hand-off file: {exc}")
+    try:
+        header = parse_handoff_header(text)
+    except HeaderError as exc:
+        return fail(f"bad hand-off header: {exc}", exc.line)
+
+    fields, key_lines = header["fields"], header["lines"]
+    folder = os.path.dirname(handoff)
+    known = format_known(fields["artifact"], fields["format"])
+    errors: list[dict] = []
+    inputs = []
+    for item in header["inputs"]:
+        path = os.path.join(folder, item["file"])
+        try:
+            current = sha256_file(path) if os.path.isfile(path) else None
+        except OSError as exc:
+            err = _error(f"cannot read input {item['file']}: {exc.strerror or exc}", file=path)
+            return _emit(_envelope("hash", False, None, [err], {}), EXIT_ENV)
+        if current is None:
+            state = "missing"
+            errors.append(_error(f"input missing: {item['file']}", file=path))
+        elif current != item["sha256"]:
+            state = "changed"
+            errors.append(_error(f"input changed since the hand-off was written: {item['file']}", file=path))
+        else:
+            state = "match"
+        inputs.append({"file": item["file"], "recorded": item["sha256"], "current": current, "state": state})
+
+    if fields["status"] != "ready":
+        errors.append(
+            {"file": handoff, "line": key_lines["status"], "column": None,
+             "message": f"status is {fields['status']!r}, not 'ready'"}
+        )
+    if not known:
+        errors.append(
+            {"file": handoff, "line": key_lines["format"], "column": None,
+             "message": f"unknown format {fields['format']!r} for artifact {fields['artifact']!r}"}
+        )
+    ready = not errors
+    verdict = report_verdict(fields["artifact"], header["body"])
+    pipeline_file = os.path.normpath(f"{fields['pipeline']}.yaml")
+    pipeline_matches = any(
+        os.path.normpath(i["file"]) == pipeline_file and i["state"] == "match" for i in inputs
+    )
+    data = {
+        "artifact": fields["artifact"],
+        "status": fields["status"],
+        "format": fields["format"],
+        "format_known": known,
+        "inputs": inputs,
+        "ready": ready,
+        "verdict": verdict,
+        "pipeline_ready": ready and pipeline_matches and verdict == "pass",
+    }
+    return _emit(_envelope("hash", ready, None, errors, data), EXIT_OK if ready else EXIT_CHECK_FAILED)
+
+
+def cmd_hash(args: argparse.Namespace) -> int:
+    files: list[str] = args.files or []
+
+    def usage(message: str) -> int:
+        return _emit(_envelope("hash", False, None, [_error(message)], {}), EXIT_ENV)
+
+    if args.check is not None:
+        if files:
+            return usage("give either files to hash or --check <handoff.md>, not both")
+        return _check_handoff(args.check)
+    if not files:
+        return usage("give at least one file to hash, or --check <handoff.md>")
+    return _hash_files(files)
+
+
 def build_parser() -> _Parser:
     parser = _Parser(
         prog="rpcn_check.py",
@@ -377,6 +627,14 @@ def build_parser() -> _Parser:
     )
     p_lint.add_argument("--env-file", metavar="<file>", help="dotenv file for interpolations")
     p_lint.set_defaults(func=cmd_lint)
+    p_hash = sub.add_parser(
+        "hash", help="print file sha256 hashes, or check a hand-off file's recorded input hashes"
+    )
+    p_hash.add_argument("files", nargs="*", metavar="<file>", help="files to hash")
+    p_hash.add_argument(
+        "--check", metavar="<handoff.md>", help="check this hand-off file's header and input hashes"
+    )
+    p_hash.set_defaults(func=cmd_hash)
     return parser
 
 

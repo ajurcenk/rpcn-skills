@@ -158,7 +158,7 @@ flowchart LR
     - its readiness list in `formats/<artifact>-format.md` passes
 
     Otherwise the reader treats the input as not ready.
-  - **Pipeline YAML** has no frontmatter. It counts as ready when `<name>.test-report.md` is ready and that report's `inputs` hash matches the YAML.
+  - **Pipeline YAML** has no frontmatter. It counts as ready when `<name>.test-report.md` is ready, that report's `inputs` hash matches the YAML, and its verdict is `pass`, which `rpcn_check.py hash --check` reports as `pipeline_ready`. A report's `ready` means the run is complete. A failing report is still `ready`, so Author can read its proposed changes (decision 2026-10-23).
   - **Entry points:** a missing design note never blocks these skills. Minimum inputs:
     - Scale: `<name>.yaml`, plus a workload description from the user
     - Deploy: `<name>.yaml` and `<name>.capacity.md`

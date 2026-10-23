@@ -23,7 +23,7 @@ bumps `schema`.
 | `schema` | int | Always `1` for this version of the contract |
 | `ok` | bool | `true` only when the command succeeded |
 | `command` | str | The subcommand that ran; the raw first argument on a usage error, `""` when none was given |
-| `binary` | object \| null | `{"path": str, "version": str}` of the binary used; `null` when none was found or the arguments were bad |
+| `binary` | object \| null | `{"path": str, "version": str}` of the binary used; `null` when none was found or the arguments were bad, and always `null` for `hash` |
 | `errors` | array | `[{"file": str\|null, "line": int\|null, "column": int\|null, "message": str}]`; `file` is `null` for errors not tied to a file |
 | `data` | object | The subcommand's result, shape below; `{}` on a usage error |
 
@@ -36,7 +36,7 @@ path, and the script runs it as `rpk connect`. `binary.version` has no leading
 | Code | When |
 |---|---|
 | 0 | `ok` is `true` |
-| 1 | A check failed: used by `lint` when the binary reports errors |
+| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready |
 | 2 | Usage or environment error: bad arguments, a missing input file, no binary, binary below 4.100.0, or a check that could not run (timeout, silent failure) |
 
 ## Binary lookup
@@ -125,3 +125,98 @@ stderr) is parsed line by line:
 | 0 | The binary exited 0 and printed nothing that parsed as an error |
 | 1 | The binary reported errors (any parsed line, whatever its exit code) |
 | 2 | No targets, a missing target, resources or env file, no usable binary, a timeout ("timed out"), or a non-zero exit with no output (the message gives the exit code) |
+
+## `hash`
+
+```
+rpcn_check.py hash <file>...
+rpcn_check.py hash --check <handoff.md>
+```
+
+Hashes files, or checks whether a hand-off file is still ready (AD-6). Neither
+mode needs the Redpanda Connect binary: it is never looked up, and `binary` is
+always `null`. Giving both files and `--check`, or neither, is a usage error
+(exit 2, `data` `{}`).
+
+### `hash <file>...`
+
+`data`:
+
+```json
+{"hashes": [{"file": "orders.yaml", "sha256": "77c752d3…(64 hex)"}]}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `hashes` | array | One entry per file, in the order given (repeats kept) |
+| `hashes[].file` | str | The path as given |
+| `hashes[].sha256` | str | 64 lowercase hex characters over the file's exact bytes |
+
+Every file is checked first. A missing file, or a path that is not a regular
+file, is exit 2 with one error per such file (its `file` set) and `hashes`
+`[]`. Exit 0 otherwise.
+
+### `hash --check <handoff.md>`
+
+Reads the hand-off header (the strict syntax in
+`tools/shared/formats/handoff-header.md`), hashes each recorded input and
+compares. Input `file` paths are resolved against the hand-off file's
+folder, not the working directory.
+
+`data`:
+
+```json
+{
+  "artifact": "test-report",
+  "status": "ready",
+  "format": "test-report@1",
+  "format_known": true,
+  "inputs": [
+    {"file": "orders.yaml", "recorded": "77c7…", "current": "77c7…", "state": "match"}
+  ],
+  "ready": true,
+  "verdict": "pass",
+  "pipeline_ready": true
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `artifact` | str | The header's `artifact` |
+| `status` | str | The header's `status`: `draft`, `ready` or `superseded` |
+| `format` | str | The header's `format`, as written |
+| `format_known` | bool | `format` is `<artifact>@<major>` for this `artifact`, the artifact is in `KNOWN_FORMATS` and the major equals its entry |
+| `inputs` | array | One entry per header `inputs` item, in header order; `[]` for `inputs: []` |
+| `inputs[].file` | str | The path as recorded (relative to the hand-off file's folder) |
+| `inputs[].recorded` | str | The sha256 in the header |
+| `inputs[].current` | str \| null | The file's sha256 now; `null` when it is missing |
+| `inputs[].state` | str | `match`, `changed` or `missing` |
+| `ready` | bool | `true` only when every input is `match`, `status` is `ready` and `format_known` is `true` |
+| `verdict` | str \| null | For a test report, the first body line `**Verdict:** pass` or `**Verdict:** fail`, as `pass` or `fail`; `null` when there is no such line or `artifact` is not `test-report` |
+| `pipeline_ready` | bool | `true` only when `ready` is `true`, an input whose `file` is `<pipeline>.yaml` (the header's `pipeline`) is `match`, and `verdict` is `pass`. A pipeline counts as ready only when this is `true` (AD-6) |
+
+`verdict` and `pipeline_ready` do not change `ok`, `ready` or the exit code:
+a `ready` report with the verdict `fail` still exits 0.
+
+`ok` equals `ready`. When not ready, `errors` gives one entry per reason:
+
+- an input `changed` or `missing`: `file` is the input path joined to the
+  hand-off file's folder, `line` is `null`
+- `status` not `ready`, or an unknown format: `file` is the hand-off file,
+  `line` is that key's line
+
+`KNOWN_FORMATS` is currently `{"design": 1, "test-report": 1}`.
+
+**Exit codes:**
+
+| Code | When |
+|---|---|
+| 0 | `ready` is `true` |
+| 1 | Not ready: an input changed or is missing, `status` is not `ready`, or the format is unknown |
+| 2 | The hand-off file is missing, unreadable or not UTF-8, an input exists but cannot be read (the error's `file` is that input), or its header does not follow the strict syntax. One error, with `file` the hand-off file (or the unreadable input), `line` the 1-based line at fault for a header error (otherwise `null`), and `data` `{}` |
+
+Header errors include: no `---` on line 1, no closing `---`, a line that is
+not `key: value`, an unknown or repeated key, an empty value, a `status`
+outside `draft|ready|superseded`, an `inputs` item that is not exactly
+`  - file: <path>` then `    sha256: <64 lowercase hex>`, an absolute input
+path, and a missing required key (reported at the closing `---` line).

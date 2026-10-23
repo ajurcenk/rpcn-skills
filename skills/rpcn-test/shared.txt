@@ -3,3 +3,6 @@
 # Never edit a copy by hand: change the source, then run `uv run tools/sync_shared.py`.
 
 rpcn_check/rpcn_check.py scripts/rpcn_check.py
+formats/handoff-header.md references/handoff-header.md
+formats/design-format.md references/design-format.md
+formats/test-report-format.md references/test-report-format.md

@@ -13,6 +13,7 @@ printed by `uv run tools/fetch_rpcn.py`; otherwise they are skipped.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -29,6 +30,7 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent.parent / "rpcn_check.py"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+FORMATS = Path(__file__).resolve().parents[2] / "formats"
 FIXED_LINT_ARGS = ["lint", "--deprecated", "--skip-env-var-check"]
 # Fake binaries run with a PATH holding only fakes, so they call these by path.
 CAT = shutil.which("cat") or "/bin/cat"
@@ -87,7 +89,9 @@ class CheckTestBase(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_check(self, *args: str, env: dict[str, str] | None = None) -> tuple[int, dict]:
+    def run_check(
+        self, *args: str, env: dict[str, str] | None = None, cwd: str | Path | None = None
+    ) -> tuple[int, dict]:
         full_env = {"PATH": str(self.path_dir), "HOME": self._tmp.name}
         full_env.update(env or {})
         proc = subprocess.run(
@@ -96,6 +100,7 @@ class CheckTestBase(unittest.TestCase):
             text=True,
             env=full_env,
             timeout=60,
+            cwd=cwd,
         )
         try:
             out = json.loads(proc.stdout)
@@ -590,6 +595,461 @@ class LintTest(CheckTestBase):
         self.assertFalse(out["ok"])
         self.assertIn("timed out", out["errors"][0]["message"])
         self.assertEqual(module.LINT_TIMEOUT_S, 1)
+
+
+def sha(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def handoff(
+    inputs: list[tuple[str, str]] | None = None,
+    artifact: str = "test-report",
+    fmt: str = "test-report@1",
+    status: str = "ready",
+    body: str = "# orders: test report\n",
+) -> str:
+    lines = [
+        "---",
+        f"artifact: {artifact}",
+        f"format: {fmt}",
+        "pipeline: orders",
+        f"status: {status}",
+        "produced_by: rpcn-test@0.1.0",
+        "rpcn_version: 4.115.0",
+    ]
+    if inputs:
+        lines.append("inputs:")
+        for file, digest in inputs:
+            lines += [f"  - file: {file}", f"    sha256: {digest}"]
+    else:
+        lines.append("inputs: []")
+    lines += ["updated: 2026-10-23", "---", ""]
+    return "\n".join(lines) + body
+
+
+def doc_examples(doc: Path) -> dict[str, str]:
+    """The `<!-- example-file: NAME -->` fenced blocks of a format doc, by file name."""
+    pattern = re.compile(r"^<!-- example-file: (\S+) -->\n(`{3,})\w*\n(.*?)^\2$", re.M | re.S)
+    return {m.group(1): m.group(3) for m in pattern.finditer(doc.read_text())}
+
+
+class HashTest(CheckTestBase):
+    """`hash`: file hashes and the hand-off check. The PATH holds no binary at all."""
+
+    PIPE = "input:\n  stdin: {}\n"
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.work = Path(self._tmp.name) / "work"
+        self.work.mkdir()
+
+    def write(self, name: str, text: str) -> Path:
+        path = self.work / name
+        path.write_text(text)
+        return path
+
+    def hash(self, *args: str, cwd: str | Path | None = None) -> tuple[int, dict]:
+        code, out = self.run_check("hash", *args, cwd=cwd)
+        self.assertEnvelope(out, "hash")
+        self.assertIsNone(out["binary"])
+        self.assertEqual(out["ok"], code == 0, out)
+        return code, out
+
+    def check(self, report: Path, cwd: str | Path | None = None) -> tuple[int, dict]:
+        return self.hash("--check", str(report), cwd=cwd)
+
+    def assertBadHeader(self, text: str, line: int, fragment: str) -> None:
+        report = self.write("orders.test-report.md", text)
+        code, out = self.check(report)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {})
+        self.assertEqual(len(out["errors"]), 1, out)
+        err = out["errors"][0]
+        self.assertEqual(err["file"], str(report))
+        self.assertEqual(err["line"], line, err)
+        self.assertIn(fragment, err["message"])
+
+    # --- hash <file>... ------------------------------------------------------
+
+    def test_hash_files_in_order(self) -> None:
+        a = self.write("a.yaml", "a: 1\n")
+        b = self.write("b.yaml", "b: 2\n")
+        code, out = self.hash(str(b), str(a))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["errors"], [])
+        self.assertEqual(
+            out["data"],
+            {"hashes": [{"file": str(b), "sha256": sha("b: 2\n")},
+                        {"file": str(a), "sha256": sha("a: 1\n")}]},
+        )
+
+    def test_hash_relative_path_as_given(self) -> None:
+        self.write("a.yaml", "a: 1\n")
+        code, out = self.hash("a.yaml", cwd=self.work)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["hashes"], [{"file": "a.yaml", "sha256": sha("a: 1\n")}])
+
+    def test_hash_missing_file(self) -> None:
+        a = self.write("a.yaml", "a: 1\n")
+        missing = str(self.work / "nope.yaml")
+        code, out = self.hash(str(a), missing)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {"hashes": []})
+        self.assertEqual([e["file"] for e in out["errors"]], [missing])
+        self.assertIn(missing, out["errors"][0]["message"])
+
+    def test_hash_folder_is_not_a_file(self) -> None:
+        code, out = self.hash(str(self.work))
+        self.assertEqual(code, 2, out)
+        self.assertIn("not a file", out["errors"][0]["message"])
+
+    def test_hash_needs_arguments(self) -> None:
+        code, out = self.hash()
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {})
+
+    def test_hash_files_and_check_together(self) -> None:
+        a = self.write("a.yaml", "a: 1\n")
+        code, out = self.hash(str(a), "--check", str(a))
+        self.assertEqual(code, 2, out)
+        self.assertIn("not both", out["errors"][0]["message"])
+
+    # --- hash --check: the matrix --------------------------------------------
+
+    def test_fresh_report(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        report = self.write("orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))]))
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["errors"], [])
+        self.assertEqual(
+            out["data"],
+            {
+                "artifact": "test-report",
+                "status": "ready",
+                "format": "test-report@1",
+                "format_known": True,
+                "inputs": [{"file": "orders.yaml", "recorded": sha(self.PIPE),
+                            "current": sha(self.PIPE), "state": "match"}],
+                "ready": True,
+                "verdict": None,
+                "pipeline_ready": False,
+            },
+        )
+
+    def test_stale_report(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        report = self.write("orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))]))
+        changed = self.PIPE + "output:\n  stdout: {}\n"
+        self.write("orders.yaml", changed)
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual(
+            out["data"]["inputs"],
+            [{"file": "orders.yaml", "recorded": sha(self.PIPE), "current": sha(changed),
+              "state": "changed"}],
+        )
+        self.assertEqual(out["errors"][0]["file"], str(self.work / "orders.yaml"))
+        self.assertIn("changed", out["errors"][0]["message"])
+
+    def test_input_deleted(self) -> None:
+        report = self.write("orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))]))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual(out["data"]["inputs"][0]["state"], "missing")
+        self.assertIsNone(out["data"]["inputs"][0]["current"])
+
+    def test_draft(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        report = self.write(
+            "orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))], status="draft")
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual(out["data"]["status"], "draft")
+        self.assertEqual(out["data"]["inputs"][0]["state"], "match")
+        self.assertEqual(out["errors"][0]["line"], 5)
+
+    def test_superseded(self) -> None:
+        report = self.write("orders.test-report.md", handoff(status="superseded"))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+
+    def test_unknown_major(self) -> None:
+        report = self.write("orders.test-report.md", handoff(fmt="test-report@2"))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["format_known"])
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual(out["errors"][0]["line"], 3)
+
+    def test_unknown_artifact(self) -> None:
+        report = self.write("orders.capacity.md", handoff(artifact="capacity", fmt="capacity@1"))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["artifact"], "capacity")
+        self.assertFalse(out["data"]["format_known"])
+
+    def test_format_naming_another_artifact(self) -> None:
+        report = self.write("orders.test-report.md", handoff(fmt="design@1"))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["format_known"])
+
+    def test_malformed_format_is_unknown(self) -> None:
+        report = self.write("orders.test-report.md", handoff(fmt="test-report"))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["format_known"])
+
+    def test_known_design_format(self) -> None:
+        report = self.write("orders.design.md", handoff(artifact="design", fmt="design@1"))
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["format_known"])
+
+    def test_no_inputs(self) -> None:
+        for status, want in (("ready", 0), ("draft", 1)):
+            with self.subTest(status=status):
+                report = self.write("orders.test-report.md", handoff(status=status))
+                code, out = self.check(report)
+                self.assertEqual(code, want, out)
+                self.assertEqual(out["data"]["inputs"], [])
+                self.assertEqual(out["data"]["ready"], want == 0)
+
+    def test_bare_inputs_key_with_no_items(self) -> None:
+        text = handoff().replace("inputs: []", "inputs:")
+        report = self.write("orders.test-report.md", text)
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["inputs"], [])
+
+    def test_several_inputs_one_changed(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        self.write("orders.design.md", "design\n")
+        report = self.write(
+            "orders.test-report.md",
+            handoff([("orders.yaml", sha(self.PIPE)), ("orders.design.md", sha("old\n"))]),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertEqual([i["state"] for i in out["data"]["inputs"]], ["match", "changed"])
+
+    def test_relative_paths_resolve_against_handoff_folder(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        (self.work / "res").mkdir()
+        self.write("res/shared.yaml", "cache_resources: []\n")
+        report = self.write(
+            "orders.test-report.md",
+            handoff([("orders.yaml", sha(self.PIPE)),
+                     ("res/shared.yaml", sha("cache_resources: []\n"))]),
+        )
+        # Run from another folder that has its own, different orders.yaml.
+        (self.other_dir / "orders.yaml").write_text("something else\n")
+        code, out = self.check(report, cwd=self.other_dir)
+        self.assertEqual(code, 0, out)
+        self.assertEqual([i["state"] for i in out["data"]["inputs"]], ["match", "match"])
+        # And with the hand-off given as a relative path.
+        code, out = self.hash("--check", "work/orders.test-report.md", cwd=self._tmp.name)
+        self.assertEqual(code, 0, out)
+
+    def test_quoted_values(self) -> None:
+        text = handoff().replace("status: ready", "status: 'ready'").replace(
+            "format: test-report@1", 'format: "test-report@1"'
+        )
+        report = self.write("orders.test-report.md", text)
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["format"], "test-report@1")
+
+    def test_body_after_header_is_ignored(self) -> None:
+        text = handoff() + "\n---\nartifact: nonsense\n"
+        report = self.write("orders.test-report.md", text)
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+
+    # --- hash --check: verdict and pipeline_ready (decision B) --------------
+
+    def report_with_verdict(self, verdict_line: str | None) -> Path:
+        self.write("orders.yaml", self.PIPE)
+        body = "# orders: test report\n\n## Summary\n\n"
+        if verdict_line is not None:
+            body += verdict_line + "\n"
+        return self.write(
+            "orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))], body=body)
+        )
+
+    def test_verdict_pass_pipeline_ready(self) -> None:
+        code, out = self.check(self.report_with_verdict("**Verdict:** pass"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["verdict"], "pass")
+        self.assertTrue(out["data"]["pipeline_ready"])
+
+    def test_verdict_fail_report_ready_pipeline_not(self) -> None:
+        code, out = self.check(self.report_with_verdict("**Verdict:** fail"))
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["ready"])
+        self.assertEqual(out["data"]["verdict"], "fail")
+        self.assertFalse(out["data"]["pipeline_ready"])
+
+    def test_verdict_absent(self) -> None:
+        for line in (None, "**Verdict:** maybe", "Verdict: pass"):
+            with self.subTest(line=line):
+                code, out = self.check(self.report_with_verdict(line))
+                self.assertEqual(code, 0, out)
+                self.assertIsNone(out["data"]["verdict"])
+                self.assertFalse(out["data"]["pipeline_ready"])
+
+    def test_verdict_stale_pipeline(self) -> None:
+        report = self.report_with_verdict("**Verdict:** pass")
+        self.write("orders.yaml", self.PIPE + "output:\n  stdout: {}\n")
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["verdict"], "pass")
+        self.assertFalse(out["data"]["pipeline_ready"])
+
+    def test_verdict_without_pipeline_input(self) -> None:
+        self.write("other.yaml", self.PIPE)
+        report = self.write(
+            "orders.test-report.md",
+            handoff([("other.yaml", sha(self.PIPE))], body="**Verdict:** pass\n"),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertFalse(out["data"]["pipeline_ready"])
+
+    def test_verdict_only_for_test_reports(self) -> None:
+        report = self.write(
+            "orders.design.md",
+            handoff(artifact="design", fmt="design@1", body="**Verdict:** pass\n"),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertIsNone(out["data"]["verdict"])
+        self.assertFalse(out["data"]["pipeline_ready"])
+
+    @unittest.skipIf(os.geteuid() == 0, "root can read any file")
+    def test_unreadable_input(self) -> None:
+        pipe = self.write("orders.yaml", self.PIPE)
+        report = self.write("orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))]))
+        pipe.chmod(0)
+        try:
+            code, out = self.check(report)
+        finally:
+            pipe.chmod(0o644)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {})
+        self.assertEqual(out["errors"][0]["file"], str(pipe))
+        self.assertIn("cannot read", out["errors"][0]["message"])
+
+    # --- hash --check: bad headers (exit 2, with the line) -------------------
+
+    def test_missing_handoff(self) -> None:
+        missing = str(self.work / "orders.test-report.md")
+        code, out = self.check(Path(missing))
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {})
+        self.assertEqual(out["errors"][0]["file"], missing)
+        self.assertIn("not found", out["errors"][0]["message"])
+
+    def test_no_frontmatter(self) -> None:
+        self.assertBadHeader("# orders: test report\n", 1, "no frontmatter")
+
+    def test_empty_file(self) -> None:
+        self.assertBadHeader("", 1, "no frontmatter")
+
+    def test_unclosed_frontmatter(self) -> None:
+        text = handoff().split("\n---\n")[0] + "\n"
+        self.assertBadHeader(text, 9, "not closed")
+
+    def test_input_item_bad_indent(self) -> None:
+        text = handoff([("orders.yaml", sha(self.PIPE))]).replace(
+            "  - file: orders.yaml", "   - file: orders.yaml"
+        )
+        self.assertBadHeader(text, 9, "inputs")
+
+    def test_input_item_without_sha(self) -> None:
+        text = handoff([("orders.yaml", sha(self.PIPE))]).replace(
+            f"    sha256: {sha(self.PIPE)}\n", ""
+        )
+        self.assertBadHeader(text, 10, "sha256")
+
+    def test_input_item_flow_style(self) -> None:
+        text = handoff().replace(
+            "inputs: []", "inputs: [{file: orders.yaml, sha256: " + sha(self.PIPE) + "}]"
+        )
+        self.assertBadHeader(text, 8, "inputs")
+
+    def test_bad_hash(self) -> None:
+        for bad in ("abc", sha(self.PIPE).upper(), sha(self.PIPE)[:-1] + "g"):
+            with self.subTest(hash=bad):
+                self.assertBadHeader(handoff([("orders.yaml", bad)]), 10, "sha256")
+
+    def test_absolute_input_path(self) -> None:
+        text = handoff([(str(self.work / "orders.yaml"), sha(self.PIPE))])
+        self.assertBadHeader(text, 9, "relative")
+
+    def test_unknown_key(self) -> None:
+        text = handoff().replace("pipeline: orders", "pipeline: orders\nowner: me")
+        self.assertBadHeader(text, 5, "unknown key")
+
+    def test_duplicate_key(self) -> None:
+        text = handoff().replace("pipeline: orders", "pipeline: orders\npipeline: other")
+        self.assertBadHeader(text, 5, "duplicate")
+
+    def test_missing_key(self) -> None:
+        text = handoff().replace("rpcn_version: 4.115.0\n", "")
+        self.assertBadHeader(text, 9, "rpcn_version")
+
+    def test_bad_status(self) -> None:
+        self.assertBadHeader(handoff(status="done"), 5, "status")
+
+    def test_not_key_value(self) -> None:
+        text = handoff().replace("pipeline: orders", "pipeline orders")
+        self.assertBadHeader(text, 4, "key: value")
+
+    def test_empty_value(self) -> None:
+        text = handoff().replace("pipeline: orders", "pipeline:")
+        self.assertBadHeader(text, 4, "no value")
+
+    # --- the format docs' examples ------------------------------------------
+
+    def test_doc_example_report_is_ready_then_stale(self) -> None:
+        report_ex = doc_examples(FORMATS / "test-report-format.md")
+        design_ex = doc_examples(FORMATS / "design-format.md")
+        self.assertEqual(set(report_ex), {"orders.yaml", "orders.test-report.md"})
+        self.assertEqual(set(design_ex), {"orders.design.md"})
+        for name, text in {**report_ex, **design_ex}.items():
+            self.write(name, text)
+
+        code, out = self.check(self.work / "orders.test-report.md")
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["ready"])
+        self.assertEqual(out["data"]["verdict"], "pass")
+        self.assertTrue(out["data"]["pipeline_ready"])
+        self.assertEqual(
+            [(i["file"], i["state"]) for i in out["data"]["inputs"]],
+            [("orders.yaml", "match"), ("orders.design.md", "match")],
+        )
+        code, out = self.check(self.work / "orders.design.md")
+        self.assertEqual(code, 0, out)
+
+        self.write("orders.yaml", report_ex["orders.yaml"].replace("max_in_flight: 8", "max_in_flight: 1"))
+        code, out = self.check(self.work / "orders.test-report.md")
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual(out["data"]["inputs"][0]["state"], "changed")
+        self.assertFalse(out["data"]["pipeline_ready"])
+
+    def test_header_doc_example_matches_report_example(self) -> None:
+        report = doc_examples(FORMATS / "test-report-format.md")["orders.test-report.md"]
+        header = report.split("\n---\n", 1)[0] + "\n---\n"
+        self.assertIn(header, (FORMATS / "handoff-header.md").read_text())
+
 
 
 def _real_binaries() -> list[str]:
