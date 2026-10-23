@@ -3,7 +3,7 @@ title: 'rpcn_check lint: text parsing, exit codes and flags on both binaries'
 type: 'feature'
 ticket: '2'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: 'fbe04fe2092052034ed9f99bedbdb9851b58a936'
 route: 'full'
 route_source: 'auto'

@@ -3,7 +3,7 @@ title: 'Shared files synced into each skill with a drift check'
 type: 'feature'
 ticket: '3'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '9cb2ad170a674b6b25d110850f9ad3f775a81610'
 route: 'full'
 route_source: 'auto'
