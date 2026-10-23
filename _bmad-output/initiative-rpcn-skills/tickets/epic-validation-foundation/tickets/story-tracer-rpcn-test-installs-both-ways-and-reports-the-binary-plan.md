@@ -3,7 +3,7 @@ title: 'Tracer: rpcn-test installs both ways and reports the binary'
 type: 'feature'
 ticket: '1'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '363e3f34f58272b30fa3d41259efc0921bd70610'
 route: 'full'
 route_source: 'auto'
