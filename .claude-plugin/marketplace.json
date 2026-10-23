@@ -1,0 +1,14 @@
+{
+  "name": "rpcn-skills",
+  "description": "Redpanda Connect lifecycle skills from ajurcenk/rpcn-skills.",
+  "owner": {
+    "name": "ajurcenk"
+  },
+  "plugins": [
+    {
+      "name": "rpcn-skills",
+      "source": "./",
+      "description": "Lifecycle skills for Redpanda Connect pipelines, checked against your own rpk connect binary."
+    }
+  ]
+}

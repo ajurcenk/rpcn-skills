@@ -1,0 +1,3 @@
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-validation-foundation/tickets/story-tracer-rpcn-test-installs-both-ways-and-reports-the-binary-plan.md`
+  summary: Check whether `rpk connect --version` auto-downloads Redpanda Connect when the plugin is missing, which would make rpcn_check's read-only probe time out or install a plugin as a side effect.
+  evidence: Unverified (maybe-false, medium if true). The unit tests use a fake rpk that always fails. Settle it by running `rpk connect --version` on a machine where `rpk connect uninstall` has been run; if it downloads, skip the rpk probe when the plugin is absent (for example by checking rpk's plugin directory first).

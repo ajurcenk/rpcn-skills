@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+
+      - name: rpcn_check unit tests
+        run: uv run tools/shared/rpcn_check/tests/test_rpcn_check.py
+
+      - name: Skill copies match the canonical rpcn_check.py
+        run: cmp tools/shared/rpcn_check/rpcn_check.py skills/rpcn-test/scripts/rpcn_check.py
