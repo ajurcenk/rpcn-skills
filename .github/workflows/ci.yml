@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.0
 
       - name: rpcn_check unit tests
         run: uv run tools/shared/rpcn_check/tests/test_rpcn_check.py
