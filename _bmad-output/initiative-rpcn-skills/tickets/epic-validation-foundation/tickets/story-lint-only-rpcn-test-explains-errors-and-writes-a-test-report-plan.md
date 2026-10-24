@@ -3,7 +3,7 @@ title: 'Lint-only rpcn-test explains errors and writes a test report'
 type: 'feature'
 ticket: '5'
 created: '2026-10-23'
-status: 'built'
+status: done
 baseline_revision: '650bf257a5a0d2cc730c7969eba2562cbe9df192'
 route: 'full'
 route_source: 'auto'
