@@ -4,3 +4,6 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-validation-foundation/tickets/story-tracer-rpcn-test-installs-both-ways-and-reports-the-binary-plan.md`
   summary: Verify the Claude Code marketplace install (`claude plugin marketplace add ajurcenk/rpcn-skills`, then `claude plugin install rpcn-skills@rpcn-skills`) offers rpcn-test and that it triggers on "check my Redpanda Connect binary".
   evidence: Skipped by the user on 2026-10-23. Already shown: `claude plugin validate` passes, a `--plugin-dir` run triggered the skill, and `npx skills add ajurcenk/rpcn-skills --list` from GitHub lists only rpcn-test. Must pass before epic 1 closes, because epic 1's R1 covers both channels.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-validation-foundation/tickets/story-trigger-evals-and-the-accuracy-gate-for-rpcn-test-plan.md`
+  summary: AD-11's deprecated-component scan (epic 4) must not flag the plain phrase "Kafka Connect" in the trigger negative `evals/rpcn-test__miss_kafka_connect/prompt.md`, or that case must be exempt.
+  evidence: AD-11 names `kafka` as a deprecated example and scans eval prompts. The negative case is required by story 1.7's frozen intent.

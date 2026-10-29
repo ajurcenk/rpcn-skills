@@ -41,3 +41,6 @@ jobs:
 
       - name: sync_shared tests
         run: uv run tools/tests/test_sync_shared.py
+
+      - name: eval_gate tests
+        run: uv run tools/tests/test_eval_gate.py

@@ -14,3 +14,7 @@ __pycache__/
 .venv/
 .cache/
 .DS_Store
+
+# claude plugin eval output: its timestamped folders only. The eval-record files
+# evals/results/<date>-<skills-hash>.json (AD-14) are committed.
+evals/results/*/
