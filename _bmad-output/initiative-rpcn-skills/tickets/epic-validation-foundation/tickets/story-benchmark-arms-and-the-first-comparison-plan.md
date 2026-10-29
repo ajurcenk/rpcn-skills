@@ -3,7 +3,7 @@ title: 'Benchmark arms and the first comparison'
 type: 'feature'
 ticket: '10'
 created: '2026-10-29'
-status: 'built'
+status: done
 baseline_revision: '6c027ecbe57ed5c3d73f3e07782cebb877a24a1e'
 route: 'full'
 route_source: 'auto'
