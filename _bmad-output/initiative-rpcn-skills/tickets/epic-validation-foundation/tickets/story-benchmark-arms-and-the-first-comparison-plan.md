@@ -142,6 +142,9 @@ Every arm is scored with the same arm-neutral checks, and one blind quality judg
   - **Judge's notes:** ours "avoids listing component fields from memory" and confirms that its fixes lint clean. Every other arm invented fields; connect-plugin and bare did so the most.
   - **Observed:** the comparison table and the `winner:` line are printed twice.
 - **After the review fixes:** rpcn-test-skills commit `fb88bbf`, 108 unit tests pass. The first comparison's judge rank came before redaction, so it may have been influenced by names in the reply text. Re-judging the saved replies is the follow-up offered to the user.
+- **Blind re-judge** of the saved replies, with redaction (user chose option (a)). These are rpcn-test-skills commits `ec9bcbe` (`--rejudge`) and `91f8497` (one retry on invalid judge JSON), with 116 tests.
+  - **First attempt** (`rejudge-20261029-141306.json`): the ranking was valid and identical (ours > skills-repo > connect-plugin > bare), but the JSON was malformed, so the runner fell back to cost. That's what prompted the retry fix.
+  - **After the fix** (`rejudge-20261029-142111.json`): exit 0, the same ranking, `winner: ours (tie on errors_found, judge rank)`, decided under a fully blind judge.
 
 ## Review Triage Log
 
