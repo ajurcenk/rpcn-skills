@@ -9,7 +9,9 @@ metadata:
 
 # rpcn-test
 
-Call the binary only through the bundled script. Never edit the pipeline YAML:
+Call the binary only through the bundled script, one `uv run …/rpcn_check.py`
+command per Bash call: no `cd`, `&&`, `;`, variables, `cat` or heredocs. Read
+and write files with the Read and Write tools. Never edit the pipeline YAML:
 propose fixes as diffs.
 
 **Headless** when the prompt says the run is unattended, headless or
