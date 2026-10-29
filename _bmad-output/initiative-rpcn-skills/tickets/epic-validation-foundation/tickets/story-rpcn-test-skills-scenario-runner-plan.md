@@ -3,7 +3,7 @@ title: 'rpcn-test-skills scenario runner'
 type: 'feature'
 ticket: '6'
 created: '2026-10-29'
-status: 'built'
+status: done
 baseline_revision: '651b7bf4f3fb5f30d4bc2e9777025e537784b5b1'
 route: 'full'
 route_source: 'auto'
