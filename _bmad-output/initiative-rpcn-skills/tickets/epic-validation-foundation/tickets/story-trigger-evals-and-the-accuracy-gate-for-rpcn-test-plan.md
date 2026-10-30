@@ -3,7 +3,7 @@ title: 'Trigger evals and the accuracy gate for rpcn-test'
 type: 'feature'
 ticket: '7'
 created: '2026-10-29'
-status: 'built'
+status: done
 baseline_revision: '6290d06b5848aa2b847ad5fe5c34f0724220750d'
 route: 'full'
 route_source: 'auto'
