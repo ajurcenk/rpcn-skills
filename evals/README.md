@@ -52,6 +52,41 @@ uv run tools/eval_gate.py <out>.json
 To try a single case, add `--case 'rpcn-test__trigger_lint_pipeline' --runs 1`.
 The gate rejects such a file (exit 2), because it needs the full suite.
 
+## Recording a run
+
+Every change that affects a skill (anything under `skills/`) carries an eval
+record (R12, AD-14). CI does not run evals; it only checks that a passing
+record exists for the exact skill content.
+
+```
+uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 3] [--with-compare]
+```
+
+It runs, in order: the skills hash, the trigger suite above, the gate, and
+the `rpcn-test-skills` pass scenarios (`run_scenarios.py --source local:<this
+repo>`). `--with-compare` adds the comparison scenarios (`[compare] enabled =
+true`, about +$4). A passing run writes
+`evals/results/<YYYY-MM-DD>-<skills-hash12>.json`. A failing run still writes
+its record, as `<YYYY-MM-DD>-<skills-hash12>.failed-<HHMMSS>.json`: the check
+ignores that name, so a failed re-run never replaces a passing record. `passed`
+is true only when the gate is ok, every scenario passed and `run_scenarios.py`
+exited 0 with no crashed comparison arm. Exit 0 passed, 1 not passed, 2 setup
+error (no record).
+
+A record can pass only with `--runs` 3 or more, because the gate requires 3
+runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
+
+- **Commit the record** with the change. CI's step `Eval record matches the
+  skills (R12)` runs `uv run tools/eval_record_check.py` and fails unless a
+  record with the current skills hash and `passed: true` is committed.
+- **The skills hash** is the sha256 over every git-trackable file under
+  `skills/` (path, NUL, file sha256, newline, in path order; no
+  `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
+  don't change it, so they need no new record. Any byte under `skills/` does.
+- **Cost:** about $4.20 for a default run (trigger suite ~$3.30, the
+  `rpcn-test__lint_broken` scenario x 3 ~$0.90). The record's `cost_usd`
+  holds the measured total.
+
 ## The gate
 
 `tools/eval_gate.py <aggregate-result.json> [--min-accuracy 0.9] [--min-runs 3]` counts every
