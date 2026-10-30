@@ -1,0 +1,10 @@
+input:
+  stdin: {}
+
+pipeline:
+  processors:
+    - mapping: 'root.doubled = this.n * 2'
+
+output:
+  stdout:
+    codec: lines

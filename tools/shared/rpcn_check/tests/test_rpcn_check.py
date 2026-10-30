@@ -25,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 import unittest
 from pathlib import Path
 
@@ -1052,6 +1053,609 @@ class HashTest(CheckTestBase):
 
 
 
+# --- blobl, list, fields, run, test: fake binary ------------------------------
+
+_FAKE_TOOL = """\
+import json, os, re, sys, time
+log = sys.argv[1]
+args = sys.argv[2:]
+if args[:2] == ["connect", "--version"]:
+    print("Version: 4.112.0")
+    sys.exit(0)
+stdin = "" if sys.stdin is None or sys.stdin.closed else sys.stdin.read()
+with open(os.path.join(log, "calls.jsonl"), "a") as fh:
+    fh.write(json.dumps({"argv": args, "stdin": stdin, "no_color": os.environ.get("NO_COLOR")}) + "\\n")
+with open(os.path.join(log, "spec.json")) as fh:
+    spec = json.load(fh)
+joined = " ".join(args[1:])
+for rule in spec:
+    if re.search(rule["match"], joined):
+        for stream, text in rule.get("out", []):
+            out = sys.stdout if stream == "O" else sys.stderr
+            out.write(text)
+            out.flush()
+        if rule.get("echo_stdin"):
+            sys.stdout.write(stdin)
+            sys.stdout.flush()
+        if rule.get("sleep"):
+            time.sleep(rule["sleep"])
+        sys.exit(rule.get("exit", 0))
+sys.stderr.write("fake: no rule for " + joined + "\\n")
+sys.exit(99)
+"""
+
+
+def fake_tool_rpk(directory: Path, log_dir: Path, spec: list[dict]) -> Path:
+    """An `rpk` at 4.112.0 that answers `connect <...>` from spec rules.
+
+    Each rule is {"match": regex on the args after `connect`, "out": [["O"|"E",
+    text], ...], "exit": int, "sleep": seconds, "echo_stdin": bool}; the first
+    match wins. Every call is logged to log_dir/calls.jsonl with argv, stdin
+    and NO_COLOR.
+    """
+    (log_dir / "spec.json").write_text(json.dumps(spec))
+    script = log_dir / "fake_tool.py"
+    script.write_text(_FAKE_TOOL)
+    return write_exe(directory, "rpk", f'exec "{sys.executable}" -I "{script}" "{log_dir}" "$@"\n')
+
+
+def _json_full(category: str, components: list[dict]) -> str:
+    return json.dumps({"version": "4.112.0", "date": "x", "config": [], category: components, "outputs": []})
+
+
+GENERATE_JSON_FULL = {
+    "name": "generate",
+    "type": "input",
+    "status": "stable",
+    "config": {
+        "name": "",
+        "type": "object",
+        "kind": "scalar",
+        "children": [
+            {"name": "mapping", "type": "string", "kind": "scalar", "description": "A mapping.\nMore text.", "bloblang": True},
+            {"name": "interval", "type": "string", "kind": "scalar", "description": "The interval.", "default": "1s"},
+            {"name": "count", "type": "int", "kind": "scalar", "description": "", "default": 0, "is_advanced": True},
+            {"name": "label", "type": "string", "kind": "scalar", "description": "x", "is_optional": True},
+        ],
+    },
+}
+NESTED_JSON_FULL = {
+    "name": "http_client",
+    "type": "input",
+    "status": "beta",
+    "config": {
+        "type": "object",
+        "kind": "scalar",
+        "children": [
+            {"name": "url", "type": "string", "kind": "scalar", "description": "URL"},
+            {
+                "name": "tls", "type": "object", "kind": "scalar", "description": "TLS", "is_advanced": True,
+                "children": [
+                    {"name": "enabled", "type": "bool", "kind": "scalar", "description": "On", "default": False},
+                    {
+                        "name": "client_certs", "type": "object", "kind": "array", "default": [],
+                        "children": [
+                            {"name": "password", "type": "string", "kind": "scalar", "default": "", "is_secret": True},
+                        ],
+                    },
+                ],
+            },
+            {
+                "name": "headers", "type": "object", "kind": "map",
+                "children": [{"name": "value", "type": "string", "kind": "scalar", "is_deprecated": True}],
+            },
+        ],
+    },
+}
+
+
+# Answers the unfiltered `list --format json` that `list` and `fields` use to check the category.
+CATEGORIES_RULE = {
+    "match": "^list --format json$",
+    "out": [["O", json.dumps({"inputs": [], "outputs": [], "processors": []})]],
+}
+
+
+class ToolCheckBase(CheckTestBase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.work = Path(self._tmp.name) / "work"
+        self.log = Path(self._tmp.name) / "log"
+        self.work.mkdir()
+        self.log.mkdir()
+
+    def make(self, name: str, text: str = "x\n") -> str:
+        path = self.work / name
+        path.write_text(text)
+        return str(path)
+
+    def fake(self, *rules: dict) -> None:
+        fake_tool_rpk(self.path_dir, self.log, [*rules, CATEGORIES_RULE])
+
+    def run_in_process(self, *args: str, **constants: object) -> tuple[int, dict]:
+        """Run main() in-process with module constants overridden (for short timeouts)."""
+        spec = importlib.util.spec_from_file_location("rpcn_check_under_test", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for name, value in constants.items():
+            setattr(module, name, value)
+        out_buf = io.StringIO()
+        saved = dict(os.environ)
+        try:
+            os.environ.clear()
+            os.environ.update({"PATH": str(self.path_dir), "HOME": self._tmp.name})
+            with contextlib.redirect_stdout(out_buf):
+                code = module.main(list(args))
+        finally:
+            os.environ.clear()
+            os.environ.update(saved)
+        out = json.loads(out_buf.getvalue())
+        self.assertEnvelope(out, args[0])
+        return code, out
+
+    def calls(self) -> list[dict]:
+        f = self.log / "calls.jsonl"
+        return [json.loads(line) for line in f.read_text().splitlines()] if f.exists() else []
+
+    def cmd(self, command: str, *args: str) -> tuple[int, dict]:
+        code, out = self.run_check(command, *args)
+        self.assertEnvelope(out, command)
+        self.assertEqual(out["ok"], code == 0, out)
+        return code, out
+
+    def assertNoForbiddenFlags(self) -> None:
+        for call in self.calls():
+            for flag in ("-v", "--verbose", "-", "--chilled"):
+                self.assertNotIn(flag, call["argv"])
+            self.assertEqual(call["no_color"], "1")
+
+
+class BloblTest(ToolCheckBase):
+    def test_ok(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", '{"doubled":2}\n']]})
+        m = self.make("double.blobl", "root.doubled = this.n * 2\n")
+        i = self.make("one.jsonl", '{"n":1}\n')
+        code, out = self.cmd("blobl", m, "--input", i)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            out["data"], {"mapping": m, "results": [{"line": 1, "output": '{"doubled":2}', "error": None}]}
+        )
+        self.assertEqual(self.calls()[0]["argv"], ["connect", "blobl", "--file", m, "--input", i])
+        self.assertNoForbiddenFlags()
+
+    def test_bad_line(self) -> None:
+        self.fake(
+            {
+                "match": "^blobl",
+                "out": [
+                    ["O", '{"doubled":2}\n'],
+                    ["E", "failed to execute map: parse as json: invalid character\n"],
+                    ["O", '{"doubled":6}\n'],
+                ],
+            }
+        )
+        m = self.make("double.blobl")
+        i = self.make("samples.jsonl", '{"n":1}\nnotjson\n{"n":3}\n')
+        code, out = self.cmd("blobl", m, "--input", i)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["data"]["results"],
+            [
+                {"line": 1, "output": '{"doubled":2}', "error": None},
+                {"line": 2, "output": None, "error": "parse as json: invalid character"},
+                {"line": 3, "output": '{"doubled":6}', "error": None},
+            ],
+        )
+        self.assertEqual(
+            out["errors"],
+            [{"file": i, "line": 2, "column": None, "message": "parse as json: invalid character"}],
+        )
+
+    def test_bad_mapping(self) -> None:
+        self.fake(
+            {
+                "match": "^blobl",
+                "out": [["E", "failed to parse mapping: line 2 char 1: required: expected query\n  |\n2 | x\n  | ^---\n"]],
+                "exit": 1,
+            }
+        )
+        m = self.make("bad.blobl")
+        code, out = self.cmd("blobl", m)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["errors"], [{"file": m, "line": 2, "column": 1, "message": "required: expected query"}]
+        )
+        self.assertEqual(out["data"], {"mapping": m, "results": []})
+
+    def test_no_input_stdin_empty(self) -> None:
+        self.fake({"match": "^blobl", "out": []})
+        m = self.make("double.blobl")
+        env = self.make("x.env", "A=1\n")
+        code, out = self.cmd("blobl", m, "--env-file", env)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["results"], [])
+        call = self.calls()[0]
+        self.assertEqual(call["argv"], ["connect", "blobl", "--env-file", env, "--file", m])
+        self.assertEqual(call["stdin"], "")
+
+    def test_multiline_output_falls_back_to_one_run_per_line(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", "a\nb\n"]]})
+        m = self.make("nl.blobl")
+        # The fake prints two lines per run, so three input lines cannot be matched by position.
+        i = self.make("three.jsonl", '{"n":1}\n{"n":2}\n{"n":3}')
+        code, out = self.cmd("blobl", m, "--input", i)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            out["data"]["results"],
+            [{"line": n, "output": "a\nb", "error": None} for n in (1, 2, 3)],
+        )
+        calls = self.calls()
+        self.assertEqual(len(calls), 4)
+        self.assertEqual([c["stdin"] for c in calls[1:]], ['{"n":1}\n', '{"n":2}\n', '{"n":3}\n'])
+        self.assertNotIn("--input", calls[1]["argv"])
+
+    def test_fallback_shares_one_budget(self) -> None:
+        """The first run and the per-line re-runs share one CHECK_TIMEOUT_S budget."""
+        self.fake({"match": "^blobl", "out": [["O", "a\nb\n"]], "sleep": 1.2})
+        m = self.make("nl.blobl")
+        i = self.make("one.jsonl", '{"n":1}\n')
+        started = time.monotonic()
+        code, out = self.run_in_process("blobl", m, "--input", i, CHECK_TIMEOUT_S=2)
+        self.assertLess(time.monotonic() - started, 3.5)
+        self.assertEqual(code, 2, out)
+        self.assertIn("timed out after 2s", out["errors"][0]["message"])
+
+    def test_fallback_nonzero_exit_is_line_error(self) -> None:
+        self.fake(
+            {"match": "^blobl --file \\S+ --input", "out": [["O", "a\nb\n"]]},
+            {"match": "^blobl", "out": [["E", "panic: boom\n"]], "exit": 2},
+        )
+        m = self.make("nl.blobl")
+        i = self.make("one.jsonl", '{"n":1}\n')
+        code, out = self.cmd("blobl", m, "--input", i)
+        self.assertEqual(code, 1, out)
+        result = out["data"]["results"][0]
+        self.assertIsNone(result["output"])
+        self.assertIn("exited 2", result["error"])
+        self.assertIn("panic: boom", result["error"])
+        self.assertEqual((out["errors"][0]["file"], out["errors"][0]["line"]), (i, 1))
+
+    def test_silent_failure(self) -> None:
+        self.fake({"match": "^blobl", "exit": 3})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m)
+        self.assertEqual(code, 2, out)
+        self.assertIn("exited 3 with no output", out["errors"][0]["message"])
+        self.assertEqual(out["errors"][0]["file"], m)
+
+    def test_missing_files(self) -> None:
+        self.fake({"match": "^blobl"})
+        m = self.make("double.blobl")
+        for args in ([str(self.work / "nope.blobl")], [m, "--input", str(self.work / "no.jsonl")],
+                     [m, "--env-file", str(self.work / "no.env")]):
+            with self.subTest(args=args):
+                code, out = self.cmd("blobl", *args)
+                self.assertEqual(code, 2, out)
+                self.assertIsNone(out["binary"])
+                self.assertIn("not found", out["errors"][0]["message"])
+                self.assertTrue(out["errors"][0]["file"].startswith(str(self.work)))
+        self.assertEqual(self.calls(), [], "binary must not run")
+
+
+class ListTest(ToolCheckBase):
+    def test_list(self) -> None:
+        self.fake({"match": "inputs$", "out": [["O", json.dumps({"inputs": ["generate", "stdin"]})]]})
+        code, out = self.cmd("list", "inputs")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"], {"category": "inputs", "components": ["generate", "stdin"]})
+        self.assertEqual(self.calls()[-1]["argv"], ["connect", "list", "--format", "json", "inputs"])
+        self.assertNoForbiddenFlags()
+
+    def test_status(self) -> None:
+        self.fake({"match": "inputs$", "out": [["O", json.dumps({"inputs": ["subprocess"]})]]})
+        code, out = self.cmd("list", "inputs", "--status", "beta")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            self.calls()[-1]["argv"], ["connect", "list", "--format", "json", "--status", "beta", "inputs"]
+        )
+
+    def test_valid_category_absent_from_filtered_output(self) -> None:
+        self.fake({"match": "--status experimental outputs$", "out": [["O", "{}"]]})
+        code, out = self.cmd("list", "outputs", "--status", "experimental")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"], {"category": "outputs", "components": []})
+        self.assertEqual(self.calls()[0]["argv"], ["connect", "list", "--format", "json"])
+
+    def test_bad_status_is_usage_error(self) -> None:
+        self.fake({"match": "."})
+        code, out = self.run_check("list", "inputs", "--status", "nope")
+        self.assertEqual(code, 2, out)
+        self.assertEqual(self.calls(), [])
+
+    def test_bad_category(self) -> None:
+        self.fake(
+            {"match": "nope$", "out": [["O", "{}"]]},
+            {"match": "json$", "out": [["O", json.dumps({"inputs": [], "outputs": []})]]},
+        )
+        code, out = self.cmd("list", "nope")
+        self.assertEqual(code, 2, out)
+        self.assertIn("unknown category 'nope'", out["errors"][0]["message"])
+        self.assertIn("inputs, outputs", out["errors"][0]["message"])
+        self.assertEqual(out["data"], {"category": "nope", "components": []})
+
+    def test_invalid_json(self) -> None:
+        self.fake({"match": ".", "out": [["O", "not json"]]})
+        code, out = self.cmd("list", "inputs")
+        self.assertEqual(code, 2, out)
+        self.assertIn("invalid JSON", out["errors"][0]["message"])
+
+
+class FieldsTest(ToolCheckBase):
+    def test_known(self) -> None:
+        self.fake({"match": "json-full inputs$", "out": [["O", _json_full("inputs", [GENERATE_JSON_FULL])]]})
+        code, out = self.cmd("fields", "inputs", "generate")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["category"], "inputs")
+        self.assertEqual(out["data"]["component"], "generate")
+        self.assertEqual(out["data"]["status"], "stable")
+        f = {x["path"]: x for x in out["data"]["fields"]}
+        self.assertEqual(
+            f["mapping"],
+            {"path": "mapping", "type": "string", "kind": "scalar", "required": True,
+             "advanced": False, "deprecated": False, "secret": False, "description": "A mapping."},
+        )
+        self.assertEqual(f["interval"]["default"], "1s")
+        self.assertFalse(f["interval"]["required"])
+        self.assertEqual(f["count"]["default"], 0)
+        self.assertTrue(f["count"]["advanced"])
+        self.assertFalse(f["label"]["required"])
+        self.assertNotIn("default", f["label"])
+        self.assertEqual(
+            self.calls()[-1]["argv"], ["connect", "list", "--format", "json-full", "inputs"]
+        )
+
+    def test_nested(self) -> None:
+        self.fake({"match": "json-full inputs$", "out": [["O", _json_full("inputs", [NESTED_JSON_FULL])]]})
+        code, out = self.cmd("fields", "inputs", "http_client")
+        self.assertEqual(code, 0, out)
+        paths = [x["path"] for x in out["data"]["fields"]]
+        self.assertEqual(
+            paths,
+            ["url", "tls", "tls.enabled", "tls.client_certs", "tls.client_certs[].password",
+             "headers", "headers.*.value"],
+        )
+        f = {x["path"]: x for x in out["data"]["fields"]}
+        self.assertTrue(f["tls.client_certs[].password"]["secret"])
+        self.assertTrue(f["headers.*.value"]["deprecated"])
+        self.assertTrue(f["url"]["required"])
+        self.assertEqual(f["tls.enabled"]["default"], False)
+
+    def test_unknown(self) -> None:
+        comps = [{"name": n, "config": {}} for n in ("kafka", "kafka_franz", "stdin")]
+        self.fake({"match": "json-full inputs$", "out": [["O", _json_full("inputs", comps)]]})
+        code, out = self.cmd("fields", "inputs", "nope")
+        self.assertEqual(code, 1, out)
+        self.assertIn("not found", out["errors"][0]["message"])
+        self.assertEqual(out["data"]["components"], [])
+        code, out = self.cmd("fields", "inputs", "kafka_fr")
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["components"], ["kafka_franz", "kafka"])
+
+    def test_unknown_category(self) -> None:
+        self.fake(
+            {"match": "json-full", "out": [["O", _json_full("inputs", [])]]},
+            {"match": "json$", "out": [["O", json.dumps({"inputs": []})]]},
+        )
+        for category in ("nope", "config"):
+            with self.subTest(category=category):
+                code, out = self.cmd("fields", category, "x")
+                self.assertEqual(code, 2, out)
+                self.assertIn("unknown category", out["errors"][0]["message"])
+                self.assertEqual(
+                    out["data"], {"category": category, "component": "x", "status": None, "fields": []}
+                )
+
+
+class RunTest(ToolCheckBase):
+    def test_ok(self) -> None:
+        self.fake({"match": "^run", "echo_stdin": True, "out": [["E", 'level=info msg="Launching"\n']]})
+        c = self.make("p[1].yaml")
+        i = self.make("in.jsonl", '{"n":1}\n{"n":2}\n')
+        r = self.make("r[1].yaml")
+        e = self.make("x.env")
+        code, out = self.cmd("run", c, "--input", i, "--resources", r, "--resources", r, "--env-file", e)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"], {"config": c, "outputs": ['{"n":1}', '{"n":2}'], "exit": 0})
+        call = self.calls()[0]
+        self.assertEqual(
+            call["argv"],
+            ["connect", "run", "--set", "http.enabled=false", "--resources",
+             str(self.work / "r\\[1\\].yaml"), "--env-file", e, c],
+        )
+        self.assertEqual(call["stdin"], '{"n":1}\n{"n":2}\n')
+        self.assertNoForbiddenFlags()
+
+    def test_no_input_stdin_empty(self) -> None:
+        self.fake({"match": "^run"})
+        code, out = self.cmd("run", self.make("p.yaml"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.calls()[0]["stdin"], "")
+        self.assertEqual(out["data"]["outputs"], [])
+
+    def test_lint_error(self) -> None:
+        c = self.make("p.yaml")
+        line = (
+            'time="t" level=error msg="Config lint error" @service=redpanda-connect '
+            f'lint="{c}(5,28) required: expected \\"x\\""\n'
+        )
+        self.fake({"match": "^run", "out": [["E", line + 'level=error msg="shutting down"\n']], "exit": 1})
+        code, out = self.cmd("run", c)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["errors"], [{"file": c, "line": 5, "column": 28, "message": 'required: expected "x"'}]
+        )
+        self.assertEqual(out["data"]["exit"], 1)
+
+    def test_other_failure_carries_stderr_tail(self) -> None:
+        self.fake({"match": "^run", "out": [["E", "boom one\nboom two\n"]], "exit": 3})
+        code, out = self.cmd("run", self.make("p.yaml"))
+        self.assertEqual(code, 1, out)
+        self.assertIn("exited 3", out["errors"][0]["message"])
+        self.assertIn("boom two", out["errors"][0]["message"])
+        self.assertEqual(out["data"]["exit"], 3)
+
+    def test_timeout(self) -> None:
+        self.fake({"match": "^run", "out": [["O", "first\nsecond\n"]], "sleep": 30})
+        code, out = self.cmd("run", self.make("p.yaml"), "--timeout", "2")
+        self.assertEqual(code, 2, out)
+        self.assertIn("timed out after 2s", out["errors"][0]["message"])
+        self.assertEqual(out["data"]["outputs"], ["first", "second"])
+        self.assertIsNone(out["data"]["exit"])
+
+    def test_bad_timeout(self) -> None:
+        self.fake({"match": "."})
+        for value in ("0", "-1", "abc"):
+            with self.subTest(value=value):
+                code, out = self.run_check("run", self.make("p.yaml"), "--timeout", value)
+                self.assertEqual(code, 2, out)
+        self.assertEqual(self.calls(), [])
+
+    def test_missing_files(self) -> None:
+        self.fake({"match": "."})
+        c = self.make("p.yaml")
+        nope = str(self.work / "nope")
+        for args in ([nope], [c, "--input", nope], [c, "--resources", nope], [c, "--env-file", nope]):
+            with self.subTest(args=args):
+                code, out = self.cmd("run", *args)
+                self.assertEqual(code, 2, out)
+                self.assertEqual(out["errors"][0]["file"], nope)
+                self.assertIsNone(out["binary"])
+        self.assertEqual(self.calls(), [])
+
+
+_ESC = "\x1b[0;33m"
+_RST = "\x1b[0m"
+TEST_FAIL_OUT = (
+    "Test 'p.yaml' failed\n\nFailures:\n\n--- p.yaml ---\n\n"
+    "wrong [line 7]:\nbatch 0 message 0: json_equals: JSON content mismatch\n"
+    f'{{\n    "doubled": {_ESC}4 => 5{_RST}\n}}\n'
+)
+
+
+class TestCmdTest(ToolCheckBase):
+    def test_pass_fail(self) -> None:
+        self.fake({"match": "^test", "out": [["O", TEST_FAIL_OUT]], "exit": 1})
+        t = self.make("p_benthos_test.yaml")
+        code, out = self.cmd("test", t)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["targets"], [{"file": "p.yaml", "passed": False}])
+        self.assertEqual(out["data"]["passed"], 0)
+        self.assertEqual(out["data"]["failed"], 1)
+        self.assertEqual(
+            out["data"]["failures"],
+            [{"target": "p.yaml", "case": "wrong", "line": 7,
+              "message": 'batch 0 message 0: json_equals: JSON content mismatch\n{\n    "doubled": 4 => 5\n}'}],
+        )
+        self.assertEqual(out["errors"][0]["file"], "p.yaml")
+        self.assertIn("wrong [line 7]", out["errors"][0]["message"])
+        self.assertNoForbiddenFlags()
+
+    def test_several_targets_and_cases(self) -> None:
+        text = (
+            "Test 'a.yaml' succeeded\nTest 'p.yaml' failed\nTest 'q.yaml' failed\n\nFailures:\n\n"
+            "--- p.yaml ---\n\nwrong [line 7]:\ndetail p\n\n"
+            "--- q.yaml ---\n\none [line 2]:\ndetail one\n\ntwo:\nwrong batch count\nsecond line\n"
+        )
+        self.fake({"match": "^test", "out": [["O", text]], "exit": 1})
+        code, out = self.cmd("test", self.make("t.yaml"))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["data"]["targets"],
+            [{"file": "a.yaml", "passed": True}, {"file": "p.yaml", "passed": False},
+             {"file": "q.yaml", "passed": False}],
+        )
+        self.assertEqual((out["data"]["passed"], out["data"]["failed"]), (1, 2))
+        self.assertEqual(
+            [(f["target"], f["case"], f["line"], f["message"]) for f in out["data"]["failures"]],
+            [("p.yaml", "wrong", 7, "detail p"), ("q.yaml", "one", 2, "detail one"),
+             ("q.yaml", "two", None, "wrong batch count\nsecond line")],
+        )
+
+    def test_all_pass(self) -> None:
+        self.fake({"match": "^test", "out": [["O", "Test 'ok.yaml' succeeded\n"]]})
+        r = self.make("r[1].yaml")
+        e = self.make("x.env")
+        t = self.make("ok[1]_benthos_test.yaml")
+        code, out = self.cmd("test", t, "--resources", r, "--env-file", e)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(
+            out["data"],
+            {"targets": [{"file": "ok.yaml", "passed": True}], "failures": [], "passed": 1, "failed": 0},
+        )
+        self.assertEqual(
+            self.calls()[0]["argv"],
+            ["connect", "test", "--resources", str(self.work / "r\\[1\\].yaml"), "--env-file", e,
+             str(self.work / "ok\\[1\\]_benthos_test.yaml")],
+        )
+
+    def test_init_failure(self) -> None:
+        self.fake(
+            {"match": "^test", "out": [["E", "Failed to execute test target 'p.yaml': test case 0 failed: boom\n"]],
+             "exit": 1}
+        )
+        code, out = self.cmd("test", self.make("p_benthos_test.yaml"))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["targets"], [{"file": "p.yaml", "passed": False}])
+        self.assertEqual(out["data"]["failed"], 1)
+        self.assertEqual(out["errors"][0]["file"], "p.yaml")
+        self.assertIn("boom", out["errors"][0]["message"])
+
+    def test_none(self) -> None:
+        self.fake({"match": "^test", "out": [["O", "No tests were found\n"]], "exit": 1})
+        t = self.make("p.yaml")
+        code, out = self.cmd("test", t)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["errors"], [{"file": t, "line": None, "column": None, "message": "No tests were found"}])
+
+    def test_silent_failure(self) -> None:
+        self.fake({"match": "^test", "exit": 4})
+        code, out = self.cmd("test", self.make("p.yaml"))
+        self.assertEqual(code, 2, out)
+        self.assertIn("exited 4", out["errors"][0]["message"])
+
+    def test_missing_files(self) -> None:
+        self.fake({"match": "."})
+        t = self.make("p.yaml")
+        nope = str(self.work / "nope")
+        for args in ([nope], [t, "--resources", nope], [t, "--env-file", nope]):
+            with self.subTest(args=args):
+                code, out = self.cmd("test", *args)
+                self.assertEqual(code, 2, out)
+                self.assertEqual(out["errors"][0]["file"], nope)
+                self.assertIsNone(out["binary"])
+        self.assertEqual(self.calls(), [])
+
+
+class NewCommandsEnvTest(ToolCheckBase):
+    """The shared lookup and version floor apply to every new subcommand."""
+
+    def test_too_old_and_missing_binary(self) -> None:
+        m = self.make("m.blobl")
+        cases = [("blobl", m), ("list", "inputs"), ("fields", "inputs", "generate"), ("run", m), ("test", m)]
+        fake_rpk(self.path_dir, "Version: 4.99.0")
+        for args in cases:
+            with self.subTest(args=args, binary="too old"):
+                code, out = self.cmd(*args)
+                self.assertEqual(code, 2, out)
+                self.assertEqual(out["binary"]["version"], "4.99.0")
+        (self.path_dir / "rpk").unlink()
+        for args in cases:
+            with self.subTest(args=args, binary="none"):
+                code, out = self.cmd(*args)
+                self.assertEqual(code, 2, out)
+                self.assertIsNone(out["binary"])
+
+
 def _real_binaries() -> list[str]:
     raw = os.environ.get("RPCN_TEST_BINARIES", "")
     return [os.path.abspath(p) for p in raw.split(os.pathsep) if p.strip()]
@@ -1137,6 +1741,172 @@ class RealBinaryLintTest(unittest.TestCase):
                 self.assertEqual(code, 2, out)
                 self.assertEqual(out["errors"][0]["file"], "does-not-exist.yaml")
                 self.assertIsNone(out["binary"], "binary must not run")
+
+
+
+@unittest.skipUnless(
+    _real_binaries(),
+    "real-binary tests skipped: set RPCN_TEST_BINARIES to binary paths (see tools/fetch_rpcn.py)",
+)
+class RealBinaryCommandsTest(unittest.TestCase):
+    """blobl, list, fields, run and test on each binary in RPCN_TEST_BINARIES."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def check(self, binary: str, *args: str, timeout: int = 120) -> tuple[int, dict]:
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), *args],
+            capture_output=True,
+            text=True,
+            cwd=FIXTURES,
+            env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", ""), "RPCN_BINARY": binary},
+            timeout=timeout,
+        )
+        try:
+            out = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            self.fail(f"stdout is not JSON:\n{proc.stdout}\nstderr:\n{proc.stderr}")
+        self.assertEqual(out["command"], args[0])
+        self.assertEqual(out["ok"], proc.returncode == 0, out)
+        return proc.returncode, out
+
+    def each(self):
+        for binary in _real_binaries():
+            with self.subTest(binary=binary):
+                yield binary
+
+    def test_blobl(self) -> None:
+        one = self.tmp / "one.jsonl"
+        one.write_text('{"n":21}\n')
+        for b in self.each():
+            code, out = self.check(b, "blobl", "double.blobl", "--input", str(one))
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["results"], [{"line": 1, "output": '{"doubled":42}', "error": None}])
+
+            code, out = self.check(b, "blobl", "double.blobl", "--input", "samples.jsonl")
+            self.assertEqual(code, 1, out)
+            results = out["data"]["results"]
+            self.assertEqual([r["line"] for r in results], [1, 2, 3])
+            self.assertEqual(results[0]["output"], '{"doubled":2}')
+            self.assertIsNone(results[1]["output"])
+            self.assertIn("json", results[1]["error"])
+            self.assertEqual(results[2]["output"], '{"doubled":6}')
+            self.assertEqual([(e["file"], e["line"]) for e in out["errors"]], [("samples.jsonl", 2)])
+
+            code, out = self.check(b, "blobl", "bad.blobl")
+            self.assertEqual(code, 1, out)
+            self.assertEqual(len(out["errors"]), 1)
+            err = out["errors"][0]
+            self.assertEqual((err["file"], err["line"]), ("bad.blobl", 2))
+            self.assertIsInstance(err["column"], int)
+
+            code, out = self.check(b, "blobl", "double.blobl")
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["results"], [])
+
+    def test_list(self) -> None:
+        for b in self.each():
+            code, out = self.check(b, "list", "inputs")
+            self.assertEqual(code, 0, out)
+            self.assertIn("generate", out["data"]["components"])
+            self.assertIn("stdin", out["data"]["components"])
+            code, out = self.check(b, "list", "inputs", "--status", "stable")
+            self.assertEqual(code, 0, out)
+            self.assertIn("generate", out["data"]["components"])
+            code, out = self.check(b, "list", "nope")
+            self.assertEqual(code, 2, out)
+            self.assertIn("inputs", out["errors"][0]["message"])
+
+    def test_fields(self) -> None:
+        for b in self.each():
+            code, out = self.check(b, "fields", "inputs", "generate")
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["status"], "stable")
+            f = {x["path"]: x for x in out["data"]["fields"]}
+            self.assertTrue(f["mapping"]["required"])
+            self.assertEqual(f["interval"]["default"], "1s")
+            self.assertFalse(f["interval"]["required"])
+
+            code, out = self.check(b, "fields", "inputs", "http_client")
+            self.assertEqual(code, 0, out)
+            f = {x["path"]: x for x in out["data"]["fields"]}
+            self.assertIn("tls.enabled", f)
+            self.assertTrue(f["tls.enabled"]["advanced"])
+            self.assertTrue(f["tls.client_certs[].password"]["secret"])
+
+            code, out = self.check(b, "fields", "inputs", "nope")
+            self.assertEqual(code, 1, out)
+            self.assertIn("not found", out["errors"][0]["message"])
+
+    def test_run(self) -> None:
+        forever = self.tmp / "forever.yaml"
+        forever.write_text(
+            "input:\n  generate:\n    interval: 100ms\n    mapping: 'root = {\"n\": counter()}'\n"
+            "output:\n  stdout:\n    codec: lines\n"
+        )
+        for b in self.each():
+            code, out = self.check(b, "run", "stdin_pipeline.yaml", "--input", "samples.jsonl")
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["exit"], 0)
+            self.assertIn('{"doubled":2}', out["data"]["outputs"])
+            self.assertIn('{"doubled":6}', out["data"]["outputs"])
+
+            code, out = self.check(b, "run", "multi_error.yaml")
+            self.assertEqual(code, 1, out)
+            self.assertEqual(
+                [(e["file"], e["line"], e["column"]) for e in out["errors"]],
+                [("multi_error.yaml", line, col) for line, col, _ in _MULTI],
+            )
+
+            code, out = self.check(b, "run", str(forever), "--timeout", "2")
+            self.assertEqual(code, 2, out)
+            self.assertIn("timed out after 2s", out["errors"][0]["message"])
+            self.assertIsNone(out["data"]["exit"])
+            self.assertIn('{"n":1}', out["data"]["outputs"])
+
+    def test_test(self) -> None:
+        for b in self.each():
+            code, out = self.check(b, "test", "stdin_pipeline_benthos_test.yaml")
+            self.assertEqual(code, 1, out)
+            self.assertEqual(out["data"]["targets"], [{"file": "stdin_pipeline.yaml", "passed": False}])
+            self.assertEqual((out["data"]["passed"], out["data"]["failed"]), (0, 1))
+            self.assertEqual(len(out["data"]["failures"]), 1)
+            failure = out["data"]["failures"][0]
+            self.assertEqual(failure["target"], "stdin_pipeline.yaml")
+            self.assertEqual(failure["case"], "expects the wrong value")
+            self.assertEqual(failure["line"], 8)
+            self.assertIn("4 => 5", failure["message"])
+            self.assertNotIn("\x1b", failure["message"])
+
+            code, out = self.check(b, "test", "valid.yaml")
+            self.assertEqual(code, 1, out)
+            self.assertIn("No tests were found", out["errors"][0]["message"])
+
+    def test_test_all_pass(self) -> None:
+        shutil.copy(FIXTURES / "stdin_pipeline.yaml", self.tmp / "ok.yaml")
+        text = (FIXTURES / "stdin_pipeline_benthos_test.yaml").read_text()
+        (self.tmp / "ok_benthos_test.yaml").write_text(text.split("\n\n  - name: expects")[0] + "\n")
+        for b in self.each():
+            code, out = self.check(b, "test", str(self.tmp / "ok_benthos_test.yaml"))
+            self.assertEqual(code, 0, out)
+            self.assertEqual(
+                out["data"],
+                {"targets": [{"file": str(self.tmp / "ok.yaml"), "passed": True}], "failures": [],
+                 "passed": 1, "failed": 0},
+            )
+
+    def test_missing_file_not_passed_to_binary(self) -> None:
+        for b in self.each():
+            for args in (["blobl", "nope.blobl"], ["run", "nope.yaml"], ["test", "nope.yaml"],
+                         ["run", "stdin_pipeline.yaml", "--input", "nope.jsonl"]):
+                code, out = self.check(b, *args)
+                self.assertEqual(code, 2, out)
+                self.assertIsNone(out["binary"])
 
 
 if __name__ == "__main__":

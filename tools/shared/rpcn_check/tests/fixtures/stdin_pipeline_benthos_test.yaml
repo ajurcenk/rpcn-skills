@@ -1,0 +1,12 @@
+tests:
+  - name: doubles n
+    input_batch:
+      - content: '{"n":2}'
+    output_batches:
+      - - json_equals: {"doubled": 4}
+
+  - name: expects the wrong value
+    input_batch:
+      - content: '{"n":2}'
+    output_batches:
+      - - json_equals: {"doubled": 5}

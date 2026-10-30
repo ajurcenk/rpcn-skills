@@ -1,0 +1,2 @@
+root.doubled = this.n * 2
+root.half =

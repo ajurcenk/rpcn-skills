@@ -90,7 +90,7 @@ flowchart LR
   - **`binary`** returns `data`:
     `{"plugin_version", "refs_version", "newer_than_refs": bool, "headless": bool}`.
     Every skill calls it first.
-  - **`fields <kind> <component>`** returns the component's fields from the installed binary's `list --format jsonschema`. Author and Design use this, not the generated references, to check fields.
+  - **`fields <kind> <component>`** returns the component's fields from the installed binary's `list --format json-full`, which also carries defaults and descriptions (decision 2026-10-30). Author and Design use this, not the generated references, to check fields.
   - **`run`** is a bounded dry run with `--timeout` (default 10 s) and a file as input.
   - **`hash <files…>`** returns the sha256 of each file.
   - **Exit codes:** `0` when `ok`, `1` when a check failed, `2` for a usage or environment error (binary missing, below 4.100.0, bad arguments).

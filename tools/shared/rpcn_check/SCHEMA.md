@@ -36,7 +36,7 @@ path, and the script runs it as `rpk connect`. `binary.version` has no leading
 | Code | When |
 |---|---|
 | 0 | `ok` is `true` |
-| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready |
+| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready, `blobl` when the mapping does not parse or a line failed, `fields` when the component does not exist, `run` when the binary exits non-zero, `test` when a case or target fails or no tests were found |
 | 2 | Usage or environment error: bad arguments, a missing input file, no binary, binary below 4.100.0, or a check that could not run (timeout, silent failure) |
 
 ## Binary lookup
@@ -220,3 +220,279 @@ not `key: value`, an unknown or repeated key, an empty value, a `status`
 outside `draft|ready|superseded`, an `inputs` item that is not exactly
 `  - file: <path>` then `    sha256: <64 lowercase hex>`, an absolute input
 path, and a missing required key (reported at the closing `---` line).
+
+## Shared rules for `blobl`, `list`, `fields`, `run` and `test`
+
+- They use the binary lookup and the 4.100.0 floor above; a missing or too old
+  binary is exit 2.
+- Every file argument (mapping, config, target, `--input`, `--resources`,
+  `--env-file`) is checked before the binary runs. A missing one is exit 2,
+  with one error per missing file (its `file` set); the binary is not run and
+  `binary` is `null`.
+- Glob characters in `test` targets and in every `--resources` file are
+  escaped as in `lint`. The `run` config and the `blobl` mapping are paths,
+  not globs, and are passed as given.
+- `--resources` is passed once per unique file, in the order first given,
+  then `--env-file`.
+- `NO_COLOR=1` is set. `-v`, `--verbose`, `-` and `--chilled` are never passed.
+- Every call except `run` is bounded to 60 s; a timeout kills the whole
+  process group and is exit 2 with a "timed out" error.
+- Output is decoded as UTF-8, with bad bytes replaced.
+- `data` keeps its shape on every error except a usage error, where it is `{}`.
+
+## `blobl`
+
+```
+rpcn_check.py blobl <mapping> [--input <file>] [--env-file <file>]
+```
+
+The binary is called as:
+
+```
+<binary> blobl [--env-file <f>] --file <mapping> [--input <file>]
+```
+
+With no `--input`, stdin is empty, so only the mapping is parsed. The input
+file holds one JSON document per line (split on `\n`, as the binary does).
+
+`data`:
+
+```json
+{
+  "mapping": "double.blobl",
+  "results": [
+    {"line": 1, "output": "{\"doubled\":2}", "error": null},
+    {"line": 2, "output": null, "error": "unable to reference message as structured …"}
+  ]
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `mapping` | str | The mapping file as given |
+| `results` | array | One entry per input line, in order; `[]` with no `--input` or when the mapping does not parse |
+| `results[].line` | int | 1-based line number in the input file |
+| `results[].output` | str \| null | What the mapping printed for this line, without the final newline; `null` when it failed. A deleted message is `""` |
+| `results[].error` | str \| null | The binary's `failed to execute map: <msg>` for this line, without that prefix; `null` when it succeeded |
+
+The binary prints each line's output on stdout and each failure on stderr.
+Both are read from one pipe, so they stay in input order. When the number of
+printed lines differs from the number of input lines (an output that spans
+several lines), each input line is run again on its own, as stdin, to match
+results to lines exactly. The first run and the re-runs share one 60 s budget.
+A re-run that exits non-zero without a `failed to execute map:` line gives
+that line an `error` of `blobl exited <code>: <output tail>`.
+
+**Errors.** A mapping that does not parse
+(`failed to parse mapping: line L char C: <msg>`) gives one error with `file`
+the mapping, `line` L, `column` C and `message` `<msg>`. Each failed input
+line gives one error with `file` the input file, `line` that line, `column`
+`null` and `message` the line's `error`. Any other non-zero exit gives one
+error with `file` the mapping and the output tail, or "exited <code> with no
+output" when it printed nothing.
+
+**Exit codes:**
+
+| Code | When |
+|---|---|
+| 0 | Every input line succeeded (or there was no input and the mapping parsed) |
+| 1 | The mapping does not parse, any input line failed, or the binary exited non-zero with output |
+| 2 | A missing file, no usable binary, a timeout, or a non-zero exit with no output |
+
+## `list`
+
+```
+rpcn_check.py list <category> [--status stable|beta|experimental]
+```
+
+The binary is called as `<binary> list --format json [--status <s>] <category>`.
+
+`data`:
+
+```json
+{"category": "inputs", "components": ["amqp_0_9", "generate", "stdin"]}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `category` | str | The category as given |
+| `components` | array of str | Component names, in the binary's order; `[]` on an error |
+
+`category` is first checked against the top-level keys of
+`<binary> list --format json` with no category, for example `inputs`, `processors`, `outputs`, `caches`, `buffers`,
+`metrics`, `tracers`, `rate-limits`, `scanners`, `bloblang-functions` or
+`bloblang-methods`. An unknown category is exit 2, and the error names the
+known categories. A known category that the `--status` filter leaves absent
+from the output gives `components` `[]` and exit 0. A `--status` outside the
+three values is a usage error.
+
+**Exit codes:** 0 when listed; 2 for an unknown category, invalid JSON from
+the binary, a non-zero exit, no usable binary or a timeout.
+
+## `fields`
+
+```
+rpcn_check.py fields <category> <component>
+```
+
+The binary is called as `<binary> list --format json-full <category>`. The
+component is found by `name` in that category, and its `config.children`
+tree is flattened. This reads the installed binary, so it is the check for
+whether a field exists in the user's version (R2).
+
+`data`:
+
+```json
+{
+  "category": "inputs",
+  "component": "generate",
+  "status": "stable",
+  "fields": [
+    {"path": "mapping", "type": "string", "kind": "scalar", "required": true,
+     "advanced": false, "deprecated": false, "secret": false,
+     "description": "A Bloblang mapping to use for generating messages."},
+    {"path": "interval", "type": "string", "kind": "scalar", "required": false, "default": "1s",
+     "advanced": false, "deprecated": false, "secret": false,
+     "description": "The time interval at which messages should be generated, …"}
+  ]
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `category`, `component` | str | As given |
+| `status` | str \| null | The component's status: `stable`, `beta`, `experimental` or `deprecated`; `null` when no component was found |
+| `fields` | array | Every field, parents before their children, in the binary's order; `[]` on an error |
+| `fields[].path` | str | Dotted path from the component's config: `tls.enabled`. Children of an array field sit under `path[]` (`tls.client_certs[].password`), of a 2D array under `path[][]`, of a map under `path.*`. When the component's config itself is an array (for example the `switch` processor) every path starts with `[].` |
+| `fields[].type` | str | The binary's `type`: `string`, `int`, `bool`, `object`, … |
+| `fields[].kind` | str | The binary's `kind`: `scalar`, `array`, `2darray`, `map` (may be `""`) |
+| `fields[].required` | bool | `true` when the field has no `default` and is not `is_optional` |
+| `fields[].default` | any | The default value; the key is absent when there is none |
+| `fields[].advanced`, `deprecated`, `secret` | bool | `true` only when `is_advanced`, `is_deprecated` or `is_secret` is present and `true` (json-full leaves them out otherwise) |
+| `fields[].description` | str | The first non-empty line of the description; `""` when there is none |
+
+A component that has no config fields (its config is a plain value, or an
+object with no children) has `fields` `[]`.
+
+**Unknown component.** Exit 1, one error "component '<name>' not found in
+<category>", `status` is `null`, `fields` is `[]`, and `data` also has
+`components`, which holds the names in that category sharing at least the first
+three characters with `<component>`, longest shared prefix first, then by
+name; `[]` when none do.
+
+The category is checked as in `list` before `json-full` is read.
+
+**Exit codes:** 0 when found; 1 when the component does not exist; 2 for an
+unknown category (as in `list`; `config` is not a category), invalid JSON, a
+non-zero exit, no usable binary or a timeout.
+
+## `run`
+
+```
+rpcn_check.py run <config> [--input <file>] [--resources <file>]... [--env-file <file>] [--timeout <s>]
+```
+
+A bounded dry run (AD-4). The binary is called as:
+
+```
+<binary> run --set http.enabled=false [--resources <f>]... [--env-file <f>] <config>
+```
+
+`--input` is passed as stdin; with no `--input`, stdin is empty, so a
+`stdin` input ends at once. `--timeout` is a positive number of seconds,
+default 10. On timeout the whole process group is killed.
+
+`data`:
+
+```json
+{"config": "pipeline.yaml", "outputs": ["{\"doubled\":2}", "{\"doubled\":6}"], "exit": 0}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `config` | str | The config file as given |
+| `outputs` | array of str | The binary's stdout, one entry per line, in the order printed (logs go to stderr and are not included). On a timeout, the lines printed before it |
+| `exit` | int \| null | The binary's exit code; `null` on a timeout or when it did not run |
+
+The order of `outputs` is the binary's: a pipeline that processes messages in
+parallel may print them in any order.
+
+**Errors.** On a non-zero exit, each stderr log line
+`level=error msg="Config lint error" lint="<file>(<l>,<c>) <msg>"` becomes
+`{"file", "line", "column", "message"}`, in the order printed. With no such
+line, one error `run exited <code>: <stderr tail>` (the last 10 non-empty
+lines). A timeout is one error `run timed out after <s>s`.
+
+**Exit codes:**
+
+| Code | When |
+|---|---|
+| 0 | The binary exited 0 |
+| 1 | The binary exited non-zero |
+| 2 | A timeout (outputs so far kept), a missing file, a bad `--timeout`, or no usable binary |
+
+## `test`
+
+```
+rpcn_check.py test <target> [--resources <file>]... [--env-file <file>]
+```
+
+Runs `rpk connect test` cases. The binary is called as:
+
+```
+<binary> test [--resources <f>]... [--env-file <f>] <target>
+```
+
+`<target>` is a config holding `tests:`, or a `<name>_benthos_test.yaml`
+file, which runs its cases against `<name>.yaml` beside it (the binary's
+default suffix, confirmed on 4.100.0 and 4.115.0).
+
+`data`:
+
+```json
+{
+  "targets": [{"file": "p.yaml", "passed": false}],
+  "failures": [
+    {"target": "p.yaml", "case": "wrong", "line": 8,
+     "message": "batch 0 message 0: json_equals: JSON content mismatch\n{\n    \"doubled\": 4 => 5\n}"}
+  ],
+  "passed": 0,
+  "failed": 1
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `targets` | array | One entry per tested config, in the order printed |
+| `targets[].file` | str | The config as the binary printed it (relative or absolute as the target was given) |
+| `targets[].passed` | bool | `true` for `Test '<f>' succeeded`; `false` for `failed` or a target that failed to initialise |
+| `failures` | array | One entry per failing case |
+| `failures[].target` | str | The config the case ran against |
+| `failures[].case` | str | The case `name` |
+| `failures[].line` | int \| null | The line of the case in its test definition, from `[line N]`; `null` when the binary prints none |
+| `failures[].message` | str | The detail lines under the case, joined with `\n` |
+| `passed`, `failed` | int | Number of targets that passed and failed. Passing cases are not printed without `--verbose`, which is never passed, so these count targets, not cases |
+
+**Parsing.** ANSI colour codes are stripped (the binary prints them even with
+`NO_COLOR=1`). stdout and stderr are parsed separately:
+
+- `Test '<f>' succeeded` / `Test '<f>' failed` give `targets`.
+- After `Failures:`, each `--- <f> ---` starts a target's block. In it, a line
+  `<case> [line N]:` (or `<case>:`) after a blank line starts a failing case,
+  and the lines up to the next case or block are its detail.
+- `Failed to execute test target '<f>': <msg>` marks `<f>` failed and gives an
+  error with `file` `<f>`.
+- `No tests were found` gives an error with `file` the target.
+
+**Errors.** One per failing case, with `file` the case's target, `line`
+`null`, and `message` `<case> [line N]: <first detail line>`; one per target
+that failed to initialise; and one for `No tests were found`. A non-zero exit
+with none of these gives one error with the output tail.
+
+**Exit codes:**
+
+| Code | When |
+|---|---|
+| 0 | The binary exited 0 and every target passed |
+| 1 | A case failed, a target failed to initialise, no tests were found, or a non-zero exit with output |
+| 2 | A missing file, no usable binary, a timeout, or a non-zero exit with no output |

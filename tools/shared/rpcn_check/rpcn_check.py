@@ -22,6 +22,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 
 SCHEMA_VERSION = 1
 PLUGIN_VERSION = "0.1.0"
@@ -611,6 +612,599 @@ def cmd_hash(args: argparse.Namespace) -> int:
     return _hash_files(files)
 
 
+# --- blobl, list, fields, run, test: the rest of the AD-4 adapter -------------
+
+CHECK_TIMEOUT_S = 60  # every binary call except `run`
+RUN_TIMEOUT_S = 10.0  # `run` default (AD-4)
+RUN_ARGS = ("run", "--set", "http.enabled=false")  # fixed by AD-4
+LIST_STATUSES = ("stable", "beta", "experimental")
+STDERR_TAIL_LINES = 10
+
+_BLOBL_EXEC_PREFIX = "failed to execute map: "
+_BLOBL_PARSE_RE = re.compile(
+    r"^failed to parse mapping: line (?P<line>\d+) char (?P<col>\d+): (?P<message>.*)$"
+)
+_RUN_LINT_RE = re.compile(r'msg="Config lint error".*?\blint="(?P<lint>(?:[^"\\]|\\.)*)"')
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+_TEST_RESULT_RE = re.compile(r"^Test '(?P<file>.+)' (?P<result>failed|succeeded)$")
+_TEST_INIT_RE = re.compile(r"^Failed to execute test target '(?P<file>.+?)': (?P<message>.*)$")
+_TEST_SECTION_RE = re.compile(r"^--- (?P<file>.+) ---$")
+_TEST_CASE_RE = re.compile(r"^(?P<case>\S.*?)(?: \[line (?P<line>\d+)\])?:$")
+_NO_TESTS = "No tests were found"
+
+
+def _missing_files(pairs: list[tuple[str, str | None]]) -> list[dict]:
+    """One error per (kind, path) whose path does not exist; None paths are skipped."""
+    return [
+        _error(f"{kind} not found: {path}", file=path)
+        for kind, path in pairs
+        if path is not None and not os.path.exists(path)
+    ]
+
+
+def _run_io(
+    cmd: list[str],
+    timeout: float,
+    stdin_path: str | None = None,
+    stdin_text: str | None = None,
+    merge_stderr: bool = False,
+) -> tuple[int | None, str, str]:
+    """Run cmd in its own process group with NO_COLOR=1; stdin from a file, a string or empty.
+
+    Returns (returncode, stdout, stderr). On timeout the whole group is killed
+    and returncode is None; the output read until then is kept. With
+    merge_stderr, stderr goes into the stdout pipe so the order is kept.
+    """
+    env = {**os.environ, "NO_COLOR": "1"}
+    stdin_file = open(stdin_path, "rb") if stdin_path is not None else None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=stdin_file if stdin_file else (subprocess.PIPE if stdin_text is not None else subprocess.DEVNULL),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
+            start_new_session=True,
+        )
+    finally:
+        if stdin_file:
+            stdin_file.close()
+    try:
+        stdout, stderr = proc.communicate(input=stdin_text, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        stdout, stderr = proc.communicate()
+        return None, stdout or "", stderr or ""
+    return proc.returncode, stdout or "", stderr or ""
+
+
+def _tail(text: str, n: int = STDERR_TAIL_LINES) -> str:
+    lines = [ln.rstrip() for ln in text.splitlines() if ln.strip()]
+    return "\n".join(lines[-n:])
+
+
+def _binary_or_error(command: str, data: dict) -> tuple[dict | None, int | None]:
+    """(found, None), or (None, exit code) after emitting the environment error."""
+    try:
+        return require_binary(), None
+    except EnvError as exc:
+        return None, _emit(_envelope(command, False, exc.binary, [_error(str(exc))], data), EXIT_ENV)
+
+
+def _public(found: dict) -> dict:
+    return {"path": found["path"], "version": found["version"]}
+
+
+def _go_lines(text: str) -> list[str]:
+    """Split like Go's bufio.ScanLines: on \\n, dropping one trailing \\r and a final empty line."""
+    parts = text.split("\n")
+    if parts and parts[-1] == "":
+        parts.pop()
+    return [p[:-1] if p.endswith("\r") else p for p in parts]
+
+
+# --- blobl ---------------------------------------------------------------------
+
+
+def _blobl_parse_error(text: str, mapping: str) -> dict | None:
+    for raw in text.splitlines():
+        m = _BLOBL_PARSE_RE.match(raw.strip())
+        if m:
+            return {
+                "file": mapping,
+                "line": int(m.group("line")),
+                "column": int(m.group("col")),
+                "message": m.group("message"),
+            }
+    return None
+
+
+def _blobl_result(n: int, text: str) -> dict:
+    if text.startswith(_BLOBL_EXEC_PREFIX):
+        return {"line": n, "output": None, "error": text[len(_BLOBL_EXEC_PREFIX):]}
+    return {"line": n, "output": text, "error": None}
+
+
+def cmd_blobl(args: argparse.Namespace) -> int:
+    mapping: str = args.mapping
+    input_file: str | None = args.input
+    env_file: str | None = args.env_file
+    data: dict = {"mapping": mapping, "results": []}
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
+        return _emit(_envelope("blobl", ok, binary, errors, data), code)
+
+    missing = _missing_files(
+        [("mapping file", mapping), ("input file", input_file), ("env file", env_file)]
+    )
+    if missing:
+        return result(False, None, missing, EXIT_ENV)
+    found, code = _binary_or_error("blobl", data)
+    if found is None:
+        return code
+    binary = _public(found)
+
+    base = [*found["argv"], "blobl"]
+    if env_file:
+        base += ["--env-file", env_file]
+    base += ["--file", mapping]
+    cmd = base + (["--input", input_file] if input_file else [])
+
+    lines: list[str] = []
+    if input_file:
+        try:
+            with open(input_file, encoding="utf-8", errors="replace") as fh:
+                lines = _go_lines(fh.read())
+        except OSError as exc:
+            return result(False, binary, [_error(f"cannot read input file: {exc}", file=input_file)], EXIT_ENV)
+
+    deadline_err = [_error(f"blobl timed out after {CHECK_TIMEOUT_S}s")]
+    start = time.monotonic()  # one 60 s budget for the whole call, fallback included
+    try:
+        # stderr merged into stdout keeps each line's output or error in input order.
+        returncode, out, _ = _run_io(cmd, CHECK_TIMEOUT_S, merge_stderr=True)
+    except OSError as exc:
+        return result(False, binary, [_error(f"could not run blobl: {exc}")], EXIT_ENV)
+    if returncode is None:
+        return result(False, binary, deadline_err, EXIT_ENV)
+    if returncode != 0:
+        err = _blobl_parse_error(out, mapping)
+        if err is None:
+            if not out.strip():
+                return result(
+                    False, binary, [_error(f"blobl exited {returncode} with no output", file=mapping)], EXIT_ENV
+                )
+            err = _error(f"blobl exited {returncode}: {_tail(out)}", file=mapping)
+        return result(False, binary, [err], EXIT_CHECK_FAILED)
+
+    printed = _go_lines(out)
+    if len(printed) == len(lines):
+        results = [_blobl_result(i + 1, text) for i, text in enumerate(printed)]
+    else:
+        # Some output spans several lines (a string with newlines), so lines
+        # cannot be matched by position: run each input line on its own.
+        results = []
+        for i, line in enumerate(lines):
+            remaining = CHECK_TIMEOUT_S - (time.monotonic() - start)
+            if remaining <= 0:
+                return result(False, binary, deadline_err, EXIT_ENV)
+            try:
+                rc, one_out, one_err = _run_io(base, remaining, stdin_text=line + "\n")
+            except OSError as exc:
+                return result(False, binary, [_error(f"could not run blobl: {exc}")], EXIT_ENV)
+            if rc is None:
+                return result(False, binary, deadline_err, EXIT_ENV)
+            failed = [ln for ln in one_err.splitlines() if ln.startswith(_BLOBL_EXEC_PREFIX)]
+            if failed:
+                results.append(_blobl_result(i + 1, failed[0]))
+            elif rc != 0:
+                tail = _tail(f"{one_out}\n{one_err}")
+                message = f"blobl exited {rc}" + (f": {tail}" if tail else " with no output")
+                results.append({"line": i + 1, "output": None, "error": message})
+            else:
+                results.append({"line": i + 1, "output": one_out[:-1] if one_out.endswith("\n") else one_out, "error": None})
+    data["results"] = results
+    errors = [
+        {"file": input_file, "line": r["line"], "column": None, "message": r["error"]}
+        for r in results
+        if r["error"] is not None
+    ]
+    if errors:
+        return result(False, binary, errors, EXIT_CHECK_FAILED)
+    return result(True, binary, [], EXIT_OK)
+
+
+# --- list and fields -----------------------------------------------------------
+
+
+def _list_json(found: dict, extra: list[str]) -> tuple[dict | None, str | None]:
+    """Run `list --format <...>` and parse its JSON object; (None, reason) on failure."""
+    cmd = [*found["argv"], "list", *extra]
+    try:
+        returncode, out, err = _run_io(cmd, CHECK_TIMEOUT_S)
+    except OSError as exc:
+        return None, f"could not run list: {exc}"
+    if returncode is None:
+        return None, f"list timed out after {CHECK_TIMEOUT_S}s"
+    if returncode != 0:
+        return None, f"list exited {returncode}" + (f": {_tail(err or out)}" if (err or out).strip() else "")
+    try:
+        parsed = json.loads(out)
+    except json.JSONDecodeError as exc:
+        return None, f"list printed invalid JSON: {exc}"
+    if not isinstance(parsed, dict):
+        return None, "list printed JSON that is not an object"
+    return parsed, None
+
+
+def _categories(found: dict) -> tuple[list[str] | None, str | None]:
+    parsed, why = _list_json(found, ["--format", "json"])
+    if parsed is None:
+        return None, why
+    return sorted(parsed), None
+
+
+def _check_category(found: dict, category: str) -> str | None:
+    """None when `category` is a key of the unfiltered `list --format json`; else the error."""
+    cats, why = _categories(found)
+    if cats is None:
+        return why
+    if category not in cats:
+        return f"unknown category {category!r}. Known categories: {', '.join(cats)}."
+    return None
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    category: str = args.category
+    data: dict = {"category": category, "components": []}
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
+        return _emit(_envelope("list", ok, binary, errors, data), code)
+
+    found, code = _binary_or_error("list", data)
+    if found is None:
+        return code
+    binary = _public(found)
+    bad = _check_category(found, category)
+    if bad:
+        return result(False, binary, [_error(bad)], EXIT_ENV)
+    extra = ["--format", "json"]
+    if args.status:
+        extra += ["--status", args.status]
+    parsed, why = _list_json(found, [*extra, category])
+    if parsed is None:
+        return result(False, binary, [_error(why)], EXIT_ENV)
+    names = parsed.get(category)  # a valid category the filter emptied may be absent
+    if not isinstance(names, list):
+        names = []
+    data["components"] = [n for n in names if isinstance(n, str)]
+    return result(True, binary, [], EXIT_OK)
+
+
+def _first_line(text: object) -> str:
+    if not isinstance(text, str):
+        return ""
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
+
+
+def _child_prefix(path: str, kind: str) -> str:
+    """Where a field's children sit: `a.b` for objects, `a[].b` for arrays, `a.*.b` for maps."""
+    if kind == "array":
+        return f"{path}[]."
+    if kind == "2darray":
+        return f"{path}[][]."
+    if kind == "map":
+        return f"{path}.*."
+    return f"{path}."
+
+
+def flatten_fields(children: list, prefix: str = "") -> list[dict]:
+    """Flatten a json-full `config.children` tree into dotted field entries."""
+    fields: list[dict] = []
+    for child in children or []:
+        if not isinstance(child, dict):
+            continue
+        path = f"{prefix}{child.get('name', '')}"
+        entry = {
+            "path": path,
+            "type": child.get("type", ""),
+            "kind": child.get("kind", ""),
+            "required": "default" not in child and child.get("is_optional") is not True,
+        }
+        if "default" in child:
+            entry["default"] = child["default"]
+        entry.update(
+            {
+                "advanced": child.get("is_advanced") is True,
+                "deprecated": child.get("is_deprecated") is True,
+                "secret": child.get("is_secret") is True,
+                "description": _first_line(child.get("description")),
+            }
+        )
+        fields.append(entry)
+        fields.extend(flatten_fields(child.get("children") or [], _child_prefix(path, entry["kind"])))
+    return fields
+
+
+def _close_matches(name: str, names: list[str]) -> list[str]:
+    """Names sharing a prefix with `name`: longest shared prefix first, at least 3 characters."""
+
+    def shared(other: str) -> int:
+        return len(os.path.commonprefix([name, other]))
+
+    need = min(3, len(name))
+    scored = [(shared(n), n) for n in names if need and shared(n) >= need]
+    return [n for _, n in sorted(scored, key=lambda s: (-s[0], s[1]))]
+
+
+def cmd_fields(args: argparse.Namespace) -> int:
+    category: str = args.category
+    component: str = args.component
+    data: dict = {"category": category, "component": component, "status": None, "fields": []}
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
+        return _emit(_envelope("fields", ok, binary, errors, data), code)
+
+    found, code = _binary_or_error("fields", data)
+    if found is None:
+        return code
+    binary = _public(found)
+    bad = _check_category(found, category)
+    if bad:
+        return result(False, binary, [_error(bad)], EXIT_ENV)
+    parsed, why = _list_json(found, ["--format", "json-full", category])
+    if parsed is None:
+        return result(False, binary, [_error(why)], EXIT_ENV)
+    components = parsed.get(category)
+    if not isinstance(components, list):
+        components = []
+    by_name = {c.get("name"): c for c in components if isinstance(c, dict)}
+    comp = by_name.get(component)
+    if comp is None:
+        data["components"] = _close_matches(component, [n for n in by_name if isinstance(n, str)])
+        return result(
+            False, binary, [_error(f"component {component!r} not found in {category}")], EXIT_CHECK_FAILED
+        )
+    config = comp.get("config") if isinstance(comp.get("config"), dict) else {}
+    root_prefix = "[]." if config.get("kind") == "array" else ""
+    data["status"] = comp.get("status", "")
+    data["fields"] = flatten_fields(config.get("children") or [], root_prefix)
+    return result(True, binary, [], EXIT_OK)
+
+
+# --- run -----------------------------------------------------------------------
+
+
+def _unescape_logfmt(value: str) -> str:
+    return re.sub(r"\\(.)", lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), value)
+
+
+def parse_run_lint_errors(text: str) -> list[dict]:
+    """File errors from `Config lint error` log lines (`lint="<file>(<l>,<c>) <msg>"`)."""
+    errors = []
+    for raw in text.splitlines():
+        m = _RUN_LINT_RE.search(raw)
+        if not m:
+            continue
+        lint = _unescape_logfmt(m.group("lint"))
+        lm = _LINT_LINE_RE.match(lint)
+        if lm:
+            errors.append(
+                {
+                    "file": lm.group("file"),
+                    "line": int(lm.group("line")),
+                    "column": int(lm.group("col")),
+                    "message": lm.group("message"),
+                }
+            )
+        else:
+            errors.append(_error(lint))
+    return errors
+
+
+def _positive_float(text: str) -> float:
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a number: {text!r}") from None
+    if not value > 0 or value != value or value == float("inf"):
+        raise argparse.ArgumentTypeError(f"must be a positive number of seconds: {text!r}")
+    return value
+
+
+def _fmt_seconds(value: float) -> str:
+    return f"{value:g}"
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    config: str = args.config
+    input_file: str | None = args.input
+    resources = _unique(args.resources or [])
+    env_file: str | None = args.env_file
+    timeout: float = args.timeout
+    data: dict = {"config": config, "outputs": [], "exit": None}
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
+        return _emit(_envelope("run", ok, binary, errors, data), code)
+
+    missing = _missing_files(
+        [("config file", config), ("input file", input_file)]
+        + [("resources file", r) for r in resources]
+        + [("env file", env_file)]
+    )
+    if missing:
+        return result(False, None, missing, EXIT_ENV)
+    found, code = _binary_or_error("run", data)
+    if found is None:
+        return code
+    binary = _public(found)
+
+    cmd = [*found["argv"], *RUN_ARGS]
+    for res in resources:
+        cmd += ["--resources", escape_glob(res)]
+    if env_file:
+        cmd += ["--env-file", env_file]
+    cmd.append(config)  # `run` reads this path as given; it is not a glob
+    try:
+        returncode, out, err = _run_io(cmd, timeout, stdin_path=input_file)
+    except OSError as exc:
+        return result(False, binary, [_error(f"could not run the pipeline: {exc}")], EXIT_ENV)
+    data["outputs"] = _go_lines(out)
+    if returncode is None:
+        return result(False, binary, [_error(f"run timed out after {_fmt_seconds(timeout)}s")], EXIT_ENV)
+    data["exit"] = returncode
+    if returncode == 0:
+        return result(True, binary, [], EXIT_OK)
+    errors = parse_run_lint_errors(err)
+    if not errors:
+        tail = _tail(err)
+        errors = [_error(f"run exited {returncode}" + (f": {tail}" if tail else " with no output"))]
+    return result(False, binary, errors, EXIT_CHECK_FAILED)
+
+
+# --- test ----------------------------------------------------------------------
+
+
+def strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
+
+
+def parse_test_output(text: str) -> dict:
+    """Parse one stream of `rpk connect test` text (ANSI already stripped).
+
+    Recognises `Test '<f>' failed|succeeded`, `Failed to execute test target
+    '<f>': <msg>`, `No tests were found`, and the `Failures:` block: a
+    `--- <f> ---` line per target, then `<case> [line N]:` after a blank line,
+    followed by that case's detail lines.
+    """
+    targets: dict[str, bool] = {}
+    failures: list[dict] = []
+    init_errors: list[dict] = []
+    no_tests = False
+    section: str | None = None
+    current: dict | None = None
+    detail: list[str] = []
+    prev_blank = True
+
+    def close_case() -> None:
+        nonlocal current, detail
+        if current is not None:
+            while detail and not detail[-1].strip():
+                detail.pop()
+            current["message"] = "\n".join(detail)
+            failures.append(current)
+        current, detail = None, []
+
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        blank = not line.strip()
+        m_res = _TEST_RESULT_RE.match(line)
+        m_init = _TEST_INIT_RE.match(line)
+        m_sec = _TEST_SECTION_RE.match(line)
+        m_case = _TEST_CASE_RE.match(line) if section is not None and prev_blank else None
+        if m_res and section is None:
+            targets[m_res.group("file")] = m_res.group("result") == "succeeded"
+        elif m_init and current is None:
+            targets[m_init.group("file")] = False
+            init_errors.append(
+                _error(f"failed to execute test target: {m_init.group('message')}", file=m_init.group("file"))
+            )
+        elif line.strip() == _NO_TESTS and current is None:
+            no_tests = True
+        elif m_sec and prev_blank:
+            close_case()
+            section = m_sec.group("file")
+            targets.setdefault(section, False)
+        elif m_case:
+            close_case()
+            current = {
+                "target": section,
+                "case": m_case.group("case"),
+                "line": int(m_case.group("line")) if m_case.group("line") else None,
+                "message": "",
+            }
+        elif current is not None and (detail or not blank):
+            detail.append(line)
+        prev_blank = blank
+    close_case()
+    return {"targets": targets, "failures": failures, "init_errors": init_errors, "no_tests": no_tests}
+
+
+def cmd_test(args: argparse.Namespace) -> int:
+    target: str = args.target
+    resources = _unique(args.resources or [])
+    env_file: str | None = args.env_file
+    data: dict = {"targets": [], "failures": [], "passed": 0, "failed": 0}
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
+        return _emit(_envelope("test", ok, binary, errors, data), code)
+
+    missing = _missing_files(
+        [("test target", target)] + [("resources file", r) for r in resources] + [("env file", env_file)]
+    )
+    if missing:
+        return result(False, None, missing, EXIT_ENV)
+    found, code = _binary_or_error("test", data)
+    if found is None:
+        return code
+    binary = _public(found)
+
+    cmd = [*found["argv"], "test"]
+    for res in resources:
+        cmd += ["--resources", escape_glob(res)]
+    if env_file:
+        cmd += ["--env-file", env_file]
+    cmd.append(escape_glob(target))
+    try:
+        returncode, out, err = _run_io(cmd, CHECK_TIMEOUT_S)
+    except OSError as exc:
+        return result(False, binary, [_error(f"could not run test: {exc}")], EXIT_ENV)
+    if returncode is None:
+        return result(False, binary, [_error(f"test timed out after {CHECK_TIMEOUT_S}s")], EXIT_ENV)
+
+    text = strip_ansi(f"{out}\n{err}")
+    parsed = parse_test_output(strip_ansi(out))
+    from_err = parse_test_output(strip_ansi(err))
+    parsed["targets"].update(from_err["targets"])
+    parsed["failures"] += from_err["failures"]
+    parsed["init_errors"] += from_err["init_errors"]
+    parsed["no_tests"] = parsed["no_tests"] or from_err["no_tests"]
+    data["targets"] = [{"file": f, "passed": p} for f, p in parsed["targets"].items()]
+    data["failures"] = parsed["failures"]
+    data["passed"] = sum(1 for p in parsed["targets"].values() if p)
+    data["failed"] = sum(1 for p in parsed["targets"].values() if not p)
+    errors = [
+        _error(
+            f"{f['case']}" + (f" [line {f['line']}]" if f["line"] is not None else "")
+            + (f": {f['message'].splitlines()[0]}" if f["message"] else ""),
+            file=f["target"],
+        )
+        for f in parsed["failures"]
+    ]
+    errors += parsed["init_errors"]
+    if parsed["no_tests"]:
+        errors.append(_error(_NO_TESTS, file=target))
+    if not errors and data["failed"]:
+        errors = [_error(f"test target failed: {t['file']}", file=t["file"]) for t in data["targets"] if not t["passed"]]
+    if errors:
+        return result(False, binary, errors, EXIT_CHECK_FAILED)
+    if returncode != 0:
+        tail = _tail(text)
+        if tail:
+            return result(False, binary, [_error(f"test exited {returncode}: {tail}")], EXIT_CHECK_FAILED)
+        return result(False, binary, [_error(f"test exited {returncode} with no output")], EXIT_ENV)
+    return result(True, binary, [], EXIT_OK)
+
+
 def build_parser() -> _Parser:
     parser = _Parser(
         prog="rpcn_check.py",
@@ -635,6 +1229,45 @@ def build_parser() -> _Parser:
         "--check", metavar="<handoff.md>", help="check this hand-off file's header and input hashes"
     )
     p_hash.set_defaults(func=cmd_hash)
+
+    p_blobl = sub.add_parser("blobl", help="run a Bloblang mapping over JSON lines")
+    p_blobl.add_argument("mapping", metavar="<mapping>", help="Bloblang mapping file")
+    p_blobl.add_argument("--input", metavar="<file>", help="input file, one JSON document per line")
+    p_blobl.add_argument("--env-file", metavar="<file>", help="dotenv file for env() lookups")
+    p_blobl.set_defaults(func=cmd_blobl)
+
+    p_list = sub.add_parser("list", help="list the components of a category")
+    p_list.add_argument("category", metavar="<category>", help="for example inputs, processors, outputs")
+    p_list.add_argument("--status", choices=LIST_STATUSES, help="only components with this status")
+    p_list.set_defaults(func=cmd_list)
+
+    p_fields = sub.add_parser("fields", help="list a component's config fields from the installed binary")
+    p_fields.add_argument("category", metavar="<category>", help="for example inputs, processors, outputs")
+    p_fields.add_argument("component", metavar="<component>", help="component name, for example generate")
+    p_fields.set_defaults(func=cmd_fields)
+
+    p_run = sub.add_parser("run", help="dry-run a pipeline config, bounded by --timeout")
+    p_run.add_argument("config", metavar="<config>", help="pipeline config file")
+    p_run.add_argument("--input", metavar="<file>", help="file passed to the pipeline as stdin")
+    p_run.add_argument(
+        "--resources", action="append", metavar="<file>", help="resources file (repeatable)"
+    )
+    p_run.add_argument("--env-file", metavar="<file>", help="dotenv file for interpolations")
+    p_run.add_argument(
+        "--timeout", type=_positive_float, default=RUN_TIMEOUT_S, metavar="<s>",
+        help=f"seconds before the run is stopped (default {RUN_TIMEOUT_S:g})",
+    )
+    p_run.set_defaults(func=cmd_run)
+
+    p_test = sub.add_parser("test", help="run `rpk connect test` cases")
+    p_test.add_argument(
+        "target", metavar="<target>", help="a config, or a <name>_benthos_test.yaml file"
+    )
+    p_test.add_argument(
+        "--resources", action="append", metavar="<file>", help="resources file (repeatable)"
+    )
+    p_test.add_argument("--env-file", metavar="<file>", help="dotenv file for interpolations")
+    p_test.set_defaults(func=cmd_test)
     return parser
 
 
