@@ -105,3 +105,4 @@ End the reply with exactly one fenced `json` block, and nothing after it:
   that stays not ready; otherwise `complete`, even when lint fails.
 - `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.
 - `artifacts`: the report path, or `[]`. Questions go in `open_questions`.
+
