@@ -1,6 +1,6 @@
 ---
 name: rpcn-test
-description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, explains each error with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also finds rpk connect (or redpanda-connect) and reports its path and version against the supported 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test". Not for writing, designing or deploying pipelines.'
+description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, explains each error with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also finds rpk connect (or redpanda-connect) and reports its path and version against the supported 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", and when the user pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it or why it fails. Not for writing, designing or deploying pipelines.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -36,6 +36,12 @@ from any call means the run can't test: write no report, show each
 
 If the user asked only about the binary, report `binary.path` and
 `binary.version` (a path ending in `rpk` runs as `rpk connect`), then go to Next.
+
+**Pasted config:** when the user pastes the YAML instead of naming a file, write
+it unchanged to a temporary file outside the project with the Write tool, then
+run Steps 3 and 4 on that file, giving diffs against the pasted text. Skip
+Step 2 and Step 5: write no test report, and in headless mode report
+`artifacts: []`. Offer to save it as `<name>.yaml` so a report can be written.
 
 ## Step 2: Hash the inputs
 
