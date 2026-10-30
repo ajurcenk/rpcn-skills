@@ -3,7 +3,7 @@ title: 'Local eval runner and the eval-record check'
 type: 'feature'
 ticket: '11'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: '5160bf02b51f43af1864119b636338c68c092c79'
 route: 'full'
 route_source: 'auto'
