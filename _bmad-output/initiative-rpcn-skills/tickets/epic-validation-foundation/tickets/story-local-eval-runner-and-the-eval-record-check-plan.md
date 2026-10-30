@@ -3,7 +3,7 @@ title: 'Local eval runner and the eval-record check'
 type: 'feature'
 ticket: '11'
 created: '2026-10-30'
-status: 'in-review'
+status: 'built'
 baseline_revision: '5160bf02b51f43af1864119b636338c68c092c79'
 route: 'full'
 route_source: 'auto'
@@ -98,9 +98,9 @@ context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-
 - [x] `tools/tests/test_eval_record.py` -- every matrix row, plus the hash properties -- correctness
 - [x] `.github/workflows/ci.yml` -- the record check after the drift check, and the test step -- enforcement
 - [x] `evals/README.md` -- a "Recording a run" section: the command, what gets committed, cost -- contributor guidance
-- [ ] (orchestrator) a first `uv run tools/run_evals.py`, with the record committed -- CI green
-- [ ] (orchestrator, approved with the plan) branch protection on `main`: required check `check`, admins exempt -- merge gate
-- [ ] (orchestrator, with the user's consent) a throwaway PR that touches `skills/rpcn-test/SKILL.md` with no record: show the check failing, then close it -- proves the acceptance criteria
+- [x] (orchestrator) a first `uv run tools/run_evals.py`, with the record committed -- CI green
+- [x] (orchestrator, approved with the plan) branch protection on `main`: required check `check`, admins exempt -- merge gate
+- [x] (orchestrator, with the user's consent) a throwaway PR that touches `skills/rpcn-test/SKILL.md` with no record: show the check failing, then close it -- proves the acceptance criteria
 
 **Acceptance Criteria:**
 - Given a PR that changes `skills/rpcn-test/` with no matching record, when CI runs, then the record check fails and the PR can't merge.
@@ -120,6 +120,11 @@ context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-
 - **Check:** every record whose name ends in `-<hash12>.json` is validated (`schema` the integer 1, `skills_hash` a string, `passed` a bool); any malformed one gives exit 2 even if another record passes.
 
 ## Plan Change Log
+- **Orchestrator verification (2026-10-30):**
+  - **First real run:** `uv run tools/run_evals.py` took 657 s and cost $4.28. Trigger accuracy 1.0, the gate ok, `rpcn-test__lint_broken` PASS 3/3, exit 0. Record `evals/results/2026-10-30-f7572be95821.json`, committed in `9a7c82f`. CI is green, including the new record check.
+  - **Branch protection on `main`:** required status check `check`, `strict: false`, `enforce_admins: false`, no required reviews.
+  - **Acceptance criterion 1:** throwaway PR #1 added a trailing newline to `skills/rpcn-test/SKILL.md` (skills hash `dc9c52218c17`, no record). CI failed on "Eval record matches the skills (R12)", and the merge state was `BLOCKED`. The PR was closed and its branch deleted.
+  - **Acceptance criterion 2** ("with a fresh record it can"): shown on `main` at `9a7c82f`. That commit carries the passing record for its skills content, and its `check` is green. A second $4 run on the throwaway edit wasn't made.
 
 ## Review Triage Log
 
