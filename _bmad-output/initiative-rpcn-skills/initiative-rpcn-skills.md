@@ -32,7 +32,7 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - R10 (brief Design principle 3): Resolved support cases, starting with `redpanda-data/connect` GitHub issues, become known-failure-mode reference entries, each naming its case.
 - R11 (brief Design principle 4; Success Criteria: Freshness): Component references are regenerated within one week of each RPCN release. CI blocks merges that mention removed or deprecated components.
 - R12 (brief Design principle 5; Success Criteria: Triggering; How the skills are built): Each description quotes real trigger phrases and names the sibling it is not for. Every change runs the evals: trigger cases with near-miss negatives, and task cases with fixture files, each run at least 3 times in a clean environment and compared against the bare model. It is met when output passes lint, at least 90% of in-scope prompts trigger the right skill, and out-of-scope prompts trigger none.
-- R13 (brief Scope: Version 1): The set installs from this project as a Claude Code plugin and through `npx skills`, per the Agent Skills spec.
+- R13 (brief Scope: Version 1; Decision 2026-11-03): The set installs from this project through `npx skills`, per the Agent Skills spec. Installing through the Claude Code plugin marketplace is out.
 - R15 (brief Success Criteria: Time to a working pipeline): A developer new to RPCN gets a linted, tested pipeline running in under 10 minutes.
 - R16 (brief Solution: Artifacts and hand-offs): Each skill writes defined files that the next skill reads, so any stage can start from files alone, with no chat history. Each hand-off file carries a `status` in its header, and the receiving skill checks a readiness list before using it (brief How the skills are built). When Author deviates from the design note, it updates the note. It is met when each skill, started in a fresh session with only the previous skill's files, completes its job.
 - R17 (brief How the skills are built: Headless mode): With no one present, a skill never asks. It ends with a JSON status (`complete` or `blocked`, a reason and file paths). It is met when Test and Migrate run in CI and evals grade that status block.
@@ -51,7 +51,7 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 
 ## Done when
 
-- The version 1 skills (Design, Author, Test) install as a Claude Code plugin and through `npx skills`, and every generated config lints clean on the tested binaries.
+- The version 1 skills (Design, Author, Test) install through `npx skills`, and every generated config lints clean on the tested binaries.
 - The eval harness runs on every change, at least 90% of in-scope prompts trigger the right skill, and out-of-scope prompts trigger none.
 - After an RPCN release, references are regenerated within a week, and CI rejects a change that mentions a removed component.
 - All seven jobs ship, ending with Migrate converting the sample Kafka Connect configs with every unmapped field reported.
@@ -61,6 +61,7 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - Out: extending RPCN (Go components, Python and RPC plugins, core contributions).
 - Out: maintaining or changing the `redpanda-data/connect` plugin or `redpanda-data/skills`.
 - Out: running an MCP server.
+- Out: installing through the Claude Code plugin marketplace (Decision 2026-11-03).
 - Out: any integration with the Pipeline Designer VS Code extension.
 - Touch point: the `rpk connect` binary, tested at v4.100.0 and the newest release. Check scripts call `lint`, `blobl`, `list` and `test`. Owner: epic-validation-foundation.
 - Touch point: the `rpcn-test-skills` test project (`../rpcn-test-skills`). It installs the skills the way a user would and runs end-to-end scenarios. Owner: epic-validation-foundation.
@@ -90,4 +91,5 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - Decision (2026-10-23): The initiative covers skills development only. All VS Code extension integration is out: R14 (editor parity) is retired, the earlier code-sharing decision no longer applies, and 4.112.0 is no longer tested. The tested binaries are 4.100.0 and the newest release.
 - Decision (2026-10-23): The `npx skills` layout question is answered. Each skill folder installs on its own, with no dependencies between skills, so every skill carries its own copy of the check scripts (architecture AD-2). Epic 1 no longer waits on this.
 - Decision (2026-10-23): The project is licensed Apache-2.0. Pieces of the two reference skill sets may be copied and adapted into this project's conventions. Each copied piece records its source and licence (Connect repo files are checked for Apache-2.0 vs the Redpanda Community License). Nothing depends on those sets directly.
+- Decision (2026-11-03): The Claude Code plugin marketplace install channel is dropped from scope (user). Skills install only through `npx skills add ajurcenk/rpcn-skills`, and the marketplace install is neither supported nor tested. This replaces the plugin half of R13. The brief's Scope still says "Claude Code plugin"; this decision overrides it. The architecture's AD-1 still names both channels and needs an update through the architect.
 - Decision (2026-10-23): The existing skill sets are used as a benchmark (R20), not tested installed alongside ours. The coexistence clause is removed from R12, and installing all three together is not tested in version 1. Names still must not clash.

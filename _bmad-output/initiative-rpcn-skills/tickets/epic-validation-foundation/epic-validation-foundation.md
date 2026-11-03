@@ -23,7 +23,7 @@ Skill authors get one tested way to check output against the binary, hand off fi
 
 ## Requirements
 
-- R1 (parent R13; architecture AD-1): The plugin installs with `claude plugin marketplace add ajurcenk/rpcn-skills` and with `npx skills add ajurcenk/rpcn-skills`. Only `rpcn-` skills are discoverable. It is met when both installs, on a clean machine, offer `rpcn-test` and no other skill.
+- R1 (parent R13; architecture AD-1): The skills install with `npx skills add ajurcenk/rpcn-skills`. Only `rpcn-` skills are discoverable. It is met when that install, on a clean machine, offers `rpcn-test` and no other skill.
 - R2 (parent R8; AD-3, AD-4): `rpcn_check.py` provides `binary`, `lint`, `blobl`, `list`, `fields`, `run`, `test` and `hash`, with the schema-1 JSON envelope, exit codes 0/1/2, the fixed flags and the binary lookup. It is met when its unit tests pass against 4.100.0 and the newest release.
 - R3 (parent R8, R16; AD-2): `tools/sync_shared.py` copies `tools/shared/` into each skill as its `shared.txt` lists. It is met when CI fails on a copy that differs from its source.
 - R4 (parent R16; AD-6, AD-7): `tools/shared/formats/` holds the shared hand-off header and readiness rules, the design-note format and the test-report format. It is met when a hand-off file whose recorded input hash no longer matches is reported as not ready.
@@ -45,7 +45,7 @@ Skill authors get one tested way to check output against the binary, hand off fi
 
 ## Done when
 
-- Both install channels offer `rpcn-test` and only `rpcn-test`, and it lints a broken pipeline to a clean one.
+- `npx skills add ajurcenk/rpcn-skills` offers `rpcn-test` and only `rpcn-test`, and it lints a broken pipeline to a clean one.
 - `rpcn_check` unit tests pass on 4.100.0 and the newest release, and the shared-file drift check is green.
 - The trigger evals reach at least 90% with negatives silent, and one scenario passes 3 headless runs in `rpcn-test-skills`.
 - One comparison scenario reports a winner across all four arms.
@@ -53,7 +53,7 @@ Skill authors get one tested way to check output against the binary, hand off fi
 
 ## Boundaries
 
-- In: plugin manifest and install channels, `rpcn_check` and its tests, `sync_shared`, the hand-off formats (shared header, design note, test report), the lint-only `rpcn-test`, `validate_skills` (base rules), the trigger evals and gate, the `rpcn-test-skills` runner with benchmark arms, `run_evals`, and CI.
+- In: plugin manifest and the `npx skills` install channel, `rpcn_check` and its tests, `sync_shared`, the hand-off formats (shared header, design note, test report), the lint-only `rpcn-test`, `validate_skills` (base rules), the trigger evals and gate, the `rpcn-test-skills` runner with benchmark arms, `run_evals`, and CI.
 - Out:
   - extending `rpcn-test` beyond lint, and `rpcn-author` (epic 2)
   - `rpcn-design` and its use of the design-note format (epic 3)
@@ -78,3 +78,4 @@ Skill authors get one tested way to check output against the binary, hand off fi
 - Decision (2026-10-23): Until sibling skills exist, `rpcn-test`'s Next step names re-running `rpcn-test` after fixes. Epic 2 updates it under the AD-9 sibling-edit rule.
 - Decision (2026-10-23): The 12-story breakdown is approved. The user didn't rank the high-risk stories, so the order assumes the headless runner (6) is the least certain. Build sessions may start the Claude Code runs in stories 6, 7 and 10 under the user's login.
 - Decision (2026-10-23): The marketplace-install check from story 1.1 is skipped for now and recorded in `deferred-work.md`. It must pass before this epic closes (R1).
+- Decision (2026-11-03): The marketplace install channel is dropped from scope (user). R1 now needs only `npx skills`, and the deferred marketplace-install check is closed without being run. The plugin manifest stays, because `--plugin-dir` runs and `claude plugin eval` use it. AD-1 still names both channels and needs an update through the architect.
