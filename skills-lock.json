@@ -186,6 +186,13 @@
       "sourceType": "github",
       "skillPath": "skills/bmod-toolsmith/SKILL.md",
       "computedHash": "84dfbd550f0923a1ae8be8c0bddb02ed86dd9db2233880a6e432c23d3fae84e7"
+    },
+    "rpcn-test": {
+      "source": "ajurcenk/rpcn-skills",
+      "sourceType": "github",
+      "skillPath": "skills/rpcn-test/SKILL.md",
+      "computedHash": "d4b479f4dbb0e6c783e49d7c8124f4166290a5b7a3a4063db4dcc78807c0798f",
+      "installMode": "copy"
     }
   }
 }
