@@ -8,9 +8,9 @@ baseline_revision: 'b16d04e93e593ca502bfcc64b41c36ae98df82c3'
 route: 'oneshot'
 route_source: 'auto'
 risk: 'medium'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'quick'
+review_source: 'pinned'
+lenses_ran: ['quick']
 review_loop_iteration: 0
 context: []
 ---
@@ -44,6 +44,31 @@ context: []
 - **New scenarios in `rpcn-test-skills`:** `rpcn-test__lint_subfolder` (broken, `pipes/orders.yaml`) and `rpcn-test__lint_subfolder_valid` (valid). Each passed 1 run on the fixed skill: `runs/20261103-151037`, at $0.28 and $0.19.
 - **Surprise: the defect is nondeterministic.** `rpcn-test__lint_subfolder` against the old skill (`git:0fd10ca`, the same `skills/` as baseline `b16d04e`) **passed** (`runs/20261103-151201`). In that run the agent ran `cd …/pipes`. That breaks the skill's no-`cd` rule but obeys the old Step 2, after which the paths come out right. When the agent follows the no-`cd` rule instead, the report records `pipes/orders.yaml` and is never ready. That case is the deterministic reproduction in the bug (`hash --check` exits 1 with "input missing"). So the scenarios pin the fixed behaviour, but they can't reliably fail on the old skill.
 - **An aside:** `git:<sha>` sources install from GitHub, so an unpushed commit (`b16d04e`) fails at install (`runs/20261103-151142`).
+
+- **The first eval record was superseded.** `2026-11-03-c158cc24c027.json` passed: accuracy 1.0, three scenarios 3/3 each, $5.53. The review patches below change `skills/`, so it was deleted unused and the evals re-run.
+- **SKILL.md after the review:**
+  - The fenced commands carry `<dir>/` (the pipeline's folder, or nothing in the root).
+  - The fix check uses `rpcn-test-${CLAUDE_SESSION_ID}`, falling back to 8 random letters.
+  - A Step 4 exit 2 drafts the report, and headless ends `blocked`.
+  - Unverified fixes end their item title with `(unverified)`.
+  - A not-ready report is fixed only in its own header or format, and inputs are never re-hashed.
+  - Size: about 1,446 tokens (warning).
+
+## Review Triage Log
+
+Quick pass: 0 high, 3 medium, 4 low, 2 false, 0 maybe-false.
+
+| Finding | Verdict | Route | Evidence / action |
+|---|---|---|---|
+| Eval record not committed, so CI would fail | false | reject | The commit step comes after review. The record is committed with the fix. |
+| AC3: a Step 4 re-lint exit 2 neither drafts nor blocks | medium | patch | Confirmed at the old Step 4 and the status-block lines. Now it drafts the report with the reason, and `blocked` covers Steps 1–4. |
+| AC4: the unverified marker has no place in the report | low | patch | Step 5 now says to end the item title with `(unverified)`. |
+| AC4: model-picked "random" folder names repeat (`qmz…` 4 of 6 times) | medium | patch | Confirmed in `runs/20261103-152108`. The skill now uses `${CLAUDE_SESSION_ID}`, with the random letters only as a fallback. |
+| The scenarios can't fail on the old skill (no check for `cd`, or for a directory part in `inputs[].file`) | medium | defer | Real, and recorded in Implementation Notes. The fix needs a new runner check type plus tests in `rpcn-test-skills`, which is not a one-line patch. Added to `deferred-work.md`. |
+| AC2 names the fixture `pipes/multi_error.yaml`, but the scenario uses `pipes/orders.yaml` | low | reject | The bytes are identical to `multi_error.yaml`, and the behaviour is covered. Renaming is cosmetic. |
+| SKILL.md grows past AD-9's 1,200-token warning | low | reject | The validator warns and doesn't fail, by design. Trimming the skill is epic 2's rewrite. |
+| "fix the report once" invites re-hashing a stale input | low | patch | The wording now says fix only the header or format, and never re-hash or change an input's `sha256`. |
+| The fenced commands show bare `<name>.yaml` while the prose says to use the path | low | patch | The fenced hash, lint and `hash --check` commands now carry `<dir>/`. |
 
 ## Verification
 

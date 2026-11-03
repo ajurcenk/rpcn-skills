@@ -45,18 +45,18 @@ Step 2 and Step 5: write no test report, and in headless mode report
 
 ## Step 2: Hash the inputs
 
-The pipeline is `<name>.yaml`; use its path as the user gave it (for example
-`pipes/<name>.yaml`) in every call. Hash it, then `<name>.resources.yaml` beside
-it if that file exists:
+The pipeline is `<name>.yaml`. In every call, `<dir>/` is its folder as the
+user gave it (for example `pipes/`), or nothing when it is in the project root.
+Hash it, then `<name>.resources.yaml` beside it if that file exists:
 
 ```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <name>.yaml [<name>.resources.yaml]
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <dir>/<name>.yaml [<dir>/<name>.resources.yaml]
 ```
 
 ## Step 3: Lint
 
 ```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py lint <name>.yaml [--resources <name>.resources.yaml] [--env-file <file>]
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py lint <dir>/<name>.yaml [--resources <dir>/<name>.resources.yaml] [--env-file <file>]
 ```
 
 Pass `--env-file` only when the user names one.
@@ -66,10 +66,12 @@ Pass `--env-file` only when the user names one.
 Only when there are errors, read `references/lint-errors.md`. For every entry
 in `errors`, in order, give its file, line and column, the cause, and the fix
 as a unified diff against that file. Never add or drop an error. Check the
-fixes: write the fully fixed pipeline into a new folder of your own under the
-system temp directory (end its name in 8 random letters) and lint it with the
-same `--resources` and `--env-file` as Step 3. Revise at most twice; mark any
-fix that still fails, or whose lint exits 2, as unverified.
+fixes: write the fully fixed pipeline to
+`<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<name>.yaml` (if the variable
+is not expanded, end the folder name in 8 random letters instead) and lint it
+with the same `--resources` and `--env-file` as Step 3. Revise at most twice,
+then mark any fix that still fails as unverified. If this lint exits 2, mark
+the fixes unverified and write the report as `draft` with that reason.
 
 ## Step 5: Write the report
 
@@ -81,17 +83,18 @@ Write `<name>.test-report.md` beside the pipeline, following
 - Summary: `**Verdict:** pass` only with 0 lint errors, else `fail`
 - Lint: `0 errors.` or the error table
 - Bloblang samples, Unit tests, Design check: `Not run: not in this version of rpcn-test.`
-- Proposed changes: one numbered item and `diff` block per fix, or `None.`
+- Proposed changes: one numbered item and `diff` block per fix, or `None.`;
+  end an unverified fix's item title with `(unverified)`
 
-Then check it, using the report's path beside the pipeline (for example
-`pipes/<name>.test-report.md`):
+Then check it:
 
 ```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <name>.test-report.md
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <dir>/<name>.test-report.md
 ```
 
-It must report `data.ready: true`. On exit 1 or 2, fix the report once and
-check again. If it still isn't ready (for example an input changed after
+It must report `data.ready: true`. On exit 1 or 2, fix only the report's own
+header or format once and check again; never re-hash an input or change its
+`sha256`. If it still isn't ready (for example an input changed after
 hashing), set `status: draft`, say why, and in headless mode report `blocked`.
 
 Reply with the verdict, the explained errors and diffs, and the report path.
@@ -110,7 +113,7 @@ End the reply with exactly one fenced `json` block, and nothing after it:
 {"status": "<complete|blocked>", "skill": "rpcn-test", "reason": null, "artifacts": [], "checks": {"lint": "<pass|fail|skipped>", "tests": "skipped"}, "open_questions": []}
 ```
 
-- `blocked` (with `reason` the first error) only after an exit 2 in Steps 1–3
+- `blocked` (with `reason` the first error) only after an exit 2 in Steps 1–4
   or a report that stays not ready; otherwise `complete`, even when lint fails.
 - `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.
 - `artifacts`: the report path, or `[]`. Questions go in `open_questions`.

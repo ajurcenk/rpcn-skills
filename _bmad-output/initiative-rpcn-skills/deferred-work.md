@@ -9,3 +9,6 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-validation-foundation/tickets/story-trigger-evals-and-the-accuracy-gate-for-rpcn-test-plan.md`
   summary: AD-11's deprecated-component scan (epic 4) must not flag the plain phrase "Kafka Connect" in the trigger negative `evals/rpcn-test__miss_kafka_connect/prompt.md`, or that case must be exempt.
   evidence: AD-11 names `kafka` as a deprecated example and scans eval prompts. The negative case is required by story 1.7's frozen intent.
+- source_plan: `_bmad-output/backlog/bug-rpcn-test-report-never-ready-for-a-pipeline-in-a-subfolder-plan.md`
+  summary: Make the subfolder scenarios fail on the old rpcn-test, by checking that no Bash call uses `cd` and that the report's `inputs[].file` has no directory part.
+  evidence: The scenario passed against the old skill (`rpcn-test-skills/runs/20261103-151201`) because the agent ran `cd pipes`. The defect depends on whether the agent cds, and the runner has no check type for either condition. That needs a runner change plus tests in rpcn-test-skills.
