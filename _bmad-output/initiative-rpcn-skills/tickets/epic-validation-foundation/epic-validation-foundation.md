@@ -9,6 +9,7 @@ companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/archit
 after: []
 refined: true
 risk: high
+status: done
 ---
 
 # Validation foundation
@@ -74,9 +75,10 @@ Skill authors get one tested way to check output against the binary, hand off fi
 - Decision (2026-10-23): Epic 1 writes the shared hand-off header and readiness rules, plus the design-note and test-report formats. Later epics add their own formats.
 - Decision (2026-10-23): Evals run locally, not in CI. CI checks for a committed passing record.
 - Decision (2026-10-23): Pieces of the existing skill sets may be copied and adapted, each recorded in `SOURCES.md` with its source and licence.
-- Decision (2026-10-23): The tracer bullet is story 1. It runs repo, both install channels, the skill, `rpcn_check binary`, the binary itself and a one-job CI, and each later story adds its own CI step. The riskiest work comes next in each lane: lint parsing (2), then the headless runner (6) and triggering (7), both straight after the skill (5).
+- Decision (2026-10-23, superseded for install channels by 2026-11-03): The tracer bullet is story 1. It runs repo, both install channels, the skill, `rpcn_check binary`, the binary itself and a one-job CI, and each later story adds its own CI step. The riskiest work comes next in each lane: lint parsing (2), then the headless runner (6) and triggering (7), both straight after the skill (5).
 - Decision (2026-10-23): Until sibling skills exist, `rpcn-test`'s Next step names re-running `rpcn-test` after fixes. Epic 2 updates it under the AD-9 sibling-edit rule.
 - Decision (2026-10-23): The 12-story breakdown is approved. The user didn't rank the high-risk stories, so the order assumes the headless runner (6) is the least certain. Build sessions may start the Claude Code runs in stories 6, 7 and 10 under the user's login.
 - Decision (2026-10-23): The marketplace-install check from story 1.1 is skipped for now and recorded in `deferred-work.md`. It must pass before this epic closes (R1).
 - Decision (2026-11-03): The marketplace install channel is dropped from scope (user). R1 now needs only `npx skills`, and the deferred marketplace-install check is closed without being run. The plugin manifest stays, because `--plugin-dir` runs and `claude plugin eval` use it. AD-1 was updated the same day to name only `npx skills`.
 - Decision (2026-11-03): The R1 check passed. The user ran `npx skills add ajurcenk/rpcn-skills` on a clean machine with no issues.
+- Decision (2026-11-03): Epic closed as accepted-with-open-items (user, after the retrospective and the closure check). Open items A1–A4, D1 and D2 are in `epic-validation-foundation-retrospective.md`. A1 is the backlog bug `bug-rpcn-test-report-never-ready-for-a-pipeline-in-a-subfolder.md`. Entry 1's title and verify still say "both ways"; done tickets stay as written.
