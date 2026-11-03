@@ -3,7 +3,7 @@ title: 'rpcn_check blobl, list, fields, run and test'
 type: 'feature'
 ticket: '8'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: '050ba1c15265ace2c33c70c18765072a6ab8ed61'
 route: 'full'
 route_source: 'auto'
