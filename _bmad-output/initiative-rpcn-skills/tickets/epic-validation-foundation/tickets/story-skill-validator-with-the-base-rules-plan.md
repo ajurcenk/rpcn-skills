@@ -3,7 +3,7 @@ title: 'Skill validator with the base rules'
 type: 'feature'
 ticket: '9'
 created: '2026-11-03'
-status: 'built'
+status: done
 baseline_revision: '570732bb1c492996697818806cd5031f134f5107'
 route: 'full'
 route_source: 'auto'
