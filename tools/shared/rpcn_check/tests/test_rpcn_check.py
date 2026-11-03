@@ -227,6 +227,21 @@ class RpcnCheckTest(CheckTestBase):
         self.assertIsNone(out["binary"])
         self.assertIn("rpk connect install", out["errors"][0]["message"])
 
+    def test_rpk_prints_help_when_connect_is_missing(self) -> None:
+        # Real rpk (v26.2.2) with no Connect plugin on PATH: `rpk connect
+        # --version` prints its usage text and exits 0, without downloading.
+        write_exe(self.path_dir, "rpk", """\
+            echo "Usage:"
+            echo "  rpk connect [command]"
+            exit 0
+            """)
+        code, out = self.run_check("binary")
+        self.assertEqual(code, 2, out)
+        self.assertIsNone(out["binary"])
+        message = out["errors"][0]["message"]
+        self.assertIn("`rpk connect --version` failed (printed no `Version:` line)", message)
+        self.assertIn("rpk connect install", message)
+
     def test_headless_eval_var(self) -> None:
         fake_rpk(self.path_dir, "Version: 4.112.0")
         code, out = self.run_check("binary", env={"EVAL_RPCN_HEADLESS": "1"})
