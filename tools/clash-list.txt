@@ -1,0 +1,68 @@
+# Clash list (AD-10): every plugin, marketplace, skill and command name in the
+# two skill sets that rpcn-skills installs beside. tools/validate_skills.py
+# fails a skill whose name, or whose part after `rpcn-`, matches a name here
+# (both sides lower-cased, with `:` and `_` read as `-`).
+#
+# One name per line. `#` starts a comment, and blank lines are ignored.
+#
+# Sources (committed here; the validator never fetches them):
+#   redpanda-data/connect  at f15e3064a4e4aa4edc47f3b0f87c53d1572189fc
+#     .claude-plugin/marketplace.json, and under
+#     .claude-plugin/plugins/redpanda-connect/: .claude-plugin/plugin.json,
+#     skills/*/SKILL.md `name:` and commands/*.md `name:`  (`/rpcn:*`)
+#   redpanda-data/skills   at a4562333b774d963066e11dfa1282646b8490550
+#     .claude-plugin/marketplace.json, .claude-plugin/plugin.json and
+#     skills/*/SKILL.md `name:` (no commands)  (`/redpanda:*`)
+#
+# To refresh: check out each repo at its newest commit, list the same names,
+# replace the matching section below, update both commits above, then run
+# `uv run tools/validate_skills.py`.
+
+# redpanda-data/connect: plugin and marketplace
+redpanda-connect
+redpanda-connect-plugins
+# redpanda-data/connect: skills
+bloblang-authoring
+component-search
+pipeline-assistant
+# redpanda-data/connect: commands
+rpcn:blobl
+rpcn:pipeline
+rpcn:search
+
+# redpanda-data/skills: plugin and marketplace
+redpanda
+redpanda-skills
+# redpanda-data/skills: skills
+adp
+cloud-byoc
+cloud-dedicated
+cloud-serverless
+connect
+connect-cdc-dynamodb
+connect-cdc-mongodb
+connect-cdc-mysql
+connect-cdc-oracle
+connect-cdc-postgres
+connect-cdc-salesforce
+connect-cdc-spanner
+connect-cdc-sqlserver
+connect-cdc-tigerbeetle
+connect-debugging
+rpk
+rpk-cloud
+rpk-cluster
+rpk-debug
+rpk-group
+rpk-redpanda
+rpk-registry
+rpk-security
+rpk-topic
+rpk-transform
+sql
+sql-admin-api
+sql-debugging
+sql-federated-queries
+streaming
+streaming-admin-api
+streaming-debugging

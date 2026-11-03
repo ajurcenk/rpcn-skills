@@ -1,0 +1,11 @@
+# Retired skill names (AD-10, AD-12). A listed name is never reused:
+# tools/validate_skills.py fails any skill that takes one.
+#
+# Add one table per renamed or removed skill, and never delete one:
+#
+#   [[retired]]
+#   name = "rpcn-old"          # the retired skill name
+#   replaced_by = "rpcn-new"   # the skill that took over its job, or "" if none
+#   version = "0.2.0"          # the plugin version that retired it
+#
+# No skills are retired yet.

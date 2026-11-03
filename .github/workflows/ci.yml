@@ -15,6 +15,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.3.0
 
+      - name: Skills follow the base rules (AD-9, AD-10)
+        run: uv run tools/validate_skills.py
+
       - name: Shared-file copies match their sources (drift check, AD-2)
         run: uv run tools/sync_shared.py --check
 
@@ -50,3 +53,6 @@ jobs:
 
       - name: eval_record tests
         run: uv run tools/tests/test_eval_record.py
+
+      - name: validate_skills tests
+        run: uv run tools/tests/test_validate_skills.py
