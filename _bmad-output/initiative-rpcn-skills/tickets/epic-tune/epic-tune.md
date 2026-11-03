@@ -5,7 +5,7 @@ title: "Tune skill"
 parent: initiative-rpcn-skills
 covers: [R4]
 sources: []
-companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md]
 after: []
 refined: false
 risk: medium
@@ -35,4 +35,4 @@ Developers improve running pipelines from evidence, not guesswork (initiative R4
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
-- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-6; Deferred: load-test environment
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-6; Deferred: load-test environment

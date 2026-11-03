@@ -5,7 +5,7 @@ title: "Validation foundation"
 parent: initiative-rpcn-skills
 covers: [R8, R9, R12, R13, R16, R17, R19, R20]
 sources: []
-companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md]
 after: []
 refined: true
 risk: high
@@ -65,7 +65,7 @@ Skill authors get one tested way to check output against the binary, hand off fi
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`: prior art (pieces to copy and adapt)
-- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-13, AD-14
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-13, AD-14
 
 ## Notes
 
@@ -78,4 +78,4 @@ Skill authors get one tested way to check output against the binary, hand off fi
 - Decision (2026-10-23): Until sibling skills exist, `rpcn-test`'s Next step names re-running `rpcn-test` after fixes. Epic 2 updates it under the AD-9 sibling-edit rule.
 - Decision (2026-10-23): The 12-story breakdown is approved. The user didn't rank the high-risk stories, so the order assumes the headless runner (6) is the least certain. Build sessions may start the Claude Code runs in stories 6, 7 and 10 under the user's login.
 - Decision (2026-10-23): The marketplace-install check from story 1.1 is skipped for now and recorded in `deferred-work.md`. It must pass before this epic closes (R1).
-- Decision (2026-11-03): The marketplace install channel is dropped from scope (user). R1 now needs only `npx skills`, and the deferred marketplace-install check is closed without being run. The plugin manifest stays, because `--plugin-dir` runs and `claude plugin eval` use it. AD-1 still names both channels and needs an update through the architect.
+- Decision (2026-11-03): The marketplace install channel is dropped from scope (user). R1 now needs only `npx skills`, and the deferred marketplace-install check is closed without being run. The plugin manifest stays, because `--plugin-dir` runs and `claude plugin eval` use it. AD-1 was updated the same day to name only `npx skills`.

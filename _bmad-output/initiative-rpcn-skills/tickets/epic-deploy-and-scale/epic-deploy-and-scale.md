@@ -5,7 +5,7 @@ title: "Deploy and Scale skills"
 parent: initiative-rpcn-skills
 covers: [R5, R6]
 sources: []
-companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
+companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md]
 after: []
 refined: false
 risk: high
@@ -36,7 +36,7 @@ Developers and DevOps engineers deploy pipelines sized right the first time (ini
 
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
-- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-6, AD-7, AD-8; Deferred: load-test environment, capacity model, deployment specifics
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-6, AD-7, AD-8; Deferred: load-test environment, capacity model, deployment specifics
 
 ## Notes
 

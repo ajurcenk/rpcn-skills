@@ -1,7 +1,7 @@
 ---
 type: review
 lens: adversarial (compliant-but-incompatible units)
-target: _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md
+target: _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md
 inputs:
   - _bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md
   - _bmad-output/initiative-rpcn-skills/tickets/tickets.toml

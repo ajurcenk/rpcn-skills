@@ -7,7 +7,7 @@ paradigm: 'pipes-and-filters over a file-based artifact chain, with one binary a
 scope: 'The RPCN Skills plugin repo: seven lifecycle skills, their shared files, hand-off files, evals, CI and release'
 status: final
 created: '2026-10-22'
-updated: '2026-10-23'
+updated: '2026-11-03'
 binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R15, R16, R17, R18, R19, R20]
 sources:
   - _bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md
@@ -44,16 +44,16 @@ flowchart LR
 
 ## Invariants & Rules
 
-### AD-1 — One repo, two install channels, self-contained skills
+### AD-1 — One repo, one install channel, self-contained skills
 
 - **Binds:** R13, all skills
-- **Prevents:** a skill that works through the Claude Code plugin but not through `npx skills`, or the reverse
+- **Prevents:** a skill that works only when the whole repo is loaded as a plugin, and breaks when `npx skills` installs its folder alone
 - **Rule:**
   - Every skill lives at `skills/rpcn-<job>/`.
-  - The repo root holds `.claude-plugin/marketplace.json` (plugin `source: "./"`) and `.claude-plugin/plugin.json` (`"name": "rpcn-skills"`, `version`).
-  - **Repo:** `github.com/ajurcenk/rpcn-skills`. Users install with `claude plugin marketplace add ajurcenk/rpcn-skills` or `npx skills add ajurcenk/rpcn-skills`. [ADOPTED]
-  - A skill uses only files inside its own folder: no `../`, no repo-root paths, no reads from another skill. `npx skills` installs each skill folder alone and lets users pick a subset (verified, vercel-labs/skills 1.7.4).
-  - **Only `rpcn-` skills are discoverable.** `npx skills` also scans `.claude/skills/` and `.agents/skills/`, so the BMad skills used to build this repo would be offered to users. Those folders are gitignored. `skills-lock.json` is committed, and contributors restore the BMad skills with `npx skills install`.
+  - **Repo:** `github.com/ajurcenk/rpcn-skills`. Users install with `npx skills add ajurcenk/rpcn-skills`. The Claude Code plugin marketplace is not a supported channel. [ADOPTED]
+  - The repo root keeps `.claude-plugin/plugin.json` (`"name": "rpcn-skills"`, `version`) as the version source (AD-12). `claude --plugin-dir` and `claude plugin eval` load the repo root during development only.
+  - A skill uses only files inside its own folder: no `../`, no repo-root paths, no reads from another skill, and no plugin-only variables such as `${CLAUDE_PLUGIN_ROOT}`. `npx skills` installs each skill folder alone, whole, and lets users pick a subset (verified on vercel-labs/skills 1.7.6, 2026-11-03; users run the latest).
+  - **Only `rpcn-` skills are discoverable:** `npx skills add ajurcenk/rpcn-skills --list` lists only `rpcn-` skills. `npx skills` scans many folders besides `skills/` (among them `.claude/skills/`, `.agents/skills/` and a root `SKILL.md`), so no `SKILL.md` is tracked outside `skills/rpcn-*/`. The BMad skills used to build this repo live in the gitignored `.claude/skills/` and `.agents/skills/`. `skills-lock.json` is committed, and contributors restore them with `npx skills experimental_install` (a preview command that restores into `.agents/skills/` only).
 
 ### AD-2 — Shared files: one source, copied, drift-checked
 
@@ -261,7 +261,7 @@ flowchart LR
     - **Scenarios:** each lives in `scenarios/<skill>__<case>/` with `prompt.md`, an input `fixtures/` folder and `expect.toml` (the files that must exist, their `status`, and the AD-8 block that is expected).
     - **Runner:** `uv run run_scenarios.py` handles each scenario in turn:
       1. copies the scenario into a fresh temp folder
-      2. installs `rpcn-skills` there the way a user would, from a local path in development or a git ref in CI
+      2. installs the skills there through the AD-1 channel, `npx skills add <source> -s <skill> -a claude-code -y --copy`, from a local path or a git commit (locally, per AD-14)
       3. runs Claude Code headless with the prompt
       4. runs the installed skill's `rpcn_check.py lint`/`blobl`/`hash` over the files left on disk
       5. parses the final AD-8 block
@@ -276,7 +276,6 @@ flowchart LR
     - **Benchmark sources:** the benchmark sets are installed from their local folders at a recorded commit. They are never copied into `rpcn-skills`.
     - **Installing all three together** is not tested in version 1.
     - **Source code:** the test project never holds skill source. Installed skills there are gitignored.
-    - `[ASSUMPTION: the install-from-ref command and the headless flags are verified in epic 1]`
   - **Repetition:** each trigger case and each scenario runs at least 3 times.
   - **Env vars:** native cases use only `EVAL_`-prefixed env vars.
   - **Gate:** trigger accuracy is at least 90%, out-of-scope negatives trigger no skill, and every scenario's produced files lint clean and match `expect.toml`.
@@ -324,7 +323,7 @@ flowchart LR
 | uv | 0.13.5 |
 | Python (`requires-python`) | >=3.10 |
 | Claude Code (`claude plugin eval`) | >=2.1.269 |
-| vercel-labs/skills (`npx skills`) | 1.7.4 |
+| vercel-labs/skills (`npx skills`) | latest (tested 1.7.6) |
 | Agent Skills spec | agentskills.io, current |
 
 ## Structural Seed
@@ -332,7 +331,7 @@ flowchart LR
 ```text
 rpcn-skills/
   .claude-plugin/
-    marketplace.json  plugin.json
+    plugin.json
   skills/rpcn-<job>/          # design author test tune scale deploy migrate
     SKILL.md  shared.txt
     references/               # hand-written + synced formats + generated-<kind>.json
@@ -363,7 +362,7 @@ rpcn-skills/
 | R11 Release sync | `gen_refs`, weekly job, validator | AD-11, AD-14 |
 | R12 Evals | `evals/` (triggers), `rpcn-test-skills` (scenarios) | AD-13 |
 | R20 Benchmark | `rpcn-test-skills` arms | AD-13 |
-| R13 Install | `.claude-plugin/`, `skills/` | AD-1 |
+| R13 Install | `skills/`, `.gitignore`, `skills-lock.json`, `.claude-plugin/plugin.json` | AD-1 |
 | R16 Hand-offs | user project | AD-6, AD-7 |
 | R17 Headless | every SKILL.md, `binary`, scenario runner | AD-8, AD-13 |
 | R18 Versioning | `plugin.json`, stamps, `retired.toml` | AD-10, AD-12 |
@@ -380,3 +379,7 @@ rpcn-skills/
 - **Running evals in CI** (a Claude subscription token or company credentials): later, when others contribute. AD-14's local runner and eval-record check stay valid either way.
 - **Windows:** out of scope. Skills, scripts and CI target Linux and macOS only.
 - **Telemetry:** out of scope.
+- **Claude Code plugin marketplace install:** out of scope (user decision 2026-11-03). `npx skills` is the only user channel (AD-1).
+- **Release stamp and the eval record (open):** AD-12's stamp commit, and a weekly pin-roll that changes synced references, both change AD-14's skills hash, so neither can merge without a new local eval run. Epic 4 decides, before its stamp work, whether the stamp keys are left out of the hash and who runs evals for a pin-roll PR. That decision also covers what the stamp edits (the shared `rpcn_check` source or the copies), and whether the eval-record hash should also cover `evals/` and `tools/eval_gate.py`.
+- **What users install (open):** `npx skills` installs from `main`, so between releases users get unreleased content under the last version stamp. Epic 4 picks one: treat every merge that changes `skills/` as a release, or pin the install to a tag. It also decides how a retired skill's folder is removed from users' installs.
+- **The trigger gate's setup (open):** `claude plugin eval` loads every skill with plugin-prefixed names, but users install a subset with plain names. Before a second skill lands, epic 2 decides whether each skill also gets a positive case and a near-miss case run through `run_scenarios.py` on an `npx` install of that skill alone. It also decides whether the runner records which skills each session could see and fails on any unexpected one.

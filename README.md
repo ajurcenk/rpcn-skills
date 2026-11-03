@@ -12,14 +12,7 @@ Skills in this release:
 
 ## Install
 
-Claude Code, as a plugin:
-
-```bash
-claude plugin marketplace add ajurcenk/rpcn-skills
-claude plugin install rpcn-skills@rpcn-skills
-```
-
-Any agent that supports [Agent Skills](https://agentskills.io), with `npx skills`:
+With `npx skills`, for Claude Code or any agent that supports [Agent Skills](https://agentskills.io):
 
 ```bash
 npx skills add ajurcenk/rpcn-skills

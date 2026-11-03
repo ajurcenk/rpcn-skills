@@ -1,5 +1,6 @@
 # Dev-only skills (BMad). npx skills scans these folders, so they must not be
-# published; restore them with `npx skills install` from skills-lock.json.
+# published; restore them from skills-lock.json with `npx skills experimental_install`
+# (a preview command; it restores into .agents/skills/ only).
 .claude/skills/
 .agents/skills/
 

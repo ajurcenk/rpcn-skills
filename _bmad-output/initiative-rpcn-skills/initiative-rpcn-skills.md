@@ -3,7 +3,7 @@ type: initiative
 title: "RPCN developers design, build, test, tune, scale, deploy and migrate pipelines with binary-checked agent skills"
 parent: none
 sources: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md]
-companions: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md, _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md]
+companions: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md, _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md]
 after: []
 risk: medium
 ---
@@ -73,7 +73,7 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 
 - brief — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md`, sections The Solution (including Artifacts and hand-offs), Success Criteria, Scope
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`: prior art summary table, landscape, companion product seams, BMAD-METHOD patterns
-- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md`: AD-1 to AD-14, conventions, structural seed, deferred list
+- architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-1 to AD-14, conventions, structural seed, deferred list
 
 ## Notes
 
@@ -91,5 +91,5 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - Decision (2026-10-23): The initiative covers skills development only. All VS Code extension integration is out: R14 (editor parity) is retired, the earlier code-sharing decision no longer applies, and 4.112.0 is no longer tested. The tested binaries are 4.100.0 and the newest release.
 - Decision (2026-10-23): The `npx skills` layout question is answered. Each skill folder installs on its own, with no dependencies between skills, so every skill carries its own copy of the check scripts (architecture AD-2). Epic 1 no longer waits on this.
 - Decision (2026-10-23): The project is licensed Apache-2.0. Pieces of the two reference skill sets may be copied and adapted into this project's conventions. Each copied piece records its source and licence (Connect repo files are checked for Apache-2.0 vs the Redpanda Community License). Nothing depends on those sets directly.
-- Decision (2026-11-03): The Claude Code plugin marketplace install channel is dropped from scope (user). Skills install only through `npx skills add ajurcenk/rpcn-skills`, and the marketplace install is neither supported nor tested. This replaces the plugin half of R13. The brief's Scope still says "Claude Code plugin"; this decision overrides it. The architecture's AD-1 still names both channels and needs an update through the architect.
+- Decision (2026-11-03): The Claude Code plugin marketplace install channel is dropped from scope (user). Skills install only through `npx skills add ajurcenk/rpcn-skills`, and the marketplace install is neither supported nor tested. This replaces the plugin half of R13. The brief's Scope still says "Claude Code plugin"; this decision overrides it. The architecture's AD-1 was updated the same day to name only `npx skills`.
 - Decision (2026-10-23): The existing skill sets are used as a benchmark (R20), not tested installed alongside ours. The coexistence clause is removed from R12, and installing all three together is not tested in version 1. Names still must not clash.

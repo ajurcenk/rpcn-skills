@@ -12,7 +12,7 @@ review: 'quick'
 review_source: 'pinned'
 lenses_ran: ['quick']
 review_loop_iteration: 0
-context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/ARCHITECTURE-SPINE.md']
+context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md']
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
