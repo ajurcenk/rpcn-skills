@@ -3,7 +3,7 @@ title: "rpcn-test's report is never ready for a pipeline in a subfolder"
 type: 'bugfix'
 ticket: 'bug-rpcn-test-report-never-ready-for-a-pipeline-in-a-subfolder'
 created: '2026-11-03'
-status: 'in-progress'
+status: 'built'
 baseline_revision: 'b16d04e93e593ca502bfcc64b41c36ae98df82c3'
 route: 'oneshot'
 route_source: 'auto'
@@ -53,6 +53,8 @@ context: []
   - Unverified fixes end their item title with `(unverified)`.
   - A not-ready report is fixed only in its own header or format, and inputs are never re-hashed.
   - Size: about 1,446 tokens (warning).
+
+- **Final eval record:** `evals/results/2026-11-03-93ce7031a1db.json` passed with `dirty: false`, at $5.73. Trigger accuracy was 1.0. `lint_broken` (pipeline in the root) passed 3/3, `lint_subfolder` 3/3 and `lint_subfolder_valid` 3/3.
 
 ## Review Triage Log
 

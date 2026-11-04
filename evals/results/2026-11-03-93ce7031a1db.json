@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "skills_hash": "93ce7031a1db5f1b90604c88fe78f62ebe3e37db55afc23833b156afccabcace",
+  "date": "2026-11-03",
+  "git_head": "54136bee96eb6bd87ae33fe65c5186afb8ae1a1f",
+  "dirty": false,
+  "plugin_version": "0.1.0",
+  "claude_version": "2.1.317 (Claude Code)",
+  "trigger": {
+    "ok": true,
+    "accuracy": 1.0,
+    "runs_total": 42,
+    "runs_correct": 42,
+    "positives": {
+      "runs": 24,
+      "correct": 24
+    },
+    "negatives": {
+      "runs": 18,
+      "correct": 18
+    },
+    "failed_runs": [],
+    "partial": false
+  },
+  "scenarios": [
+    {
+      "name": "rpcn-test__lint_broken",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder_valid",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    }
+  ],
+  "compare": null,
+  "passed": true,
+  "cost_usd": 5.7324
+}
