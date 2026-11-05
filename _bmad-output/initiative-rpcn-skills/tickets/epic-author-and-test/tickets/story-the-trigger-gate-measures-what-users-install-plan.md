@@ -3,7 +3,7 @@ title: 'The trigger gate measures what users install'
 type: 'feature'
 ticket: '1'
 created: '2026-11-05'
-status: 'built'
+status: done
 baseline_revision: 'd5fbb4e9b64aae01aea6f14fb8558c92a779faac'
 route: 'full'
 route_source: 'auto'
