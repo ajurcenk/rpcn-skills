@@ -3,7 +3,7 @@ title: 'rpcn_check hand-off checks hold for real projects'
 type: 'feature'
 ticket: '2'
 created: '2026-11-05'
-status: 'in-review'
+status: 'built'
 baseline_revision: 'f8c3a10c7f398caba1a18a4a5268b39db69262d3'
 route: 'full'
 route_source: 'auto'
@@ -113,6 +113,8 @@ context: []
 - **First record superseded.** The record `2026-11-05-ab5d28984931.json` passed ($6.49) but was dirty, because it was run before the commit (retrospective lesson L2). The review patches then changed `skills/`, so it was deleted unused. The evals re-run from the committed tree.
 - **Size:** `rpcn-test` SKILL.md is now about 1,574 tokens. That's a warning only, and story 2.3 trims it under 1,200.
 - **Change:** `pipeline_matches` now looks only at `inputs[0]`, consistent with the pipeline-first rule.
+
+- **Final record:** `evals/results/2026-11-05-1d26594d55bb.json` passed with `dirty: false`, at $6.75. The runner tests ran first, the gate passed with accuracy 1.0, and all 5 scenarios passed 3/3.
 
 ## Review Triage Log
 
