@@ -45,18 +45,22 @@ Step 2 and Step 5: write no test report, and in headless mode report
 
 ## Step 2: Hash the inputs
 
-The pipeline is `<name>.yaml`. In every call, `<dir>/` is its folder as the
-user gave it (for example `pipes/`), or nothing when it is in the project root.
-Hash it, then `<name>.resources.yaml` beside it if that file exists:
+`<pipeline>` is the pipeline's file name with its real extension:
+`<name>.yaml` or `<name>.yml`. In every call, `<dir>/` is its folder as the
+user gave it (for example `pipes/`), or nothing when it is in the project
+root. The resources file `<res>` is the one the user names, such as a
+`resources.yaml` shared by several pipelines, else
+`<dir>/<name>.resources.yaml` (`.resources.yml` for a `.yml` pipeline) if
+that file exists, else none. Hash the pipeline first, then `<res>`:
 
 ```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <dir>/<name>.yaml [<dir>/<name>.resources.yaml]
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <dir>/<pipeline> [<res>]
 ```
 
 ## Step 3: Lint
 
 ```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py lint <dir>/<name>.yaml [--resources <dir>/<name>.resources.yaml] [--env-file <file>]
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py lint <dir>/<pipeline> [--resources <res>] [--env-file <file>]
 ```
 
 Pass `--env-file` only when the user names one.
@@ -67,7 +71,7 @@ Only when there are errors, read `references/lint-errors.md`. For every entry
 in `errors`, in order, give its file, line and column, the cause, and the fix
 as a unified diff against that file. Never add or drop an error. Check the
 fixes: write the fully fixed pipeline to
-`<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<name>.yaml` (if the variable
+`<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<pipeline>` (if the variable
 is not expanded, end the folder name in 8 random letters instead) and lint it
 with the same `--resources` and `--env-file` as Step 3. Revise at most twice,
 then mark any fix that still fails as unverified. If this lint exits 2, mark
@@ -79,7 +83,12 @@ Write `<name>.test-report.md` beside the pipeline, following
 `references/test-report-format.md` and `references/handoff-header.md`:
 - header: `status: ready`, `produced_by: rpcn-test@<data.plugin_version>`,
   `rpcn_version` from `binary.version`, `inputs` from Step 2 in that order,
-  each `file` as the file name alone (`<name>.yaml`, never `pipes/<name>.yaml`)
+  each `file` relative to the report's folder, not as `hash` printed it: the
+  pipeline as `<pipeline>` alone (never `pipes/<pipeline>`), and any other
+  input as its path from the pipeline's folder (hashed as `resources.yaml`
+  from the project root with the pipeline in `pipes/`: record
+  `../resources.yaml`; hashed as `pipes/orders.resources.yaml`: record
+  `orders.resources.yaml`)
 - Summary: `**Verdict:** pass` only with 0 lint errors, else `fail`
 - Lint: `0 errors.` or the error table
 - Bloblang samples, Unit tests, Design check: `Not run: not in this version of rpcn-test.`

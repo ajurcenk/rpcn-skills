@@ -1,7 +1,7 @@
 # Test report format, `test-report@1`
 
 The test report `<name>.test-report.md` is what rpcn-test writes after it
-checks `<name>.yaml` (AD-6). It sits beside the pipeline in the developer's
+checks `<name>.yaml` or `<name>.yml` (AD-6). It sits beside the pipeline in the developer's
 project, and rpcn-test is its only writer. Its header follows
 `handoff-header.md`, with:
 
@@ -17,8 +17,12 @@ Readers reject a major they do not know, through `rpcn_check.py hash --check`.
 ## Header
 
 - `inputs`: every file the checks read, hashed before the checks ran:
-  - the pipeline YAML, `<name>.yaml`, always first
-  - each resources file passed to lint or the tests (`<name>.resources.yaml`)
+  - the pipeline YAML, `<name>.yaml` or `<name>.yml`, always first and as a
+    bare file name. `hash --check` reports a test report whose first input is
+    anything else (or that has no inputs) as not ready.
+  - each resources file passed to lint or the tests: `<name>.resources.yaml`,
+    or a resources file shared with other pipelines, recorded relative to
+    the report's folder (for example `../resources.yaml`)
   - the design note `<name>.design.md`, when the Design check used it
 
   The `.env` or `.env.example` file, the test cases file and the samples file
@@ -75,12 +79,13 @@ After `rpcn_check.py hash --check <name>.test-report.md` reports
 - [ ] The six sections are present, with the headings above, in order.
 - [ ] Summary has a `**Verdict:**` line of `pass` or `fail`.
 - [ ] Every section that did not run says `Not run` and why.
-- [ ] `inputs` lists `<name>.yaml`, and the design note when Design check ran.
+- [ ] `inputs` lists the design note when Design check ran. (That the
+      pipeline file comes first is checked by `hash --check`.)
 
 A reader that needs the pipeline itself to be ready (AD-6: rpcn-scale,
 rpcn-deploy) uses it only when the same `hash --check` reports
-`pipeline_ready: true`: the report is ready, its `<name>.yaml` input hash
-matches, and its verdict is `pass` (`data.verdict`). It also checks:
+`pipeline_ready: true`: the report is ready, its `<name>.yaml` (or
+`<name>.yml`) input hash matches, and its verdict is `pass` (`data.verdict`). It also checks:
 
 - [ ] Lint ran.
 

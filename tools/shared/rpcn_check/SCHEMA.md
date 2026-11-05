@@ -114,7 +114,8 @@ stderr) is parsed line by line:
   path with parentheses splits on the last `(line,col)`. `file` is the path as
   the binary printed it, which is the target as given.
 - Any other non-empty line becomes an error with `file`, `line` and `column`
-  `null`.
+  `null`, but only when the binary exited non-zero. When it exited 0, such
+  lines are ignored: a clean lint can still print an `rpk` update notice.
 - Errors are sorted by file, then line, then column, then message, with
   file-less errors last, so every RPCN version gives the same order.
 
@@ -122,8 +123,8 @@ stderr) is parsed line by line:
 
 | Code | When |
 |---|---|
-| 0 | The binary exited 0 and printed nothing that parsed as an error |
-| 1 | The binary reported errors (any parsed line, whatever its exit code) |
+| 0 | The binary exited 0 and printed no `<file>(<line>,<col>) <message>` line (other lines are ignored) |
+| 1 | The binary reported errors: a `<file>(<line>,<col>) <message>` line whatever its exit code, or any non-empty line with a non-zero exit |
 | 2 | No targets, a missing target, resources or env file, no usable binary, a timeout ("timed out"), or a non-zero exit with no output (the message gives the exit code) |
 
 ## `hash`
@@ -191,9 +192,9 @@ folder, not the working directory.
 | `inputs[].recorded` | str | The sha256 in the header |
 | `inputs[].current` | str \| null | The file's sha256 now; `null` when it is missing |
 | `inputs[].state` | str | `match`, `changed` or `missing` |
-| `ready` | bool | `true` only when every input is `match`, `status` is `ready` and `format_known` is `true` |
+| `ready` | bool | `true` only when every input is `match`, `status` is `ready` and `format_known` is `true`, and, for a `test-report`, the first input is the pipeline file `<pipeline>.yaml` or `<pipeline>.yml` (compared after path normalisation) |
 | `verdict` | str \| null | For a test report, the first body line `**Verdict:** pass` or `**Verdict:** fail`, as `pass` or `fail`; `null` when there is no such line or `artifact` is not `test-report` |
-| `pipeline_ready` | bool | `true` only when `ready` is `true`, an input whose `file` is `<pipeline>.yaml` (the header's `pipeline`) is `match`, and `verdict` is `pass`. A pipeline counts as ready only when this is `true` (AD-6) |
+| `pipeline_ready` | bool | `true` only when `ready` is `true`, the first input's `file` is `<pipeline>.yaml` or `<pipeline>.yml` (the header's `pipeline`) and it is `match`, and `verdict` is `pass`. A pipeline counts as ready only when this is `true` (AD-6) |
 
 `verdict` and `pipeline_ready` do not change `ok`, `ready` or the exit code:
 a `ready` report with the verdict `fail` still exits 0.
@@ -204,6 +205,9 @@ a `ready` report with the verdict `fail` still exits 0.
   hand-off file's folder, `line` is `null`
 - `status` not `ready`, or an unknown format: `file` is the hand-off file,
   `line` is that key's line
+- a `test-report` whose `inputs` is empty or whose first input is not
+  `<pipeline>.yaml` or `<pipeline>.yml`: `file` is the hand-off file, `line`
+  is the `inputs` line
 
 `KNOWN_FORMATS` is currently `{"design": 1, "test-report": 1}`.
 
@@ -212,7 +216,7 @@ a `ready` report with the verdict `fail` still exits 0.
 | Code | When |
 |---|---|
 | 0 | `ready` is `true` |
-| 1 | Not ready: an input changed or is missing, `status` is not `ready`, or the format is unknown |
+| 1 | Not ready: an input changed or is missing, `status` is not `ready`, the format is unknown, or a test report's first input is not its pipeline file |
 | 2 | The hand-off file is missing, unreadable or not UTF-8, an input exists but cannot be read (the error's `file` is that input), or its header does not follow the strict syntax. One error, with `file` the hand-off file (or the unreadable input), `line` the 1-based line at fault for a header error (otherwise `null`), and `data` `{}` |
 
 Header errors include: no `---` on line 1, no closing `---`, a line that is

@@ -437,6 +437,44 @@ class LintTest(CheckTestBase):
         self.assertEqual(code, 1, out)
         self.assertFalse(out["ok"])
 
+    NOTICE = (
+        "A new version of rpk is available (v25.3.1). To update, run:\n"
+        "  rpk upgrade\n"
+    )
+
+    def test_notice_with_exit_zero_is_ok(self) -> None:
+        f = self.make("p.yaml")
+        for stream in ("stderr", "stdout"):
+            with self.subTest(stream=stream):
+                fake_lint_rpk(self.path_dir, self.log, self.NOTICE, exit_code=0, stream=stream)
+                code, out = self.lint(f)
+                self.assertEqual(code, 0, out)
+                self.assertTrue(out["ok"])
+                self.assertEqual(out["errors"], [])
+                self.assertEqual(out["data"], {"files": [f], "error_count": 0})
+
+    def test_notice_and_error_with_exit_zero_keeps_only_the_error(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, f"{self.NOTICE}{f}(3,5) field x not recognised\n", 0)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["errors"],
+            [{"file": f, "line": 3, "column": 5, "message": "field x not recognised"}],
+        )
+        self.assertEqual(out["data"]["error_count"], 1)
+
+    def test_notice_with_nonzero_exit_is_fileless_error(self) -> None:
+        f = self.make("p.yaml")
+        fake_lint_rpk(self.path_dir, self.log, "A new version of rpk is available\n", exit_code=1)
+        code, out = self.lint(f)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            out["errors"],
+            [{"file": None, "line": None, "column": None,
+              "message": "A new version of rpk is available"}],
+        )
+
     def test_invalid_utf8_output(self) -> None:
         f = self.make("p.yaml")
         fake_lint_rpk(self.path_dir, self.log, "", exit_code=1)
@@ -796,7 +834,10 @@ class HashTest(CheckTestBase):
         self.assertFalse(out["data"]["ready"])
 
     def test_unknown_major(self) -> None:
-        report = self.write("orders.test-report.md", handoff(fmt="test-report@2"))
+        self.write("orders.yaml", self.PIPE)
+        report = self.write(
+            "orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))], fmt="test-report@2")
+        )
         code, out = self.check(report)
         self.assertEqual(code, 1, out)
         self.assertFalse(out["data"]["format_known"])
@@ -829,17 +870,76 @@ class HashTest(CheckTestBase):
         self.assertTrue(out["data"]["format_known"])
 
     def test_no_inputs(self) -> None:
-        for status, want in (("ready", 0), ("draft", 1)):
+        # A design may have no inputs; a test report must start with its pipeline.
+        report = self.write("orders.design.md", handoff(artifact="design", fmt="design@1"))
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["inputs"], [])
+        for status in ("ready", "draft"):
             with self.subTest(status=status):
                 report = self.write("orders.test-report.md", handoff(status=status))
                 code, out = self.check(report)
-                self.assertEqual(code, want, out)
+                self.assertEqual(code, 1, out)
                 self.assertEqual(out["data"]["inputs"], [])
-                self.assertEqual(out["data"]["ready"], want == 0)
+                self.assertFalse(out["data"]["ready"])
+                self.assertFalse(out["data"]["pipeline_ready"])
+                inputs_err = [e for e in out["errors"] if "first input" in e["message"]]
+                self.assertEqual(len(inputs_err), 1, out)
+                self.assertEqual(inputs_err[0]["line"], 8)
+                self.assertEqual(inputs_err[0]["file"], str(report))
+                self.assertIn("inputs is empty", inputs_err[0]["message"])
+
+    def test_test_report_first_input_must_be_pipeline(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        self.write("resources.yaml", "cache_resources: []\n")
+        for first in ("resources.yaml", "pipes/orders.yaml", "orders.json"):
+            with self.subTest(first=first):
+                inputs = [(first, sha("x\n")), ("orders.yaml", sha(self.PIPE))]
+                report = self.write(
+                    "orders.test-report.md", handoff(inputs, body="**Verdict:** pass\n")
+                )
+                code, out = self.check(report)
+                self.assertEqual(code, 1, out)
+                self.assertFalse(out["data"]["ready"])
+                self.assertFalse(out["data"]["pipeline_ready"])
+                inputs_err = [e for e in out["errors"] if "first input" in e["message"]]
+                self.assertEqual(len(inputs_err), 1, out)
+                self.assertEqual(inputs_err[0]["line"], 8)
+                self.assertIn(repr(first), inputs_err[0]["message"])
+
+    def test_test_report_first_input_normalised(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        report = self.write(
+            "orders.test-report.md",
+            handoff([("./orders.yaml", sha(self.PIPE))], body="**Verdict:** pass\n"),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["pipeline_ready"])
+
+    def test_shared_resources_input_changed(self) -> None:
+        (self.work / "pipes").mkdir()
+        self.write("pipes/orders.yaml", self.PIPE)
+        self.write("resources.yaml", "cache_resources: []\n")
+        report = self.write(
+            "pipes/orders.test-report.md",
+            handoff([("orders.yaml", sha(self.PIPE)),
+                     ("../resources.yaml", sha("cache_resources: []\n"))],
+                    body="**Verdict:** pass\n"),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["pipeline_ready"])
+        self.write("resources.yaml", "cache_resources: [{label: c, memory: {}}]\n")
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertFalse(out["data"]["pipeline_ready"])
+        self.assertEqual([i["state"] for i in out["data"]["inputs"]], ["match", "changed"])
 
     def test_bare_inputs_key_with_no_items(self) -> None:
-        text = handoff().replace("inputs: []", "inputs:")
-        report = self.write("orders.test-report.md", text)
+        text = handoff(artifact="design", fmt="design@1").replace("inputs: []", "inputs:")
+        report = self.write("orders.design.md", text)
         code, out = self.check(report)
         self.assertEqual(code, 0, out)
         self.assertEqual(out["data"]["inputs"], [])
@@ -874,7 +974,8 @@ class HashTest(CheckTestBase):
         self.assertEqual(code, 0, out)
 
     def test_quoted_values(self) -> None:
-        text = handoff().replace("status: ready", "status: 'ready'").replace(
+        self.write("orders.yaml", self.PIPE)
+        text = handoff([("orders.yaml", sha(self.PIPE))]).replace("status: ready", "status: 'ready'").replace(
             "format: test-report@1", 'format: "test-report@1"'
         )
         report = self.write("orders.test-report.md", text)
@@ -883,7 +984,8 @@ class HashTest(CheckTestBase):
         self.assertEqual(out["data"]["format"], "test-report@1")
 
     def test_body_after_header_is_ignored(self) -> None:
-        text = handoff() + "\n---\nartifact: nonsense\n"
+        self.write("orders.yaml", self.PIPE)
+        text = handoff([("orders.yaml", sha(self.PIPE))]) + "\n---\nartifact: nonsense\n"
         report = self.write("orders.test-report.md", text)
         code, out = self.check(report)
         self.assertEqual(code, 0, out)
@@ -935,8 +1037,32 @@ class HashTest(CheckTestBase):
             handoff([("other.yaml", sha(self.PIPE))], body="**Verdict:** pass\n"),
         )
         code, out = self.check(report)
-        self.assertEqual(code, 0, out)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
         self.assertFalse(out["data"]["pipeline_ready"])
+        self.assertEqual(out["errors"][0]["line"], 8)
+        self.assertIn("first input", out["errors"][0]["message"])
+
+    def test_verdict_pass_yml_pipeline_ready(self) -> None:
+        self.write("orders.yml", self.PIPE)
+        report = self.write(
+            "orders.test-report.md",
+            handoff([("orders.yml", sha(self.PIPE))], body="**Verdict:** pass\n"),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["ready"])
+        self.assertTrue(out["data"]["pipeline_ready"])
+
+    def test_design_with_yml_pipeline_input(self) -> None:
+        self.write("orders.yml", self.PIPE)
+        report = self.write(
+            "orders.design.md",
+            handoff([("orders.yml", sha(self.PIPE))], artifact="design", fmt="design@1"),
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["ready"])
 
     def test_verdict_only_for_test_reports(self) -> None:
         report = self.write(

@@ -242,12 +242,13 @@ def escape_glob(path: str) -> str:
     return "".join("\\" + ch if ch in _GLOB_CHARS else ch for ch in path)
 
 
-def parse_lint_output(text: str) -> list[dict]:
+def parse_lint_output(text: str, matched_only: bool = False) -> list[dict]:
     """Turn `rpk connect lint` text into schema-1 errors, sorted by file, line, column.
 
     A line `<file>(<line>,<col>) <message>` becomes a file-bound error; any other
-    non-empty line becomes an error with file, line and column null. Sorting makes
-    the order the same on every RPCN version.
+    non-empty line becomes an error with file, line and column null, unless
+    matched_only is set, when it is dropped (a clean exit 0 can still print an
+    `rpk` update notice). Sorting makes the order the same on every RPCN version.
     """
     errors = []
     for raw in text.splitlines():
@@ -264,7 +265,7 @@ def parse_lint_output(text: str) -> list[dict]:
                     "message": m.group("message"),
                 }
             )
-        else:
+        elif not matched_only:
             errors.append(_error(line.strip()))
     errors.sort(
         key=lambda e: (
@@ -353,7 +354,9 @@ def cmd_lint(args: argparse.Namespace) -> int:
     except OSError as exc:
         return result(False, binary, [_error(f"could not run lint: {exc}")], EXIT_ENV)
 
-    errors = parse_lint_output(f"{stdout}\n{stderr}")
+    # On exit 0 only `file(line,col) msg` lines count: any other line (an `rpk`
+    # update notice, say) is noise, not a lint error.
+    errors = parse_lint_output(f"{stdout}\n{stderr}", matched_only=returncode == 0)
     if errors:
         return result(False, binary, errors, EXIT_CHECK_FAILED, len(errors))
     if returncode != 0:
@@ -373,6 +376,7 @@ HANDOFF_SCALAR_KEYS = (
     "artifact", "format", "pipeline", "status", "produced_by", "rpcn_version", "updated",
 )
 HANDOFF_STATUSES = ("draft", "ready", "superseded")
+PIPELINE_EXTENSIONS = (".yaml", ".yml")  # `<pipeline>.yaml` or `<pipeline>.yml`
 _HASH_CHUNK = 1 << 16
 _HEADER_KEY_RE = re.compile(r"^(?P<key>[a-z_]+):(?:[ \t]+(?P<value>.*?))?[ \t]*$")
 _INPUT_FILE_RE = re.compile(r"^  - file:[ \t]+(?P<value>.*?)[ \t]*$")
@@ -568,6 +572,18 @@ def _check_handoff(handoff: str) -> int:
             state = "match"
         inputs.append({"file": item["file"], "recorded": item["sha256"], "current": current, "state": state})
 
+    pipeline_files = tuple(
+        os.path.normpath(f"{fields['pipeline']}{ext}") for ext in PIPELINE_EXTENSIONS
+    )
+    if fields["artifact"] == "test-report":
+        first = os.path.normpath(header["inputs"][0]["file"]) if header["inputs"] else None
+        if first not in pipeline_files:
+            got = f"the first input is {header['inputs'][0]['file']!r}" if first else "inputs is empty"
+            errors.append(
+                {"file": handoff, "line": key_lines["inputs"], "column": None,
+                 "message": f"a test report's first input must be the pipeline file "
+                            f"{' or '.join(pipeline_files)}; {got}"}
+            )
     if fields["status"] != "ready":
         errors.append(
             {"file": handoff, "line": key_lines["status"], "column": None,
@@ -580,9 +596,8 @@ def _check_handoff(handoff: str) -> int:
         )
     ready = not errors
     verdict = report_verdict(fields["artifact"], header["body"])
-    pipeline_file = os.path.normpath(f"{fields['pipeline']}.yaml")
-    pipeline_matches = any(
-        os.path.normpath(i["file"]) == pipeline_file and i["state"] == "match" for i in inputs
+    pipeline_matches = bool(inputs) and (
+        os.path.normpath(inputs[0]["file"]) in pipeline_files and inputs[0]["state"] == "match"
     )
     data = {
         "artifact": fields["artifact"],
