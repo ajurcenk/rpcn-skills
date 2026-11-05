@@ -1,0 +1,145 @@
+# Epic 2, Author and Test skills: stories in build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "The trigger gate measures what users install"
+description = "Before a second skill lands: trigger negatives assert that no rpcn- skill fired; eval_gate takes the expected case list and fails on a missing or extra case; the scenario runner records which skills each session could see and fails on an unexpected one; each skill gets a positive and a near-miss trigger scenario on an npx install of that skill alone; run_evals runs the rpcn-test-skills unit tests first and stops on failure. Tools, evals and rpcn-test-skills only; skills/ is unchanged."
+verify = "Unit tests show eval_gate failing on a dropped case and the runner failing when an extra skill is visible; run_evals stops when an rpcn-test-skills test fails; rpcn-test's existing cases and the new npx-alone pair pass."
+covers = ["R10"]
+after = ["1.6", "1.7", "1.11"]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 2
+type = "story"
+title = "rpcn_check hand-off checks hold for real projects"
+description = "Before any reader relies on pipeline_ready: lint ignores output lines that are not lint errors when the binary exits 0; .yml pipelines and a shared resources file are hashed and checked; a test report with no pipeline input is not ready; the runner gains scenario checks for no `cd` in Bash calls and bare file names in report inputs, and the subfolder scenario uses them."
+verify = "rpcn_check unit tests cover each case on both binaries; the subfolder scenario fails on the old rpcn-test (an agent that cds or records pipes/ paths) and passes on the current one; the eval record passes."
+covers = ["R11"]
+after = [1, "1.4", "1.6", "1.8"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "rpcn-test moves its detail into references"
+description = "Opening refactor: rpcn-test's step detail (pasted config, fix check, report writing) moves into references/ files loaded at their step, so SKILL.md is 1,200 tokens or less before the epic grows it. No behaviour change."
+verify = "The validator reports no size warning for rpcn-test; the existing scenarios and trigger evals pass unchanged in a new eval record."
+covers = ["R9"]
+after = [2]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Tracer: rpcn-author writes a pipeline that lints clean"
+description = "rpcn-author's first slice, with its scaffold (shared.txt, synced rpcn_check, format references): from a plain request it picks components with rpcn_check list, checks every field with rpcn_check fields, writes <name>.yaml (plus <name>.resources.yaml and .env.example when the pipeline needs resources or env vars), lints it clean and ends with a Next step naming rpcn-test. Sibling edits (AD-9): rpcn-test's Not for and Next lines, and each skill's trigger negatives, name the other. Adds rpcn-author's trigger cases, its npx-alone pair, and scenarios with the pipeline in a subfolder and a .yml name."
+verify = "A headless run asked for a generate-to-stdout pipeline in pipes/ writes a file that lints clean on both binaries with only reported fields; a request needing a cache resource and an env var also writes <name>.resources.yaml and .env.example and lints clean; the validator reports no warnings for rpcn-author; the trigger gate passes for both skills with negatives silent; the eval record passes."
+covers = ["R1", "R9", "R10"]
+after = [1, 3]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Author applies a test report's proposed changes"
+description = "The Author and Test loop: given a ready failing <name>.test-report.md, Author applies its proposed diffs to the pipeline files it owns (any kind of finding, not only lint), lints, and names re-running rpcn-test as Next. A stale or draft report is refused with the reason."
+verify = "Scenario: the broken fixture's report from rpcn-test, handed to rpcn-author, yields a pipeline that lints clean, and a re-run of rpcn-test gives verdict pass; a report whose input hash no longer matches is refused."
+covers = ["R3"]
+after = [4, 2]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Author builds from a design note and records deviations"
+description = "When a ready <name>.design.md exists, Author builds its components and error-handling, delivery and idempotency choices into the pipeline, checks each component with fields, and appends a Deviations row for each deliberate departure, touching nothing else in the note. A missing note never blocks; a not-ready note is reported and ignored. Uses hand-written fixture notes (no design skill yet), which entry 10 reuses."
+verify = "Scenario with a fixture note: the pipeline contains the note's components and DLQ/retry choices and lints clean; a forced departure adds exactly one Deviations row; the note's hash check still passes after the row is added."
+covers = ["R2"]
+after = [5]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Bloblang mappings come with samples, and Test runs them"
+description = "Author writes non-trivial mappings as <name>.<label>.blobl files. The new samples-format.md (tools/shared/formats) defines <name>.samples.json. rpcn-test writes samples, runs each mapping with rpcn_check blobl, and reports each mismatch with the sample, the expected output and the actual output."
+verify = "Scenario: a correct mapping's samples pass; a mapping with a deliberate bug is reported with sample, expected and actual output in the test report; the samples file matches samples-format.md, checked by a parser unit test this story adds."
+covers = ["R1", "R4"]
+after = [6]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 8
+type = "story"
+title = "Test dry-runs a pipeline with bounded input"
+description = "rpcn-test runs the pipeline through rpcn_check run with a bounded generate input or a fixture file in place of the real input, and reports passed or the runtime error in a new Dry run section of the test report; this story updates test-report-format.md (bumping to test-report@2 if adding a section is breaking, with every reader updated)."
+verify = "Scenario: a working pipeline's dry run is reported as passed; a pipeline that lints clean but fails at runtime (for example a mapping error on real data) is reported with its error."
+covers = ["R5"]
+after = [7]
+unknown = "How the real input is replaced by a bounded one for the dry run without editing the pipeline YAML (AD-6) and within rpcn_check run's fixed arguments (AD-4)."
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "Test writes and runs rpk connect test cases"
+description = "rpcn-test writes <name>_benthos_test.yaml cases from the samples and the request, runs them with rpcn_check test, and reports each failing case in the test report's Unit tests section."
+verify = "Scenario: the written cases pass on a correct pipeline and fail, with the failing case named, when the pipeline is broken; rpk connect test finds the file with no extra flags."
+covers = ["R6"]
+after = [8]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 10
+type = "story"
+title = "Test checks the pipeline against the design note"
+description = "When a ready design note exists, rpcn-test checks the pipeline against its Error handling, Delivery and ordering, and Idempotency sections and reports each finding as ok, mismatch, or deviation-recorded when an unresolved Deviations row covers it (test-report-format.md), reusing entry 6's fixture notes."
+verify = "Scenario with fixture notes: a missing DLQ is reported as mismatch; the same gap covered by an unresolved Deviations row is reported as deviation-recorded; a matching pipeline reports ok."
+covers = ["R7"]
+after = [6, 9]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 11
+type = "story"
+title = "Test diagnoses failures with a fix that passes"
+description = "For each failed check (lint, samples, dry run, unit tests, design check), rpcn-test states the cause and proposes a diff, verifies the fix against the check that failed, and marks a fix it could not verify. Fixes to files Test owns (<name>.samples.json, <name>_benthos_test.yaml) it applies itself; fixes to Author's files are proposed diffs, and Next names rpcn-author to apply them."
+verify = "Scenario with one failing case per check: every failure gets a stated cause and a proposed diff that passes the check it failed, or is marked unverified; the status block lists the report; the validator reports no warnings for either skill."
+covers = ["R8", "R9"]
+after = [10]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 12
+type = "story"
+title = "Benchmark Author and Test against the other skill sets"
+description = "One comparison scenario for Author (write a pipeline from a request) and one for Test (diagnose a failing pipeline), each run in the four arms with run_evals --with-compare. Any scenario another arm wins becomes an improvement story in this epic."
+verify = "The results file names a winner for both scenarios; each loss has a new story entry."
+covers = ["R12"]
+after = [5, 11]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 13
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from plans and review findings the epic deferred."
+verify = "All epic checks still pass after the cleanup."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+hitl = false
+risk = "low"
