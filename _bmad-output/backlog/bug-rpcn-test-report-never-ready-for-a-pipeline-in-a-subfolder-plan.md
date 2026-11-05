@@ -3,7 +3,7 @@ title: "rpcn-test's report is never ready for a pipeline in a subfolder"
 type: 'bugfix'
 ticket: 'bug-rpcn-test-report-never-ready-for-a-pipeline-in-a-subfolder'
 created: '2026-11-03'
-status: 'built'
+status: done
 baseline_revision: 'b16d04e93e593ca502bfcc64b41c36ae98df82c3'
 route: 'oneshot'
 route_source: 'auto'
