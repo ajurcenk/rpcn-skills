@@ -91,6 +91,16 @@ class GateTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self.tmp.name)
+        self.cases = self.make_cases_dir(POSITIVES + NEGATIVES)
+
+    def make_cases_dir(self, names: list[str], folder: str = "evals") -> Path:
+        """A cases dir holding one folder per name, plus a results/ folder and a README."""
+        root = self.dir / folder
+        for name in names:
+            (root / name / "graders").mkdir(parents=True, exist_ok=True)
+        (root / "results").mkdir(parents=True, exist_ok=True)
+        (root / "README.md").write_text("x", encoding="utf-8")
+        return root
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -100,6 +110,8 @@ class GateTest(unittest.TestCase):
         if path is None:
             path = self.dir / "aggregate-result.json"
             path.write_text(raw if raw is not None else json.dumps(data), encoding="utf-8")
+        if "--cases-dir" not in args:
+            args = (*args, "--cases-dir", str(self.cases))
         proc = subprocess.run([sys.executable, str(SCRIPT), str(path), *args],
                               capture_output=True, text=True, timeout=60)
         try:
@@ -188,6 +200,86 @@ class GateTest(unittest.TestCase):
         code, out = self.run_gate(make_suite(extra_cases=[other]))
         self.assertEqual(code, 0)
         self.assertEqual(out["runs_total"], 42)
+
+    def test_missing_case_exits_2_naming_it(self) -> None:
+        data = make_suite()
+        data["cases"] = [c for c in data["cases"] if c["name"] != NEGATIVES[2]]
+        code, out = self.run_gate(data)
+        self.assertEqual(code, 2)
+        self.assertFalse(out["ok"])
+        self.assertIn(NEGATIVES[2], out["error"])
+        self.assertEqual(out["errors"], [f"missing case {NEGATIVES[2]} (a folder with no result)"])
+
+    def test_extra_case_exits_2_naming_it(self) -> None:
+        extra = make_case("rpcn-test__miss_unknown", [make_run("negative") for _ in range(3)])
+        code, out = self.run_gate(make_suite(extra_cases=[extra]))
+        self.assertEqual(code, 2)
+        self.assertFalse(out["ok"])
+        self.assertIn("rpcn-test__miss_unknown", out["error"])
+        self.assertEqual(out["errors"],
+                         ["extra case rpcn-test__miss_unknown (a result with no folder)"])
+
+    def test_missing_and_extra_both_listed(self) -> None:
+        data = make_suite()
+        data["cases"] = [c for c in data["cases"] if c["name"] != POSITIVES[0]]
+        data["cases"].append(make_case("rpcn-test__trigger_new", [make_run("positive")] * 3))
+        code, out = self.run_gate(data)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(out["errors"]), 2)
+        self.assertIn(POSITIVES[0], out["error"])
+        self.assertIn("rpcn-test__trigger_new", out["error"])
+
+    def test_other_skill_cases_are_counted(self) -> None:
+        # a sibling skill's cases are trigger cases too, by the generalised prefix
+        sibling = ["rpcn-author__trigger_a", "rpcn-author__miss_b"]
+        self.cases = self.make_cases_dir(POSITIVES + NEGATIVES + sibling, "evals2")
+        extra = [make_case(sibling[0], [make_run("positive") for _ in range(3)]),
+                 make_case(sibling[1], [make_run("negative", passed=False)] + [make_run("negative")] * 2)]
+        code, out = self.run_gate(make_suite(extra_cases=extra))
+        self.assertEqual(code, 1)  # the sibling's negative fired once
+        self.assertEqual(out["runs_total"], 48)
+        self.assertEqual(out["positives"], {"runs": 27, "correct": 27})
+        self.assertEqual(out["negatives"], {"runs": 21, "correct": 20})
+        self.assertEqual(out["failed_runs"][0]["case"], sibling[1])
+
+    def test_other_skill_case_without_folder_is_extra(self) -> None:
+        extra = make_case("rpcn-author__trigger_a", [make_run("positive") for _ in range(3)])
+        code, out = self.run_gate(make_suite(extra_cases=[extra]))
+        self.assertEqual(code, 2)
+        self.assertIn("extra case rpcn-author__trigger_a", out["error"])
+
+    def test_generalised_prefix_needs_a_skill_name(self) -> None:
+        # `__trigger_x` (no skill) and `rpcn-test_trigger_x` (one underscore) are not trigger cases
+        odd = [make_case(n, [make_run("positive")]) for n in ("__trigger_x", "rpcn-test_trigger_x")]
+        code, out = self.run_gate(make_suite(extra_cases=odd))
+        self.assertEqual(code, 0)
+        self.assertEqual(out["runs_total"], 42)
+
+    def test_missing_cases_dir_exits_2(self) -> None:
+        code, out = self.run_gate(make_suite(), None, None, "--cases-dir", str(self.dir / "nope"))
+        self.assertEqual(code, 2)
+        self.assertIn("cases dir not found", out["error"])
+
+    def test_cases_dir_without_trigger_folders_exits_2(self) -> None:
+        empty = self.make_cases_dir([], "empty")
+        code, out = self.run_gate(make_suite(), None, None, "--cases-dir", str(empty))
+        self.assertEqual(code, 2)
+        self.assertIn("no trigger case folders", out["error"])
+
+    def test_default_cases_dir_is_the_repo_evals(self) -> None:
+        # the real suite's names, from the real evals/ folder
+        evals = SCRIPT.parent.parent / "evals"
+        names = sorted(p.name for p in evals.iterdir()
+                       if p.is_dir() and ("__trigger_" in p.name or "__miss_" in p.name))
+        self.assertTrue(names)
+        data = make_suite()
+        data["cases"] = [make_case(n, [make_run("positive" if "__trigger_" in n else "negative")
+                                       for _ in range(3)]) for n in names]
+        path = self.dir / "real.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        proc = subprocess.run([sys.executable, str(SCRIPT), str(path)],
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
 
     def test_no_trigger_cases(self) -> None:
         data = make_suite()

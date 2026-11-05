@@ -293,6 +293,22 @@ print(f"results: {out / 'results.json'}")
 sys.exit(0 if passed and not crashed else 1)
 '''
 
+FAKE_RUNNER_TESTS = '''# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""Fake tests/test_run_scenarios.py: passes unless FAKE_RUNNER_TESTS_FAIL is set."""
+import os, sys
+from pathlib import Path
+with open(os.environ["FAKE_LOG"], "a") as f:
+    f.write(f"runner_tests cwd={Path.cwd()}\\n")
+if os.environ.get("FAKE_RUNNER_TESTS_FAIL"):
+    sys.stderr.write("FAIL: test_visible_check (__main__.VisibleTest.test_visible_check)\\n")
+    sys.stderr.write("Ran 120 tests in 1.0s\\n\\nFAILED (failures=1)\\n")
+    sys.exit(1)
+sys.stderr.write("Ran 120 tests in 1.0s\\n\\nOK\\n")
+'''
+
 
 def aggregate(fail_cases: int = 0, runs: int = 3) -> dict:
     """14 cases x runs; the first `fail_cases` positives fail every run."""
@@ -316,6 +332,9 @@ class RunEvalsTests(unittest.TestCase):
         write(self.repo / ".claude-plugin/plugin.json", json.dumps({"version": "0.1.0"}))
         self.project = self.tmp / "test-project"
         write(self.project / "run_scenarios.py", FAKE_RUNNER)
+        write(self.project / "tests/test_run_scenarios.py", FAKE_RUNNER_TESTS)
+        for name in POSITIVES + NEGATIVES:  # the case folders the gate checks the result against
+            write(self.repo / "evals" / name / "prompt.md", "x\n")
         write(self.project / "scenarios/rpcn-test__lint_broken/expect.toml",
               'skill = "rpcn-test"\n[status]\nstatus = "complete"\n')
         write(self.project / "scenarios/rpcn-test__compare_lint/expect.toml",
@@ -387,6 +406,43 @@ class RunEvalsTests(unittest.TestCase):
         check = run(["uv", "run", str(CHECK), "--root", str(self.repo)])
         self.assertEqual(check.returncode, 0, check.stdout)
 
+    def test_runner_tests_run_first(self) -> None:
+        proc = self.run_evals()
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        lines = self.calls().splitlines()
+        self.assertEqual(lines[0], f"runner_tests cwd={self.project.resolve()}")
+        self.assertIn("] runner tests: ok (Ran 120 tests", proc.stdout)
+        # and before the trigger suite, the only paid step that comes first
+        self.assertLess(proc.stdout.index("] runner tests: ok"), proc.stdout.index("] trigger:"))
+
+    def test_runner_tests_fail_exits_2_before_any_paid_step(self) -> None:
+        proc = self.run_evals(FAKE_RUNNER_TESTS_FAIL="1")
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("runner tests failed (exit 1): "
+                      "test_visible_check (__main__.VisibleTest.test_visible_check)", proc.stdout)
+        calls = self.calls()
+        self.assertIn("runner_tests", calls)
+        self.assertNotIn("plugin eval", calls)
+        self.assertNotIn("run_scenarios", calls)
+        self.assertEqual(self.records(), [])
+
+    def test_missing_runner_tests_exits_2(self) -> None:
+        (self.project / "tests/test_run_scenarios.py").unlink()
+        proc = self.run_evals()
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("tests/test_run_scenarios.py", proc.stdout)
+        self.assertEqual(self.calls(), "")
+        self.assertEqual(self.records(), [])
+
+    def test_gate_exit_2_stops_before_scenarios_without_record(self) -> None:
+        # a case folder with no result in the trigger output: a suite problem, gate exit 2
+        write(self.repo / "evals/rpcn-test__miss_dropped/prompt.md", "x\n")
+        proc = self.run_evals()
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("error: eval_gate exited 2: missing case rpcn-test__miss_dropped", proc.stdout)
+        self.assertNotIn("run_scenarios", self.calls())
+        self.assertEqual(self.records(), [])
+
     def test_runs_option_passes_through(self) -> None:
         self.agg.write_text(json.dumps(aggregate(runs=4)))
         proc = self.run_evals("--runs", "4")
@@ -457,7 +513,8 @@ class RunEvalsTests(unittest.TestCase):
         proc = self.run_evals()
         self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
         self.assertIn("git", proc.stdout)
-        self.assertEqual(self.calls(), "")
+        # only the free runner tests ran, no paid step
+        self.assertEqual(self.calls(), f"runner_tests cwd={self.project.resolve()}\n")
         self.assertEqual(self.records(), [])
 
     def test_skills_change_mid_run_exits_2_without_record(self) -> None:

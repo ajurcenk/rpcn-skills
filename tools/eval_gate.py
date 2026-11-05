@@ -2,15 +2,18 @@
 # requires-python = ">=3.10"
 # dependencies = []
 # ///
-"""Gate the rpcn-test trigger evals on suite accuracy (R12, AD-13).
+"""Gate the trigger evals on suite accuracy (R12, AD-13).
 
 Reads the `aggregate-result.json` written by `claude plugin eval` and counts
 every run of every trigger case in `cases[].arms.with[]`:
 
-  rpcn-test__trigger_<slug>  positive: its `fired` grader must pass
-  rpcn-test__miss_<slug>     near-miss negative: its `not-fired` grader must pass
+  <skill>__trigger_<slug>  positive: its `fired` grader must pass
+  <skill>__miss_<slug>     near-miss negative: its `not-fired` grader must pass
 
-The eval output carries no tags, so cases are told apart by name prefix. A run
+The eval output carries no tags, so cases are told apart by name. The trigger
+case names in the result must equal the `<skill>__trigger_*` and
+`<skill>__miss_*` folders in --cases-dir (default: this repo's `evals/`), so a
+dropped or unknown case is an incomplete suite, not a smaller one. A run
 is correct when its trigger grader passed and its `error` does not start with
 `API` (an API failure means the graders never really ran). A run that stopped
 at the turn limit still counts: the Skill call is already in the transcript.
@@ -25,23 +28,28 @@ Exit codes:
   0  accuracy >= --min-accuracy and every negative run is correct
   1  otherwise
   2  missing or unreadable file, unknown schemaVersion, no trigger cases,
-     an incomplete suite (no positive or no negative trigger case, or a
-     trigger case with fewer than --min-runs runs), or a partial run.
+     a --cases-dir with no trigger case folders, an incomplete suite (no
+     positive or no negative trigger case, a trigger case with fewer than
+     --min-runs runs, a case folder with no result, or a result case with no
+     folder), or a partial run. `errors` lists each suite problem, and
      `partial` and `partialReason` are kept in the output on every exit 2.
 
 Run: uv run tools/eval_gate.py <aggregate-result.json> [--min-accuracy 0.9] [--min-runs 3]
+                               [--cases-dir evals]
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
 SCHEMA_VERSION = 1
-POSITIVE_PREFIX = "rpcn-test__trigger_"
-NEGATIVE_PREFIX = "rpcn-test__miss_"
+POSITIVE_RE = re.compile(r"^[\w-]+__trigger_")
+NEGATIVE_RE = re.compile(r"^[\w-]+__miss_")
+CASES_DIR = Path(__file__).resolve().parent.parent / "evals"
 GRADER_FOR = {"positive": "fired", "negative": "not-fired"}
 
 
@@ -88,11 +96,23 @@ def load(path: Path) -> dict:
 
 
 def kind_of(name: str) -> str | None:
-    if name.startswith(POSITIVE_PREFIX):
+    if POSITIVE_RE.match(name):
         return "positive"
-    if name.startswith(NEGATIVE_PREFIX):
+    if NEGATIVE_RE.match(name):
         return "negative"
     return None
+
+
+def expected_cases(cases_dir: Path) -> set[str]:
+    """The trigger case names: the folders in `cases_dir` named like a trigger case."""
+    if not cases_dir.is_dir():
+        raise GateError(f"cases dir not found: {cases_dir}")
+    names = {p.name for p in cases_dir.iterdir() if p.is_dir() and kind_of(p.name)}
+    if not names:
+        raise GateError(
+            f"no trigger case folders (<skill>__trigger_* or <skill>__miss_*) in {cases_dir}"
+        )
+    return names
 
 
 def judge_run(run: object, kind: str) -> tuple[bool, str]:
@@ -112,7 +132,8 @@ def judge_run(run: object, kind: str) -> tuple[bool, str]:
     return grader.get("passed") is True, explanation
 
 
-def gate(data: dict, min_accuracy: float, min_runs: int = 3) -> tuple[int, dict]:
+def gate(data: dict, min_accuracy: float, min_runs: int = 3,
+         expected: set[str] | None = None) -> tuple[int, dict]:
     result = empty_result()
     result["partial"] = bool(data.get("partial"))
     if result["partial"]:
@@ -124,12 +145,20 @@ def gate(data: dict, min_accuracy: float, min_runs: int = 3) -> tuple[int, dict]
     ]
     if not trigger_cases:
         raise GateError(
-            f"no trigger cases (names starting {POSITIVE_PREFIX!r} or {NEGATIVE_PREFIX!r})",
+            "no trigger cases (names like <skill>__trigger_* or <skill>__miss_*)",
             result,
         )
     kinds = {kind_of(c["name"]) for c in trigger_cases}
     missing = [f"no {k} trigger cases" for k in ("positive", "negative") if k not in kinds]
     short = []
+    listed: list[str] = []
+    if expected is not None:
+        got = [c["name"] for c in trigger_cases]
+        listed += [f"missing case {n} (a folder with no result)"
+                   for n in sorted(expected - set(got))]
+        listed += [f"extra case {n} (a result with no folder)"
+                   for n in sorted(set(got) - expected)]
+        listed += [f"duplicate case {n}" for n in sorted({n for n in got if got.count(n) > 1})]
 
     for case in trigger_cases:
         name = case["name"]
@@ -151,8 +180,10 @@ def gate(data: dict, min_accuracy: float, min_runs: int = 3) -> tuple[int, dict]
                     {"case": name, "run": index, "explanation": explanation}
                 )
 
-    if missing or short:
-        raise GateError("incomplete suite: " + "; ".join(missing + short), result)
+    problems = missing + listed + short
+    if problems:
+        result["errors"] = problems
+        raise GateError("incomplete suite: " + "; ".join(problems), result)
 
     result["accuracy"] = round(result["runs_correct"] / result["runs_total"], 3)
     negatives_clean = result["negatives"]["correct"] == result["negatives"]["runs"]
@@ -171,10 +202,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-accuracy", type=float, default=0.9)
     parser.add_argument("--min-runs", type=int, default=3,
                         help="runs every trigger case must have (default 3, AD-13)")
+    parser.add_argument("--cases-dir", type=Path, default=CASES_DIR,
+                        help="folder whose <skill>__trigger_* and <skill>__miss_* folders are "
+                             "the expected cases (default: this repo's evals/)")
     args = parser.parse_args(argv)
 
     try:
-        code, result = gate(load(args.result), args.min_accuracy, args.min_runs)
+        code, result = gate(load(args.result), args.min_accuracy, args.min_runs,
+                            expected_cases(args.cases_dir))
     except GateError as exc:
         result = exc.result if exc.result is not None else empty_result()
         result["ok"] = False

@@ -7,10 +7,12 @@
 Steps, in order, one progress line each (`[run_evals +<s>s] ...`); each child's
 own output passes through live:
 
+  0. in the test project: uv run tests/test_run_scenarios.py (the runner's
+         own unit tests, free); a failure stops the run before any paid step
   1. the skills hash (tools/eval_record.py)
   2. claude plugin eval . --ablation none --runs <n> --tag trigger
          --no-publish --trust-plugin --json <tmp>
-  3. uv run tools/eval_gate.py <tmp>
+  3. uv run tools/eval_gate.py <tmp> --cases-dir <this repo>/evals
   4. in the test project: uv run run_scenarios.py --source local:<this repo>
          --runs <n> --scenario <s>... for every scenario that is not a
          comparison ([compare] enabled = true in expect.toml), plus the
@@ -38,10 +40,11 @@ Exit codes:
   0  passed
   1  not passed (the record is still written)
   2  setup error, no record: no `claude` or `uv`, a missing test project,
-     the trigger eval wrote no result, run_scenarios.py reported a setup
+     the test project's own tests failed, the trigger eval wrote no result,
+     eval_gate exited 2 (a suite problem, such as a missing or extra case), run_scenarios.py reported a setup
      error, or the skills hash changed while the run was in progress
 
-A default run costs about $4.20 (trigger suite ~$3.30, scenarios ~$0.90).
+A default run costs about $6.40 (trigger suite ~$3.50, scenarios ~$2.90).
 
 Run: uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 3] [--with-compare]
 """
@@ -141,8 +144,30 @@ def run_trigger(root: Path, runs: int, out_json: Path) -> float | None:
     return cost if isinstance(cost, (int, float)) else None
 
 
-def run_gate(out_json: Path) -> dict:
-    proc = subprocess.run(["uv", "run", str(GATE), str(out_json)],
+RUNNER_TESTS = Path("tests") / "test_run_scenarios.py"
+
+
+def run_runner_tests(project: Path) -> None:
+    """Run the test project's own unit tests; SetupError when they fail."""
+    if not (project / RUNNER_TESTS).is_file():
+        raise SetupError(f"test project has no {RUNNER_TESTS.as_posix()}: {project}")
+    cmd = ["uv", "run", RUNNER_TESTS.as_posix()]
+    say(f"runner tests: {' '.join(cmd)}")
+    proc = subprocess.run(cmd, cwd=project, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, check=False)
+    if proc.returncode != 0:
+        sys.stdout.write(proc.stdout)
+        failed = re.findall(r"^(?:FAIL|ERROR): (\S+ \([^)]*\))", proc.stdout, re.MULTILINE)
+        summary = ", ".join(failed[:10]) + (f" and {len(failed) - 10} more" if len(failed) > 10 else "")
+        tail = proc.stdout.strip().splitlines()[-1:] or ["no output"]
+        raise SetupError(f"runner tests failed (exit {proc.returncode}): "
+                         + (summary or tail[0]))
+    last = [ln for ln in proc.stdout.splitlines() if ln.startswith("Ran ")]
+    say(f"runner tests: ok ({last[-1] if last else 'passed'})")
+
+
+def run_gate(out_json: Path, cases_dir: Path) -> dict:
+    proc = subprocess.run(["uv", "run", str(GATE), str(out_json), "--cases-dir", str(cases_dir)],
                           stdout=subprocess.PIPE, text=True, check=False)
     try:
         result = json.loads(proc.stdout)
@@ -154,6 +179,10 @@ def run_gate(out_json: Path) -> dict:
         result["ok"] = False
     say(f"gate: accuracy={result.get('accuracy')} ok={str(result.get('ok')).lower()}"
         f" exit={proc.returncode}" + (f" error={result['error']}" if result.get("error") else ""))
+    if proc.returncode == 2:  # a setup or suite problem: no scenarios, no record
+        errors = result.get("errors") if isinstance(result.get("errors"), list) else []
+        why = "; ".join(str(e) for e in errors) or result.get("error") or "no reason given"
+        raise SetupError(f"eval_gate exited 2: {why}")
     return result
 
 
@@ -256,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise SetupError(f"`{tool}` is not on PATH")
         if not (project / "run_scenarios.py").is_file():
             raise SetupError(f"test project not found: {project} has no run_scenarios.py")
+        run_runner_tests(project)
         names = list_scenarios(project, args.with_compare)
         if not names:
             raise SetupError(f"no scenarios to run in {project / 'scenarios'}")
@@ -276,7 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         with tempfile.TemporaryDirectory(prefix="run_evals-") as tmp:
             out_json = Path(tmp) / "trigger.json"
             trigger_cost = run_trigger(root, args.runs, out_json)
-            gate = run_gate(out_json)
+            gate = run_gate(out_json, root / "evals")
         results, scenarios_ok = run_scenarios(root, project, names, args.runs)
         rows, winners, scenario_cost = summarize(results, names)
 
