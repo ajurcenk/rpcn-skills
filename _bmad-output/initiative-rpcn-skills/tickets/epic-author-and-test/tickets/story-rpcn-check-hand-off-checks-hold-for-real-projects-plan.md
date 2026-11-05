@@ -3,7 +3,7 @@ title: 'rpcn_check hand-off checks hold for real projects'
 type: 'feature'
 ticket: '2'
 created: '2026-11-05'
-status: 'built'
+status: done
 baseline_revision: 'f8c3a10c7f398caba1a18a4a5268b39db69262d3'
 route: 'full'
 route_source: 'auto'
