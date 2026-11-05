@@ -7,7 +7,7 @@ paradigm: 'pipes-and-filters over a file-based artifact chain, with one binary a
 scope: 'The RPCN Skills plugin repo: seven lifecycle skills, their shared files, hand-off files, evals, CI and release'
 status: final
 created: '2026-10-22'
-updated: '2026-11-03'
+updated: '2026-11-05'
 binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R15, R16, R17, R18, R19, R20]
 sources:
   - _bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md
@@ -73,7 +73,7 @@ flowchart LR
 - **Binds:** R8, every script in `tools/` and `skills/*/scripts/`
 - **Prevents:** scripts that need different runtimes or undeclared packages
 - **Rule:**
-  - **Header:** every Python script starts with a PEP 723 header (`requires-python = ">=3.10"`, standard library first) and runs as `uv run <path>`.
+  - **Header:** every Python script starts with a PEP 723 header and runs as `uv run <path>`. Scripts that ship inside a skill (`skills/*/scripts/`) declare `requires-python = ">=3.10"` and use the standard library only. Developer tools (`tools/`, `rpcn-test-skills`) may declare `">=3.11"`, and may list packages in their header (for example `pyyaml` in `validate_skills.py`).
   - **Banned:** never `python` or `pip`, and no `jq`.
   - **Compatibility field:** each skill sets `compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."`
   - **Calling scripts:** SKILL.md calls `uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py …`, with one line saying the path is relative to this SKILL.md's folder when the variable is not expanded. [ADOPTED]
@@ -252,7 +252,7 @@ flowchart LR
 - **Binds:** R8, R12, R15, R17, R20
 - **Prevents:** one skill measured by different rules than another, and an accuracy gate that the tool cannot actually enforce
 - **Rule:**
-  - **Trigger evals** stay in this repo. Cases use `claude plugin eval` (Claude Code ≥ 2.1.269): `evals/<skill>__<case>/` with `prompt.md`, `case.yaml` and `graders/`.
+  - **Trigger evals** stay in this repo. Cases use `claude plugin eval` (Claude Code ≥ 2.1.269): `evals/<skill>__<case>/` with `prompt.md` and `graders/`.
   - **Trigger cases** run with `--ablation none`, so `tool_used` graders count toward the score:
     - a positive case asserts `tool: Skill` with `input_match` on the skill name
     - a near-miss negative, for each sibling in the skill's "Not for" lines, uses `min: 0, max: 0`
@@ -276,6 +276,14 @@ flowchart LR
     - **Benchmark sources:** the benchmark sets are installed from their local folders at a recorded commit. They are never copied into `rpcn-skills`.
     - **Installing all three together** is not tested in version 1.
     - **Source code:** the test project never holds skill source. Installed skills there are gitignored.
+  - **What users install:** the gate also measures the `npx` path.
+    - Negatives assert that no `rpcn-` skill fired.
+    - `eval_gate.py` checks the expected case list.
+    - Each skill has a positive and a near-miss trigger scenario, run through `run_scenarios.py` on an `npx` install of that skill alone.
+    - Every session records the skills it could see, and fails on an unexpected one.
+    - `run_evals.py` runs the `rpcn-test-skills` unit tests first.
+
+    This was decided for epic 2 on 2026-11-05.
   - **Repetition:** each trigger case and each scenario runs at least 3 times.
   - **Env vars:** native cases use only `EVAL_`-prefixed env vars.
   - **Gate:** trigger accuracy is at least 90%, out-of-scope negatives trigger no skill, and every scenario's produced files lint clean and match `expect.toml`.
@@ -291,7 +299,7 @@ flowchart LR
     - the `rpcn_check` unit tests on every AD-5 version
     - the eval-record check: the change carries a passing result file from `tools/run_evals.py` for its current commit's skill content
   - **Evals run locally, not in CI.** One command, `uv run tools/run_evals.py`, runs the trigger evals and the `rpcn-test-skills` scenarios with the developer's logged-in Claude Code. It writes `evals/results/<date>-<skills-hash>.json`, which is committed with the change. CI holds no Claude credentials. [ADOPTED]
-  - **CI environment:** rpk and uv are installed outside `$HOME` (the eval sandbox can't read `$HOME`), with each version via `rpk connect install --connect-version <v>`. Linux runners add bubblewrap and socat. CI is GitHub Actions on the repo. [ADOPTED] `[ASSUMPTION: the install command is verified in epic 1]`
+  - **CI environment:** GitHub Actions on the repo, with uv from `astral-sh/setup-uv`. `tools/fetch_rpcn.py` downloads each version in `tools/rpcn_versions.txt` as a release binary, checks it against the published `.sha256`, and unpacks it into `.cache/rpcn/<v>/`. The folder is cached by the versions file. The `rpcn_check` tests run against those binaries through `RPCN_TEST_BINARIES`. CI installs no `rpk` and runs no evals (see Evals, above). [ADOPTED]
   - **Weekly job:** it detects a new RPCN release, runs `gen_refs`, rolls the newest pin, and opens a PR within one week.
   - **Release** runs only from a green `main` (AD-12).
 
@@ -321,7 +329,7 @@ flowchart LR
 |---|---|
 | Redpanda Connect (floor / newest) | 4.100.0 / 4.115.0 (rolling) |
 | uv | 0.13.5 |
-| Python (`requires-python`) | >=3.10 |
+| Python (`requires-python`) | >=3.10 shipped scripts; >=3.11 developer tools |
 | Claude Code (`claude plugin eval`) | >=2.1.269 |
 | vercel-labs/skills (`npx skills`) | latest (tested 1.7.6) |
 | Agent Skills spec | agentskills.io, current |
@@ -382,4 +390,4 @@ rpcn-skills/
 - **Claude Code plugin marketplace install:** out of scope (user decision 2026-11-03). `npx skills` is the only user channel (AD-1).
 - **Release stamp and the eval record (open):** AD-12's stamp commit, and a weekly pin-roll that changes synced references, both change AD-14's skills hash, so neither can merge without a new local eval run. Epic 4 decides, before its stamp work, whether the stamp keys are left out of the hash and who runs evals for a pin-roll PR. That decision also covers what the stamp edits (the shared `rpcn_check` source or the copies), and whether the eval-record hash should also cover `evals/` and `tools/eval_gate.py`.
 - **What users install (open):** `npx skills` installs from `main`, so between releases users get unreleased content under the last version stamp. Epic 4 picks one: treat every merge that changes `skills/` as a release, or pin the install to a tag. It also decides how a retired skill's folder is removed from users' installs.
-- **The trigger gate's setup (open):** `claude plugin eval` loads every skill with plugin-prefixed names, but users install a subset with plain names. Before a second skill lands, epic 2 decides whether each skill also gets a positive case and a near-miss case run through `run_scenarios.py` on an `npx` install of that skill alone. It also decides whether the runner records which skills each session could see and fails on any unexpected one.
+- **The trigger gate's setup:** decided on 2026-11-05 and moved into AD-13 ("What users install").
