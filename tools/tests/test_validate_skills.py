@@ -452,7 +452,8 @@ class RealRepo(unittest.TestCase):
         rep = next(s for s in out["skills"] if s["skill"] == "rpcn-test")
         self.assertEqual(rep["errors"], [])
         rules = {w["rule"] for w in rep["warnings"]}
-        self.assertIn("size", rules)
+        # Story 2.3 brought SKILL.md under the 1,200-token budget (AD-9).
+        self.assertNotIn("size", rules)
         self.assertIn("file-refs", rules)
         self.assertTrue(
             any("references/design-format.md" in w["message"] for w in rep["warnings"]
