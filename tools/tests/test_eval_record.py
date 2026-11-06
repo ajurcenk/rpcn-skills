@@ -272,6 +272,7 @@ p.add_argument("--scenario", action="append", default=[])
 a = p.parse_args()
 with open(os.environ["FAKE_LOG"], "a") as f:
     f.write("run_scenarios " + " ".join(sys.argv[1:]) + "\\n")
+    f.write("RPCN_TEST_BINARIES=" + os.environ.get("RPCN_TEST_BINARIES", "") + "\\n")
 fail = os.environ.get("FAKE_SCENARIO_FAIL", "")
 out = Path(__file__).parent / "runs" / "t1"
 out.mkdir(parents=True, exist_ok=True)
@@ -339,6 +340,9 @@ class RunEvalsTests(unittest.TestCase):
               'skill = "rpcn-test"\n[status]\nstatus = "complete"\n')
         write(self.project / "scenarios/rpcn-test__compare_lint/expect.toml",
               'skill = "rpcn-test"\n[compare]\nenabled = true\n')
+        write(self.repo / "tools/rpcn_versions.txt", "# pins\n4.100.0\n4.115.0\n")
+        self.binaries = [write(self.repo / f".cache/rpcn/{v}/redpanda-connect", "fake\n")
+                         for v in ("4.100.0", "4.115.0")]
         bindir = self.tmp / "bin"
         claude = write(bindir / "claude", FAKE_CLAUDE)
         claude.chmod(claude.stat().st_mode | stat.S_IXUSR)
@@ -405,6 +409,23 @@ class RunEvalsTests(unittest.TestCase):
         # and the check accepts it
         check = run(["uv", "run", str(CHECK), "--root", str(self.repo)])
         self.assertEqual(check.returncode, 0, check.stdout)
+
+    def test_scenarios_lint_on_every_pinned_binary(self) -> None:
+        proc = self.run_evals()
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        want = ":".join(str(b.resolve()) for b in self.binaries)
+        self.assertIn(f"RPCN_TEST_BINARIES={want}\n", self.calls())
+        self.assertIn(f"] scenarios: lint on {' '.join(str(b.resolve()) for b in self.binaries)}", proc.stdout)
+
+    def test_missing_pinned_binary_is_a_setup_error(self) -> None:
+        self.binaries[1].unlink()
+        proc = self.run_evals()
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        out = proc.stdout + proc.stderr
+        self.assertIn("4.115.0/redpanda-connect", out)
+        self.assertIn("uv run tools/fetch_rpcn.py", out)
+        self.assertNotIn("run_scenarios", self.calls())
+        self.assertEqual(self.records(), [])
 
     def test_runner_tests_run_first(self) -> None:
         proc = self.run_evals()

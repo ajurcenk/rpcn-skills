@@ -92,6 +92,8 @@ Reply with the files written, the components used, and the lint result.
 
 - Lint clean: test it with rpcn-test.
 - Lint still failing: fix the reported errors, then lint with rpcn-test.
+- File already exists: re-run rpcn-author with a new name.
+- Binary missing or too old: fix it as reported, then re-run rpcn-author.
 
 ## Status block (headless only)
 
@@ -101,7 +103,8 @@ End the reply with exactly one fenced `json` block, and nothing after it:
 {"status": "<complete|blocked>", "skill": "rpcn-author", "reason": null, "artifacts": [], "checks": {"lint": "<pass|fail|skipped>", "tests": "skipped"}, "open_questions": []}
 ```
 
-- `blocked` (with `reason`) only after an exit 2, an existing file, or lint
-  still failing after 3 revisions; otherwise `complete`.
+- `blocked` (with `reason`) only after an exit 2, an existing file, a
+  component the binary doesn't list (`reason` names it), or lint still
+  failing after 3 revisions; otherwise `complete`.
 - `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.
 - `artifacts`: every file written, as paths from the project root.

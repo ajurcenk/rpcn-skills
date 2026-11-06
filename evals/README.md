@@ -103,8 +103,8 @@ runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $11 for a default run (trigger suite ~$5, the eight
-  pass scenarios x 3 ~$6, most of it the two `rpcn-author` write scenarios). The record's `cost_usd`
+- **Cost:** about $12 for a default run (trigger suite ~$5.60, the nine
+  pass scenarios x 3 ~$6.50, most of it the `rpcn-author` scenarios). The record's `cost_usd`
   holds the measured total.
 
 ## The gate

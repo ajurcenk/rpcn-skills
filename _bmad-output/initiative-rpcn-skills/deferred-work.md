@@ -12,3 +12,13 @@
 - source_plan: `_bmad-output/backlog/bug-rpcn-test-report-never-ready-for-a-pipeline-in-a-subfolder-plan.md`
   summary: Make the subfolder scenarios fail on the old rpcn-test, by checking that no Bash call uses `cd` and that the report's `inputs[].file` has no directory part.
   evidence: The scenario passed against the old skill (`rpcn-test-skills/runs/20261103-151201`) because the agent ran `cd pipes`. The defect depends on whether the agent cds, and the runner has no check type for either condition. That needs a runner change plus tests in rpcn-test-skills.
+
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-tracer-rpcn-author-writes-a-pipeline-that-lints-clean-plan.md`
+  summary: No scenario covers rpcn-author's "unknown component" matrix row (`fields` exits 1 with close matches, so the agent picks a reported one or records an open question).
+  evidence: The story 2.4 matrix audit found the row untested. A made-up component is hard to assert reliably (which match it picks, or the open_questions content), so the user chose to defer it (2026-11-06).
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-tracer-rpcn-author-writes-a-pipeline-that-lints-clean-plan.md`
+  summary: No scenario covers rpcn-author's "lint won't clean after 3 revisions" matrix row (headless ends blocked, with the first error as the reason).
+  evidence: The story 2.4 matrix audit found the row untested. A lint failure the agent can't fix is hard to force deterministically. Story 2.11 (diagnosis) is the natural home for it. The user chose to defer it (2026-11-06).
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-tracer-rpcn-author-writes-a-pipeline-that-lints-clean-plan.md`
+  summary: The AD-11 deprecated-scan exemption for "Kafka Connect" must also cover `evals/rpcn-author__miss_kafka_connect/prompt.md`, not only the rpcn-test negative.
+  evidence: The existing deferred AD-11 entry names only `evals/rpcn-test__miss_kafka_connect/prompt.md`. Story 2.4 added a second prompt with the same phrase ("Write a Kafka Connect connector config …").

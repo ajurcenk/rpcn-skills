@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -63,6 +64,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import eval_record
+import fetch_rpcn
 
 TOOLS_DIR = Path(__file__).resolve().parent
 GATE = TOOLS_DIR / "eval_gate.py"
@@ -186,6 +188,21 @@ def run_gate(out_json: Path, cases_dir: Path) -> dict:
     return result
 
 
+def scenario_binaries(root: Path) -> list[Path]:
+    """The cached binary of every version in tools/rpcn_versions.txt, so each
+    scenario's [[lint]] runs on the floor and the newest pin (AD-5)."""
+    versions_file = root / "tools" / "rpcn_versions.txt"
+    try:
+        versions = fetch_rpcn.read_versions(versions_file)
+    except (OSError, fetch_rpcn.FetchError) as exc:
+        raise SetupError(f"cannot read the pinned versions in {versions_file}: {exc}")
+    paths = [root / ".cache" / "rpcn" / v / fetch_rpcn.BINARY_NAME for v in versions]
+    missing = [str(p) for p in paths if not p.is_file()]
+    if missing:
+        raise SetupError(f"pinned binary missing: {', '.join(missing)}; run `uv run tools/fetch_rpcn.py`")
+    return [p.resolve() for p in paths]
+
+
 def run_scenarios(root: Path, project: Path, names: list[str], runs: int) -> tuple[dict, bool]:
     """Run the scenarios; return (the parsed results.json, whether the whole run passed).
 
@@ -194,9 +211,12 @@ def run_scenarios(root: Path, project: Path, names: list[str], runs: int) -> tup
     cmd = ["uv", "run", "run_scenarios.py", "--source", f"local:{root}", "--runs", str(runs)]
     for name in names:
         cmd += ["--scenario", name]
+    binaries = scenario_binaries(root)
+    env = {**os.environ, "RPCN_TEST_BINARIES": ":".join(str(b) for b in binaries)}
+    say(f"scenarios: lint on {' '.join(str(b) for b in binaries)}")
     say(f"scenarios: {' '.join(cmd)}")
     results_path = None
-    proc = subprocess.Popen(cmd, cwd=project, stdout=subprocess.PIPE, text=True, bufsize=1)
+    proc = subprocess.Popen(cmd, cwd=project, stdout=subprocess.PIPE, text=True, bufsize=1, env=env)
     assert proc.stdout is not None
     for line in proc.stdout:
         sys.stdout.write(line)
@@ -286,6 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         if not (project / "run_scenarios.py").is_file():
             raise SetupError(f"test project not found: {project} has no run_scenarios.py")
         run_runner_tests(project)
+        scenario_binaries(root)  # fail before any paid step when a pinned binary is missing
         names = list_scenarios(project, args.with_compare)
         if not names:
             raise SetupError(f"no scenarios to run in {project / 'scenarios'}")

@@ -3,14 +3,14 @@ title: 'Tracer: rpcn-author writes a pipeline that lints clean'
 type: 'feature'
 ticket: '4'
 created: '2026-11-06'
-status: 'in-progress'
+status: 'built'
 baseline_revision: '94a4be463e2895695c4b765648a04271522ba5b4'
 route: 'full'
 route_source: 'auto'
 risk: 'high'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'quick'
+review_source: 'pinned'
+lenses_ran: ['quick']
 review_loop_iteration: 0
 context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md']
 ---
@@ -132,7 +132,30 @@ context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-
 - **Given** the committed tree, **when** `uv run tools/run_evals.py` runs (about $11), **then** the gate passes for both skills with negatives silent, every scenario passes 3/3, and a `dirty: false` record is written and committed.
 - **Given** all of R's `tools/` suites, `rpcn_check` tests and T's tests, **when** they run before the push, **then** all pass, and CI is green after it.
 
+## Implementation Notes
+
+- **Built in both repos.** Commits: R `77fde7a` and `42dec87` (record); T `d7f802e` and `06bb199`. `rpcn-author` is about 1,175 tokens with no validator warnings. `rpcn-test` is about 1,163 tokens: its status-block bullets moved to `references/status-block.md`.
+- **Unplanned:** `--scenario` accepts globs, because the acceptance command `'rpcn-author__*'` needs them.
+- **`npx_miss`:** with no pipeline to find, the agent searched and hit 5 turns. It got a `pipes/orders.yaml` fixture and 15 turns. The implementer's first full eval failed only on this ($10.67, uncommitted); the second passed ($10.25, record `2026-11-06-5dea371e33a1`). Both ran before review, so the review patches make that record stale.
+- **Matrix audit:** added `rpcn-author__existing_file` (blocked, file unchanged; 1/1 smoke). "Unknown component" and "lint won't clean" are deferred by the user's choice (deferred-work).
+- **After review:** `run_evals` passes `RPCN_TEST_BINARIES` (the pinned cached binaries) to the scenarios, and checks for them before any paid step. The final eval record is the first to prove lint on both binaries.
+
 ## Spec Change Log
+
+## Review Triage Log
+
+Quick pass: 0 high, 3 medium, 4 low, 0 false, 0 maybe-false.
+
+| Finding | Verdict | Route | Evidence / action |
+|---|---|---|---|
+| `rpcn-author__existing_file` isn't in the committed eval record, and the README count is stale | medium | patch | Confirmed: the scenario was added after the eval run, during the matrix audit. The README count was updated, and the final eval run covers the scenario. |
+| Nothing committed proves "lints clean on both binaries": `run_evals` never sets `RPCN_TEST_BINARIES` | medium | patch | Confirmed. `run_evals` now passes the pinned cached binaries, and raises SetupError when one is missing. |
+| A headless run with an unlisted component is forced to `complete` | medium | patch | Confirmed in the Status block rule. A missing component is now `blocked` (AD-8 "required input is missing"). |
+| `## Next` has no situation for an existing file or a binary error | low | patch | Confirmed against AD-9. Bullets added. |
+| `rpcn-author__npx_miss` lacks `no_cd = true` | low | patch | Confirmed. Added. |
+| `ShippedAuthorScenarioTests.NAMES` omits `existing_file` | low | patch | Confirmed. Added. |
+| `existing_file` doesn't assert a non-empty `open_questions` | low | reject | Real. But `check_status` only compares exact values, so the fix is a new runner feature, while `blocked` and `unchanged` already pin the behaviour that matters. |
+| The AD-11 deferred note doesn't name the new Kafka Connect negative | low | defer | A deferred-work entry was added. It only matters when AD-11's scan lands. |
 
 ## Design Notes
 
