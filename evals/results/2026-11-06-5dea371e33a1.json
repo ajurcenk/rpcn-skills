@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "skills_hash": "5dea371e33a1cd724d15c1ce31b160750795aa29ac56cd2e3526f9f11a21c619",
+  "date": "2026-11-06",
+  "git_head": "77fde7a90d5ce268a1424e920e6128099a46f36e",
+  "dirty": false,
+  "plugin_version": "0.1.0",
+  "claude_version": "2.1.319 (Claude Code)",
+  "trigger": {
+    "ok": true,
+    "accuracy": 1.0,
+    "runs_total": 72,
+    "runs_correct": 72,
+    "positives": {
+      "runs": 42,
+      "correct": 42
+    },
+    "negatives": {
+      "runs": 30,
+      "correct": 30
+    },
+    "failed_runs": [],
+    "partial": false
+  },
+  "scenarios": [
+    {
+      "name": "rpcn-author__npx_miss",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__npx_trigger",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__write_resources_yml",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_broken",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder_valid",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__npx_miss",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__npx_trigger",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    }
+  ],
+  "compare": null,
+  "passed": true,
+  "cost_usd": 10.2509
+}
