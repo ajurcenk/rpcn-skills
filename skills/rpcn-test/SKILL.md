@@ -1,6 +1,6 @@
 ---
 name: rpcn-test
-description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, explains each error with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also finds rpk connect (or redpanda-connect) and reports its path and version against the supported 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", and when the user pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it or why it fails. Not for writing, designing or deploying pipelines.'
+description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, explains each error with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also finds rpk connect (or redpanda-connect) and reports its path and version against the supported 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", and when the user pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it or why it fails. Not for writing pipelines: use rpcn-author. Not for designing or deploying them.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -93,6 +93,7 @@ Reply with the verdict, the explained errors and diffs, and report path.
 - Errors found: apply the proposed changes, then re-run rpcn-test.
 - 0 errors: nothing to fix.
 - Binary fixed: re-run rpcn-test to confirm it.
+- No pipeline yet, or write a new one: use rpcn-author.
 
 ## Status block (headless only)
 
@@ -102,7 +103,4 @@ End the reply with exactly one fenced `json` block, and nothing after it:
 {"status": "<complete|blocked>", "skill": "rpcn-test", "reason": null, "artifacts": [], "checks": {"lint": "<pass|fail|skipped>", "tests": "skipped"}, "open_questions": []}
 ```
 
-- `blocked` (with `reason` the first error) only after an exit 2 in Steps 1–4
-  or a report that stays not ready; otherwise `complete`, even when lint fails.
-- `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.
-- `artifacts`: the report path, or `[]`. Questions go in `open_questions`.
+Read `references/status-block.md` and fill the block as it says.

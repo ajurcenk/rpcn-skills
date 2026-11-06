@@ -8,7 +8,8 @@ Skills in this release:
 
 | Skill | What it does |
 |---|---|
-| `rpcn-test` | Finds your Redpanda Connect binary and reports its path and version |
+| `rpcn-author` | Writes a new pipeline from a plain request, using only the components and fields your binary reports, and lints it until clean |
+| `rpcn-test` | Lints a pipeline, explains each error with a proposed fix and writes a test report; also finds your Redpanda Connect binary and reports its path and version |
 
 ## Install
 
@@ -18,7 +19,7 @@ With `npx skills`, for Claude Code or any agent that supports [Agent Skills](htt
 npx skills add ajurcenk/rpcn-skills
 ```
 
-Then ask your agent to "check my Redpanda Connect binary".
+Then ask your agent to "write me a Redpanda Connect pipeline" or "lint my pipeline".
 
 ## Requirements
 

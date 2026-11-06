@@ -461,6 +461,14 @@ class RealRepo(unittest.TestCase):
             rep,
         )
 
+    def test_rpcn_author_has_no_warnings(self) -> None:
+        # Story 2.4: the new skill is clean, and names its sibling in "Not for".
+        code, out = run_validate(REPO_ROOT)
+        self.assertEqual(code, 0, out)
+        rep = next(s for s in out["skills"] if s["skill"] == "rpcn-author")
+        self.assertEqual(rep["errors"], [])
+        self.assertEqual(rep["warnings"], [])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

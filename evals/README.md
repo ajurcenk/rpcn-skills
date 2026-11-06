@@ -1,8 +1,8 @@
 # Evals
 
-## Trigger suite for `rpcn-test` (R12, AD-13)
+## Trigger suites for `rpcn-test` and `rpcn-author` (R12, AD-13)
 
-These cases measure whether Claude picks the `rpcn-test` skill from the ways
+These cases measure whether Claude picks the right skill from the ways
 developers actually phrase requests, and whether it stays quiet on requests
 that sound related but belong elsewhere. Each case only checks which skill the
 Skill tool was called for. Nothing else is graded.
@@ -10,20 +10,31 @@ Skill tool was called for. Nothing else is graded.
 | Cases | Name | Grader | Passes when |
 |---|---|---|---|
 | 8 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
-| 6 near-miss negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
+| 5 out-of-repo negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
+| 1 sibling negative | `rpcn-test__miss_write_new_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
+| 6 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
+| 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
+| 1 sibling negative | `rpcn-author__miss_lint_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
 
-A negative fails when **any** `rpcn-` skill fires, not only `rpcn-test`
-(`input_match: '"skill"\s*:\s*"(?:[\w-]+:)?rpcn-[\w-]+"'`): a near-miss
-request belongs outside this repo, so a sibling skill picking it up is as wrong
-as `rpcn-test` doing so.
+There are two kinds of near-miss negative (decision 2026-11-06):
+
+- **Out-of-repo** near-misses (deploying, Kafka Connect, a Python consumer,
+  broker health, ...) belong outside this repo, so a negative fails when
+  **any** `rpcn-` skill fires
+  (`input_match: '"skill"\s*:\s*"(?:[\w-]+:)?rpcn-[\w-]+"'`): a sibling
+  skill picking one up is as wrong as the case's own skill doing so.
+- **Sibling** near-misses are a request that belongs to the sibling: a write
+  request for `rpcn-test`, a lint request for `rpcn-author`. They assert only
+  that their own skill stayed silent (`input_match` on that skill's name). The
+  sibling firing is the right answer, and the sibling's own positives cover it.
 
 Every case sets `max_turns: 2` and `allowed_tools: [Skill]`, plus
 `tags: [trigger, positive]` or `tags: [trigger, negative]`. A run that stops
 with "Reached maximum number of turns (2)" is normal: the Skill call (or its
 absence) is already in the transcript.
 
-Some positives echo the description's quoted phrases and some are new
-phrasings, so read the results with that in mind:
+Some `rpcn-test` positives echo the description's quoted phrases and some
+are new phrasings, so read the results with that in mind:
 
 | Case | Relation to the description |
 |---|---|
@@ -92,8 +103,8 @@ runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $6.40 for a default run (trigger suite ~$3.50, the five
-  pass scenarios x 3 ~$2.90). The record's `cost_usd`
+- **Cost:** about $11 for a default run (trigger suite ~$5, the eight
+  pass scenarios x 3 ~$6, most of it the two `rpcn-author` write scenarios). The record's `cost_usd`
   holds the measured total.
 
 ## The gate
@@ -116,9 +127,9 @@ named in `errors` and in `error`. So the suite can't shrink unnoticed.
 | 2 | missing or unreadable file, `schemaVersion` not the integer 1, no trigger cases, no trigger case folders in `--cases-dir`, an incomplete suite (no positive or no negative case, a case with fewer than `--min-runs` runs, a missing or extra case), or a partial run |
 
 When the gate fails, `failed_runs` lists the phrasings to address. Fixing them
-means changing the `rpcn-test` description, which is a separate decision.
+means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $3 for the full 14 cases x 3 runs.
+About $0.07 and 7 s per run, so roughly $5 for the full 24 cases x 3 runs.
 These evals run locally only, never in CI (CI holds no Claude credentials).
