@@ -53,6 +53,7 @@ context: []
 - **Surprise:** `${CLAUDE_SESSION_ID}` and `${CLAUDE_SKILL_DIR}` are expanded only in `SKILL.md`. The fix-check temp path therefore stays in Step 4, and `fix-check.md` refers back to it.
 - A few phrases elsewhere in `SKILL.md` were tightened without changing their meaning: Step 2's resources sentence, "Then check it", and the reply line. That brought the file to 4,799 characters, about 1,199 tokens. The margin is very small, so epic 2's growth has to go into references.
 - **Smoke runs:** `lint_subfolder` and `lint_broken` each passed 1/1, before and after the review patches (`T/runs/20261106-103258`, `T/runs/20261106-103624`). The agent read each reference at its step.
+- **Evals:** the first run's record (`2026-11-06-45e142225fc7.failed-105404`, $6.57) failed the gate on one negative run. `rpcn-test__miss_write_new_pipeline` fired `rpcn-test` once, in 1 of 3 runs, for 41 of 42 correct overall. All scenarios passed 3/3. The description is unchanged, and that case passed 3/3 in every earlier record, so this is model nondeterminism, not this change. The record wasn't committed. A re-run from the same commit passed: `evals/results/2026-11-06-45e142225fc7.json`, accuracy 1.0, all 5 scenarios 3/3, `dirty: false`, $6.47. If the case fires again, tighten the "Not for writing" line, which story 2.4 edits anyway.
 
 ## Plan Change Log
 
