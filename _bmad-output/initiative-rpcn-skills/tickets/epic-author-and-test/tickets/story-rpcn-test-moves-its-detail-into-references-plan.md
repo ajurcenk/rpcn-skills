@@ -3,7 +3,7 @@ title: 'rpcn-test moves its detail into references'
 type: 'refactor'
 ticket: '3'
 created: '2026-11-06'
-status: 'built'
+status: done
 baseline_revision: 'ad21e418f7dbd8d68961e237f3dc8c3702d83f91'
 route: 'oneshot'
 route_source: 'auto'
