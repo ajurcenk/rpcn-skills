@@ -29,29 +29,23 @@ the folder that holds this SKILL.md, in this and every call below.
 
 Each call prints one JSON object (`ok`, `binary`, `errors`, `data`). **Exit 2**
 in Steps 1–3 means the run can't test: write no report, show each
-`errors[].message`, and for a binary error the matching fix:
-- nothing found: `rpk connect install`, `redpanda-connect` on PATH, or
-  `RPCN_BINARY=<path>`
-- below 4.100.0: `rpk connect upgrade`, or `rpk connect install --connect-version <version>`
+`errors[].message`, and for a binary error read
+`references/binary-fixes.md` and show its fix.
 
 If the user asked only about the binary, report `binary.path` and
 `binary.version` (a path ending in `rpk` runs as `rpk connect`), then go to Next.
 
-**Pasted config:** when the user pastes the YAML instead of naming a file, write
-it unchanged to a temporary file outside the project with the Write tool, then
-run Steps 3 and 4 on that file, giving diffs against the pasted text. Skip
-Step 2 and Step 5: write no test report, and in headless mode report
-`artifacts: []`. Offer to save it as `<name>.yaml` so a report can be written.
+**Pasted config:** if the user pastes YAML instead of naming a file, first
+read `references/pasted-config.md` and follow it.
 
 ## Step 2: Hash the inputs
 
-`<pipeline>` is the pipeline's file name with its real extension:
-`<name>.yaml` or `<name>.yml`. In every call, `<dir>/` is its folder as the
+`<pipeline>` is the pipeline's file name, with its real extension
+(`<name>.yaml` or `.yml`). In every call, `<dir>/` is its folder as the
 user gave it (for example `pipes/`), or nothing when it is in the project
-root. The resources file `<res>` is the one the user names, such as a
-`resources.yaml` shared by several pipelines, else
-`<dir>/<name>.resources.yaml` (`.resources.yml` for a `.yml` pipeline) if
-that file exists, else none. Hash the pipeline first, then `<res>`:
+root. `<res>` is the resources file the user names (such as a shared
+`resources.yaml`), else `<dir>/<name>.resources.yaml` (`.resources.yml` for
+a `.yml` pipeline) if it exists, else none. Hash the pipeline, then `<res>`:
 
 ```bash
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <dir>/<pipeline> [<res>]
@@ -69,33 +63,19 @@ Pass `--env-file` only when the user names one.
 
 Only when there are errors, read `references/lint-errors.md`. For every entry
 in `errors`, in order, give its file, line and column, the cause, and the fix
-as a unified diff against that file. Never add or drop an error. Check the
-fixes: write the fully fixed pipeline to
+as a unified diff against that file. Never add or drop an error. Then write
+the fully fixed pipeline to
 `<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<pipeline>` (if the variable
-is not expanded, end the folder name in 8 random letters instead) and lint it
-with the same `--resources` and `--env-file` as Step 3. Revise at most twice,
-then mark any fix that still fails as unverified. If this lint exits 2, mark
-the fixes unverified and write the report as `draft` with that reason.
+is not expanded, end the folder in 8 random letters instead), read
+`references/fix-check.md` and follow it.
 
 ## Step 5: Write the report
 
-Write `<name>.test-report.md` beside the pipeline, following
-`references/test-report-format.md` and `references/handoff-header.md`:
-- header: `status: ready`, `produced_by: rpcn-test@<data.plugin_version>`,
-  `rpcn_version` from `binary.version`, `inputs` from Step 2 in that order,
-  each `file` relative to the report's folder, not as `hash` printed it: the
-  pipeline as `<pipeline>` alone (never `pipes/<pipeline>`), and any other
-  input as its path from the pipeline's folder (hashed as `resources.yaml`
-  from the project root with the pipeline in `pipes/`: record
-  `../resources.yaml`; hashed as `pipes/orders.resources.yaml`: record
-  `orders.resources.yaml`)
-- Summary: `**Verdict:** pass` only with 0 lint errors, else `fail`
-- Lint: `0 errors.` or the error table
-- Bloblang samples, Unit tests, Design check: `Not run: not in this version of rpcn-test.`
-- Proposed changes: one numbered item and `diff` block per fix, or `None.`;
-  end an unverified fix's item title with `(unverified)`
+Write `<name>.test-report.md` beside the pipeline: read
+`references/report-writing.md` and follow it, with
+`references/test-report-format.md` and `references/handoff-header.md`.
 
-Then check it:
+Check it:
 
 ```bash
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <dir>/<name>.test-report.md
@@ -103,10 +83,10 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <dir>/<name>.test-
 
 It must report `data.ready: true`. On exit 1 or 2, fix only the report's own
 header or format once and check again; never re-hash an input or change its
-`sha256`. If it still isn't ready (for example an input changed after
+`sha256`. If it still isn't ready (such as an input changed after
 hashing), set `status: draft`, say why, and in headless mode report `blocked`.
 
-Reply with the verdict, the explained errors and diffs, and the report path.
+Reply with the verdict, the explained errors and diffs, and report path.
 
 ## Next
 
