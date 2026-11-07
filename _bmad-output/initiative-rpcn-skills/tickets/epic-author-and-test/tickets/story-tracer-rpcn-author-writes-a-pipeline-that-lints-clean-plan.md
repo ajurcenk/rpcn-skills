@@ -140,6 +140,9 @@ context: ['{project-root}/_bmad-output/initiative-rpcn-skills/architecture-rpcn-
 - **Matrix audit:** added `rpcn-author__existing_file` (blocked, file unchanged; 1/1 smoke). "Unknown component" and "lint won't clean" are deferred by the user's choice (deferred-work).
 - **After review:** `run_evals` passes `RPCN_TEST_BINARIES` (the pinned cached binaries) to the scenarios, and checks for them before any paid step. The final eval record is the first to prove lint on both binaries.
 
+- **The review patch for `no_cd` on `npx_miss` was wrong.** The first post-review run (`f3de850d3066.failed`, $11.03) failed `rpcn-author__npx_miss` 0/3. No skill runs in a near-miss, and Claude Code auto-allowed plain Claude's read-only `cd pipes && cat …` even though Bash is outside `allowed_tools`. T `d2d32d8` now rejects `no_cd` together with `silent` and drops it from that scenario.
+- **Final record:** `evals/results/2026-11-06-f3de850d3066.json` passed with `dirty: false`, at $10.97. Trigger accuracy was 1.0 for both skills, and all 9 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. Story 2.4's eval spend in total was about $43 over 4 full runs.
+
 ## Spec Change Log
 
 ## Review Triage Log
