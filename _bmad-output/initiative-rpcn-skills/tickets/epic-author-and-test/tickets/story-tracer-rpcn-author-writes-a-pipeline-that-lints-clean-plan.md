@@ -3,7 +3,7 @@ title: 'Tracer: rpcn-author writes a pipeline that lints clean'
 type: 'feature'
 ticket: '4'
 created: '2026-11-06'
-status: 'built'
+status: done
 baseline_revision: '94a4be463e2895695c4b765648a04271522ba5b4'
 route: 'full'
 route_source: 'auto'
