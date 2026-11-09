@@ -158,6 +158,9 @@ context: []
   - T tests: 163 pass. Smoke run (`--runs 1 --no-judge`, both binaries): `apply_report` passed every check, including `unchanged`, in 25 turns for $0.35. `draft_report` passed in 6 turns for $0.12.
 - **After the review patches:** the validator, `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries, and T's 164 tests all pass. `rpcn-author` `SKILL.md` is 4,777 characters. Smoke run of all 7 author scenarios: 7/7 pass on both binaries, $1.23 (`T/runs/20261109-100251`).
 
+- **Commits:** R `fdd30f7`, T `01bbd33`.
+- **Eval record:** `evals/results/2026-11-09-84c71b40536a.json` passed with `dirty: false`, at $13.37. Trigger accuracy was 1.0, so the 3 new report-phrasing cases were right, and the sibling negative stayed silent. All 12 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. This was the story's only full eval run.
+
 ## Plan Change Log
 
 - **2026-11-09, fixture lint count.** `multi_error.yaml` gives 4 lint errors on both 4.100.0 and 4.115.0 (`not_a_field`, the trailing `.`, `bogus_option`, `wrong_key`), not 3. The fixture report records all 4, with 5 Proposed changes (4 lint diffs plus the `heartbeat` one). Inventing a 3-error variant would break "the `multi_error.yaml` content"; the intent (lint diffs plus one non-lint diff, then `pass`) is unchanged.

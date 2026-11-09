@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "skills_hash": "84c71b40536a5a8e8a508e40a4770b3453da4b3db67edde204e2e11ca96bd626",
+  "date": "2026-11-09",
+  "git_head": "fdd30f72d02988430de1417ee7418498d2c71b44",
+  "dirty": false,
+  "plugin_version": "0.1.0",
+  "claude_version": "2.1.319 (Claude Code)",
+  "trigger": {
+    "ok": true,
+    "accuracy": 1.0,
+    "runs_total": 81,
+    "runs_correct": 81,
+    "positives": {
+      "runs": 48,
+      "correct": 48
+    },
+    "negatives": {
+      "runs": 33,
+      "correct": 33
+    },
+    "failed_runs": [],
+    "partial": false
+  },
+  "scenarios": [
+    {
+      "name": "rpcn-author__apply_report",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__draft_report",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__existing_file",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__npx_miss",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__npx_trigger",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__stale_report",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__write_resources_yml",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_broken",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder_valid",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__npx_miss",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__npx_trigger",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    }
+  ],
+  "compare": null,
+  "passed": true,
+  "cost_usd": 13.3669
+}
