@@ -3,7 +3,7 @@ title: "Author applies a test report's proposed changes"
 type: 'feature'
 ticket: '5'
 created: '2026-11-09'
-status: 'built'
+status: done
 baseline_revision: 'e09b532ea27458694987352ded8f84de91818102'
 route: 'full'
 route_source: 'auto'
@@ -160,6 +160,8 @@ context: []
 
 - **Commits:** R `fdd30f7`, T `01bbd33`.
 - **Eval record:** `evals/results/2026-11-09-84c71b40536a.json` passed with `dirty: false`, at $13.37. Trigger accuracy was 1.0, so the 3 new report-phrasing cases were right, and the sibling negative stayed silent. All 12 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. This was the story's only full eval run.
+- **Manual test (2026-11-09, user):** the user ran the apply, stale and draft fixtures by hand in `T`, with the committed skills installed. No issues found.
+- **Pushed:** `e09b532..7654dbe`. CI run 42669326589 was green.
 
 ## Plan Change Log
 
