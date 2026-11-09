@@ -11,8 +11,8 @@ Skill tool was called for. Nothing else is graded.
 |---|---|---|---|
 | 8 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
 | 5 out-of-repo negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
-| 1 sibling negative | `rpcn-test__miss_write_new_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
-| 6 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
+| 2 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
+| 8 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
 | 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 1 sibling negative | `rpcn-author__miss_lint_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
 
@@ -24,7 +24,8 @@ There are two kinds of near-miss negative (decision 2026-11-06):
   (`input_match: '"skill"\s*:\s*"(?:[\w-]+:)?rpcn-[\w-]+"'`): a sibling
   skill picking one up is as wrong as the case's own skill doing so.
 - **Sibling** near-misses are a request that belongs to the sibling: a write
-  request for `rpcn-test`, a lint request for `rpcn-author`. They assert only
+  request or a request to apply a test report's proposed changes for
+  `rpcn-test`, a lint request for `rpcn-author`. They assert only
   that their own skill stayed silent (`input_match` on that skill's name). The
   sibling firing is the right answer, and the sibling's own positives cover it.
 
@@ -103,8 +104,9 @@ runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $12 for a default run (trigger suite ~$5.60, the nine
-  pass scenarios x 3 ~$6.50, most of it the `rpcn-author` scenarios). The record's `cost_usd`
+- **Cost:** about $15 for a default run (trigger suite ~$6.30, the twelve
+  pass scenarios x 3 ~$9, most of it the `rpcn-author` scenarios, and the
+  two-skill `rpcn-author__apply_report` loop the largest). The record's `cost_usd`
   holds the measured total.
 
 ## The gate
@@ -131,5 +133,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $5 for the full 24 cases x 3 runs.
+About $0.07 and 7 s per run, so roughly $6 for the full 27 cases x 3 runs.
 These evals run locally only, never in CI (CI holds no Claude credentials).

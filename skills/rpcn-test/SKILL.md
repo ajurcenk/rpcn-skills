@@ -1,6 +1,6 @@
 ---
 name: rpcn-test
-description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, explains each error with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also finds rpk connect (or redpanda-connect) and reports its path and version against the supported 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", and when the user pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it or why it fails. Not for writing pipelines: use rpcn-author. Not for designing or deploying them.'
+description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, explains each error with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also finds rpk connect (or redpanda-connect) and reports its path and version against the supported 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", and when the user pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it or why it fails. Not for writing pipelines or applying a report''s changes: use rpcn-author. Not for designing or deploying them.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -90,7 +90,7 @@ Reply with the verdict, the explained errors and diffs, and report path.
 
 ## Next
 
-- Errors found: apply the proposed changes, then re-run rpcn-test.
+- Errors found: apply the proposed changes with rpcn-author, then re-run rpcn-test.
 - 0 errors: nothing to fix.
 - Binary fixed: re-run rpcn-test to confirm it.
 - No pipeline yet, or write a new one: use rpcn-author.

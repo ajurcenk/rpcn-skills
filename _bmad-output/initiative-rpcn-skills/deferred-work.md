@@ -22,3 +22,12 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-tracer-rpcn-author-writes-a-pipeline-that-lints-clean-plan.md`
   summary: The AD-11 deprecated-scan exemption for "Kafka Connect" must also cover `evals/rpcn-author__miss_kafka_connect/prompt.md`, not only the rpcn-test negative.
   evidence: The existing deferred AD-11 entry names only `evals/rpcn-test__miss_kafka_connect/prompt.md`. Story 2.4 added a second prompt with the same phrase ("Write a Kafka Connect connector config …").
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-applies-a-test-report-s-proposed-changes-plan.md`
+  summary: No scenario covers rpcn-author's "verdict pass, Proposed changes None." matrix row (nothing to apply, files unchanged, complete).
+  evidence: The story 2.5 matrix audit found the row untested. The user chose to cover only the draft report and the Test-owned diff, to keep the eval cost down (2026-11-09).
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-applies-a-test-report-s-proposed-changes-plan.md`
+  summary: No scenario covers rpcn-author's "hunk doesn't match" matrix row (the item isn't applied and goes in open_questions, the others are applied, complete).
+  evidence: The story 2.5 matrix audit found the row untested. The runner has no "file does not contain" check or open_questions content check to assert it, so the user chose to defer it (2026-11-09).
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-applies-a-test-report-s-proposed-changes-plan.md`
+  summary: No scenario covers rpcn-author's "lint still fails after applying a report" matrix row (Step 6's 3 revisions, then blocked).
+  evidence: The story 2.5 matrix audit found the row untested. It is the same Step 6 path as story 2.4's deferred "lint won't clean" row, and is as hard to force. The user chose to defer it (2026-11-09).
