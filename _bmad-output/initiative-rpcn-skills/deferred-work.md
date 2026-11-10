@@ -46,3 +46,6 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-bloblang-mappings-come-with-samples-and-test-runs-them-plan.md`
   summary: `rpcn-test__samples_written` proves the written samples file is valid only through the skill's own status block and substring checks. Add a runner check that validates a samples file left behind, for example by running `rpcn_check blobl --samples`.
   evidence: Story 2.7 quick review (2026-11-10). The runner has no samples-file check. That limitation predates this story, like the 2.6 status/reply assertion deferral. Adding one needs a new `expect.toml` key.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-bloblang-mappings-come-with-samples-and-test-runs-them-plan.md`
+  summary: rpcn-author's `.blobl` rule doesn't say what wins when the user asks for one mapping processor that also needs `now()` or `uuid_v4()`. Today Author keeps the whole mapping inline, so it gets no samples.
+  evidence: Story 2.7 second full eval (2026-11-10). `write_blobl` run 1 kept a 5-line mapping with `now()` inline because the prompt asked for "one mapping processor". The scenario prompt was changed. The rule itself needs a decision (split anyway, or keep inline and say so).
