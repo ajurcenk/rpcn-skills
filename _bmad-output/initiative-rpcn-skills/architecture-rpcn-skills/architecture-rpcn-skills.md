@@ -7,7 +7,7 @@ paradigm: 'pipes-and-filters over a file-based artifact chain, with one binary a
 scope: 'The RPCN Skills plugin repo: seven lifecycle skills, their shared files, hand-off files, evals, CI and release'
 status: final
 created: '2026-10-22'
-updated: '2026-11-05'
+updated: '2026-11-10'
 binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R15, R16, R17, R18, R19, R20]
 sources:
   - _bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md
@@ -273,7 +273,7 @@ flowchart LR
       - `bare`: nothing installed
     - **Scoring:** every arm is scored by the same objective checks, using our `rpcn_check` (lint, Bloblang output, fields present in the binary), plus a quality judgement and the turns, time and tokens used.
     - **Results:** the runner writes a per-scenario comparison table with the winner into the results file.
-    - **Benchmark sources:** the benchmark sets are installed from their local folders at a recorded commit. They are never copied into `rpcn-skills`.
+    - **Benchmark sources:** the benchmark sets are installed from their local folders at a recorded commit. They are never installed into or vendored in `rpcn-skills`; adapting their text follows AD-15.
     - **Installing all three together** is not tested in version 1.
     - **Source code:** the test project never holds skill source. Installed skills there are gitignored.
   - **What users install:** the gate also measures the `npx` path.
@@ -309,6 +309,34 @@ flowchart LR
   R[New RPCN release] --> G[weekly job: gen_refs + pin roll PR] --> PR
   M --> REL[stamp commit + tag]
 ```
+
+### AD-15 — Content sources
+
+- **Binds:** R8, R10, R11, R20, every skill, and every story that writes references
+- **Prevents:** two skills shipping the same fact from different sources with different answers, and a skill trusting a checkout or a doc page over the user's binary
+- **Rule:**
+  - **At runtime**, a skill takes every fact the binary can report (components, fields, defaults, required and deprecated status, lint and Bloblang results) from `rpcn_check` (AD-4), or from the AD-11 generated references. Its own `references/` hold only what the binary can't report, and never restate a field, default or deprecation. Skills never fetch RPCN source code, docs, or doc tools such as the Redpanda Docs MCP while they run.
+  - **Classify a fact by what it claims, not by which skill uses it.** Any statement of what RPCN does is a behaviour fact, even inside Design, Deploy or Tune guidance. The docs supply only recommendations, and each recommendation names the behaviour fact it rests on. A behaviour fact that more than one skill uses lives once in `tools/shared/` and is copied (AD-2).
+  - **Each kind of fact has one source**, distilled at authoring time:
+
+    | Kind of fact | Source | Pin |
+    |---|---|---|
+    | Behaviour: retry and backoff, ack and delivery, batching, `fallback`, ordering under `max_in_flight`, lint message strings, canonical config and test examples | The engine source: `redpanda-data/benthos` (MIT) at the version that connect's `go.mod` pins, plus `redpanda-data/connect` for connect-only components | The AD-5 newest pin when written, recorded as the connect tag plus the benthos version |
+    | Recommendations for Design, Deploy and Tune | Official docs and cookbooks (docs.redpanda.com/connect, read directly or through the Redpanda Docs MCP) | The URL and the date read, since the docs are unversioned |
+    | Failure modes | Resolved `redpanda-data/connect` GitHub issues, in the AD-11 entry shape. Other sources stay deferred. | The AD-11 "Fixed in" field |
+    | Adapted phrasing, and the benchmark baseline | The existing skill sets, at their AD-13 benchmark commits | The AD-13 recorded commit |
+
+    A kind of fact with no row here (for example Helm or Kafka Connect mappings) gets a row added to this table before the first story that ships it.
+  - **Versions:** a fact that differs between 4.100.0 and the newest pin is written once per version, or checked at runtime through `rpcn_check`.
+  - **Licence:** text is copied or adapted only from Apache-2.0, MIT or BSD files. Redpanda Community License files, and the unlicensed docs, may inform a fact in our own words, but are never copied.
+  - **Provenance:** `SOURCES.md` has one row per file and source, with the columns File, Source, Pin, Licence and Proof. A failure-mode entry's own AD-11 Source field is its provenance. A reference file that adapts third-party text also says so in a closing line, so that a single-skill install keeps the attribution.
+  - **Proof, by kind:**
+    - behaviour facts and lint strings: a test backed by the binary that runs in CI on every AD-5 version
+    - examples: lint, plus `rpcn_check test` where cases exist, on both pins
+    - recommendations: the behaviour fact they cite, plus an eval
+
+    The binary is the only arbiter of facts. Evals judge whether a skill applies its references, not whether the references are true. Epic 4's validator fails a `SOURCES.md` row with no Pin, Licence or Proof.
+  - **Release sync:** the AD-14 weekly pin-roll PR diffs `tools/shared/generated/` between the old and new pins. It lists the `SOURCES.md` rows whose pin is now older, and the behaviour tests re-run on the new pin in CI.
 
 ## Consistency Conventions
 
@@ -388,6 +416,6 @@ rpcn-skills/
 - **Windows:** out of scope. Skills, scripts and CI target Linux and macOS only.
 - **Telemetry:** out of scope.
 - **Claude Code plugin marketplace install:** out of scope (user decision 2026-11-03). `npx skills` is the only user channel (AD-1).
-- **Release stamp and the eval record (open):** AD-12's stamp commit, and a weekly pin-roll that changes synced references, both change AD-14's skills hash, so neither can merge without a new local eval run. Epic 4 decides, before its stamp work, whether the stamp keys are left out of the hash and who runs evals for a pin-roll PR. That decision also covers what the stamp edits (the shared `rpcn_check` source or the copies), and whether the eval-record hash should also cover `evals/` and `tools/eval_gate.py`.
+- **Release stamp and the eval record (open):** AD-12's stamp commit, and a weekly pin-roll that changes synced references, both change AD-14's skills hash, so neither can merge without a new local eval run. Epic 4 decides, before its stamp work, whether the stamp keys are left out of the hash and who runs evals for a pin-roll PR, including the AD-15 re-proofs it triggers. That decision also covers what the stamp edits (the shared `rpcn_check` source or the copies), and whether the eval-record hash should also cover `evals/` and `tools/eval_gate.py`.
 - **What users install (open):** `npx skills` installs from `main`, so between releases users get unreleased content under the last version stamp. Epic 4 picks one: treat every merge that changes `skills/` as a release, or pin the install to a tag. It also decides how a retired skill's folder is removed from users' installs.
 - **The trigger gate's setup:** decided on 2026-11-05 and moved into AD-13 ("What users install").
