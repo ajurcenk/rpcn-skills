@@ -128,6 +128,7 @@ context: []
   - **Tests and smoke runs:** `rpcn_check` tests pass on both binaries (169). The scenarios were not re-run after these fixes.
 - **Not done here:** review, commits (R and T), and the paid `run_evals.py` (AC 3, about $20), which needs the reviewed, committed tree.
 - **After the review patches:** the validator passes with no new warning (`rpcn-author` 4,792 characters, `rpcn-test` 4,800), and so do `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries, and T's 196 tests. Smoke run of 20 scenarios (all author scenarios, plus `rpcn-test__lint_*`, `npx_*` and `samples_*`): 20/20 pass on both binaries (`T/runs/20261110-113938`).
+- **First full eval ($22.05) failed on an install timeout only:** in `design_deviation` run 3, `npx skills add` timed out after 300s before the agent ran. Every other run and check passed, and the gate scored accuracy 1.0. The user chose to fix the cause: the runner now retries a failed install once (T commit after `6468412`). The failed record was deleted unused, and the eval re-ran from the same `skills/`.
 
 ## Plan Change Log
 
