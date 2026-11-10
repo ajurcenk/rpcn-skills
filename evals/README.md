@@ -12,7 +12,7 @@ Skill tool was called for. Nothing else is graded.
 | 8 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
 | 5 out-of-repo negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
 | 2 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
-| 8 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
+| 9 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
 | 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 1 sibling negative | `rpcn-author__miss_lint_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
 
@@ -104,8 +104,8 @@ runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $15 for a default run (trigger suite ~$6.30, the twelve
-  pass scenarios x 3 ~$9, most of it the `rpcn-author` scenarios, and the
+- **Cost:** about $17 for a default run (trigger suite ~$6.50, the sixteen
+  pass scenarios x 3 ~$11, most of it the `rpcn-author` scenarios, and the
   two-skill `rpcn-author__apply_report` loop the largest). The record's `cost_usd`
   holds the measured total.
 
@@ -133,5 +133,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $6 for the full 27 cases x 3 runs.
+About $0.07 and 7 s per run, so roughly $6 for the full 28 cases x 3 runs.
 These evals run locally only, never in CI (CI holds no Claude credentials).

@@ -31,3 +31,9 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-applies-a-test-report-s-proposed-changes-plan.md`
   summary: No scenario covers rpcn-author's "lint still fails after applying a report" matrix row (Step 6's 3 revisions, then blocked).
   evidence: The story 2.5 matrix audit found the row untested. It is the same Step 6 path as story 2.4's deferred "lint won't clean" row, and is as hard to force. The user chose to defer it (2026-11-09).
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-builds-from-a-design-note-and-records-deviations-plan.md`
+  summary: Scenario for a ready design note that names a component the binary doesn't list (Author must stop `blocked`, unlisted component).
+  evidence: Story 2.6 matrix audit (2026-11-09). The user chose to defer it, because a deterministic fixture needs a component that is absent on every tested binary, and the block rule predates this story.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-builds-from-a-design-note-and-records-deviations-plan.md`
+  summary: The 2.6 scenarios don't check the design-note rows' status and reply parts: the edited note in `artifacts` (deviation), the not-ready line in `open_questions` and the reply (not_ready, draft), or that the deviation pipeline really dropped `orders.dlq`.
+  evidence: Story 2.6 quick review (2026-11-09). The runner's `[status]` check uses exact equality, and it has no "does not contain" or `open_questions` content check. That limitation predates this story (see the 2.5 hunk-mismatch deferral). It needs a new runner capability.
