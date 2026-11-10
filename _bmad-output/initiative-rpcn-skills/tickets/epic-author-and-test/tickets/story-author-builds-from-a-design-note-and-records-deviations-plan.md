@@ -148,6 +148,7 @@ context: []
 - Matrix audit follow-up (user's choice): `T/scenarios/rpcn-author__design_draft` covers the draft-note row. Its note is `design_note`'s fixture with only `status: draft` (`hash --check` exit 1), with the same Redpanda-to-stdout prompt as `design_not_ready`, and checks `complete`, lint ok, `stdout` in the file, the note `unchanged` and `no_cd`. It passed a 1-run smoke on both binaries. The stale-note row stays covered by 2.5's `hash --check` branch.
 - `rpcn-test` keeps a pre-existing validator warning (`references/design-format.md is never named in SKILL.md`); this story doesn't touch rpcn-test.
 - **After the review patches:** the validator passes (`rpcn-author` has no warnings; `SKILL.md` is 4,801 characters), and so do `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries, and T's 190 tests. Smoke run of all 11 author scenarios: 11/11 pass on both binaries, $2.67 (`T/runs/20261109-192414`).
+- **Fixture fix during the first full eval:** `design_note` run 1/3 failed `unchanged`. The fixture's Error handling said failed orders reach `orders.dlq` "with its original payload", but its own mapping adds `total_cents` first. The agent rightly recorded a Deviations row for that. The eval was stopped after the gate (accuracy 1.0). The wording in all four fixtures became "as the mapping left it" (T commit after `292e5b1`), and `design_note` then passed 3/3 ($1.29). `skills/` is unchanged.
 
 ## Plan Change Log
 
