@@ -3,7 +3,7 @@ title: 'Author builds from a design note and records deviations'
 type: 'feature'
 ticket: '6'
 created: '2026-11-09'
-status: 'built'
+status: done
 baseline_revision: 'a2cc47bdfd3fe8854da27f68e73496e1c542ea0c'
 route: 'full'
 route_source: 'auto'
@@ -150,6 +150,7 @@ context: []
 - **After the review patches:** the validator passes (`rpcn-author` has no warnings; `SKILL.md` is 4,801 characters), and so do `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries, and T's 190 tests. Smoke run of all 11 author scenarios: 11/11 pass on both binaries, $2.67 (`T/runs/20261109-192414`).
 - **Fixture fix during the first full eval:** `design_note` run 1/3 failed `unchanged`. The fixture's Error handling said failed orders reach `orders.dlq` "with its original payload", but its own mapping adds `total_cents` first. The agent rightly recorded a Deviations row for that. The eval was stopped after the gate (accuracy 1.0). The wording in all four fixtures became "as the mapping left it" (T commit after `292e5b1`), and `design_note` then passed 3/3 ($1.29). `skills/` is unchanged.
 - **Eval record:** `evals/results/2026-11-10-e470cf76ed42.json` passed with `dirty: false`, at $17.71. Trigger accuracy was 1.0, and all 16 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. Two earlier full runs left no record: the first was stopped for the fixture fix, and the second was cut off when the session closed (its one failure, `existing_file` run 2, was an `npx skills add` install timeout).
+- **Pushed:** `a2cc47b..f7bb675`. CI run 42844849358 was green.
 
 ## Plan Change Log
 
