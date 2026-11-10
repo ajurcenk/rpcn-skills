@@ -36,7 +36,7 @@ path, and the script runs it as `rpk connect`. `binary.version` has no leading
 | Code | When |
 |---|---|
 | 0 | `ok` is `true` |
-| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready, `blobl` when the mapping does not parse or a line failed, `fields` when the component does not exist, `run` when the binary exits non-zero, `test` when a case or target fails or no tests were found |
+| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready, `blobl` when the mapping does not parse, a line failed or a sample's output differs, `fields` when the component does not exist, `run` when the binary exits non-zero, `test` when a case or target fails or no tests were found |
 | 2 | Usage or environment error: bad arguments, a missing input file, no binary, binary below 4.100.0, or a check that could not run (timeout, silent failure) |
 
 ## Binary lookup
@@ -229,8 +229,8 @@ path, and a missing required key (reported at the closing `---` line).
 
 - They use the binary lookup and the 4.100.0 floor above; a missing or too old
   binary is exit 2.
-- Every file argument (mapping, config, target, `--input`, `--resources`,
-  `--env-file`) is checked before the binary runs. A missing one is exit 2,
+- Every file argument (mapping, config, target, `--input`, `--samples`,
+  `--resources`, `--env-file`) is checked before the binary runs. A missing one is exit 2,
   with one error per missing file (its `file` set); the binary is not run and
   `binary` is `null`.
 - Glob characters in `test` targets and in every `--resources` file are
@@ -248,7 +248,10 @@ path, and a missing required key (reported at the closing `---` line).
 
 ```
 rpcn_check.py blobl <mapping> [--input <file>] [--env-file <file>]
+rpcn_check.py blobl <mapping> --samples <name>.samples.json [--env-file <file>]
 ```
+
+`--input` and `--samples` are mutually exclusive (a usage error, exit 2).
 
 The binary is called as:
 
@@ -302,6 +305,72 @@ output" when it printed nothing.
 | 0 | Every input line succeeded (or there was no input and the mapping parsed) |
 | 1 | The mapping does not parse, any input line failed, or the binary exited non-zero with output |
 | 2 | A missing file, no usable binary, a timeout, or a non-zero exit with no output |
+
+### `blobl --samples`
+
+Added in story 2.7, without a schema bump: the command, `data` and exit codes
+without `--samples` are unchanged. The samples file follows
+`tools/shared/formats/samples-format.md`.
+
+1. The samples file is read and validated before the binary is looked up.
+   It must be UTF-8 JSON with no repeated key and no `NaN`, `Infinity` or
+   `-Infinity` (an error naming the key), and follow the format's
+   rules. Its `mappings` must have a key equal to the mapping's file name
+   (`os.path.basename(<mapping>)`). Otherwise exit 2, with one error whose
+   `file` is the samples file: for a JSON syntax error `line` and `column`
+   are the position, otherwise they are `null` and the message names the
+   key, such as `mappings["orders.enrich.blobl"][1]: needs exactly one of
+   output and deleted`. `binary` is `null`.
+2. That mapping's samples are run as one input file, one compact JSON
+   `input` per line, in the samples' order, exactly as `--input` runs
+   (the fallback and budget included).
+3. An empty output is a deleted message, which passes only for
+   `deleted: true`. When the expected `output` is a JSON string, it is
+   compared with the output text exactly as printed, unparsed: the binary
+   prints a string root without quotes, so `root = "123"` prints `123`, and
+   `format_json()` prints JSON text. Otherwise the output is parsed as JSON
+   and compared as a JSON value: `1` equals `1.0`, `true` never equals `1`,
+   key order does not count, and an output that is not JSON fails.
+
+`data` adds four keys to the shape above:
+
+```json
+{
+  "mapping": "pipes/orders.enrich.blobl",
+  "results": [{"line": 1, "output": "{\"id\":\"o1\",\"total_cents\":125}", "error": null}],
+  "samples_file": "pipes/orders.samples.json",
+  "samples": [
+    {"name": "small order", "input": "{\"id\":\"o1\",\"total\":12.5}",
+     "expected": "{\"id\":\"o1\",\"total_cents\":1250}", "deleted": false,
+     "actual": "{\"id\":\"o1\",\"total_cents\":125}", "error": null, "result": "fail"}
+  ],
+  "passed": 0,
+  "failed": 1
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `results` | array | As above; `line` is the sample's 1-based position in its mapping's array |
+| `samples_file` | str | The samples file as given |
+| `samples` | array | One entry per sample of this mapping, in order; `[]` when the mapping does not parse or the run failed |
+| `samples[].name` | str | The sample's `name` |
+| `samples[].input` | str | The sample's `input` as compact JSON with sorted keys |
+| `samples[].expected` | str \| null | The expected `output` as compact JSON with sorted keys; `null` for `deleted: true` |
+| `samples[].deleted` | bool | `true` when the sample expects the message deleted |
+| `samples[].actual` | str \| null | What the mapping printed, as in `results[].output`; `null` when it failed |
+| `samples[].error` | str \| null | As in `results[].error` |
+| `samples[].result` | str | `pass` or `fail` |
+| `passed`, `failed` | int | Number of samples that passed and failed; both `0` when none ran |
+
+**Errors.** One per failed sample, with `file` the samples file, `line` and
+`column` `null`, and `message` `sample '<name>': expected <expected>, got
+<actual>` (or the line's error, or a note that the message was or was not
+deleted). A mapping that does not parse gives the parse error as above.
+
+**Exit codes:** 0 when every sample passed; 1 when any sample failed or the
+mapping does not parse; 2 for an invalid samples file, no entry for the
+mapping, and every exit 2 above.
 
 ## `list`
 

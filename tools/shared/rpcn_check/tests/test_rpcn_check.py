@@ -1205,7 +1205,12 @@ if args[:2] == ["connect", "--version"]:
     sys.exit(0)
 stdin = "" if sys.stdin is None or sys.stdin.closed else sys.stdin.read()
 with open(os.path.join(log, "calls.jsonl"), "a") as fh:
-    fh.write(json.dumps({"argv": args, "stdin": stdin, "no_color": os.environ.get("NO_COLOR")}) + "\\n")
+    input_text = None
+    if "--input" in args:
+        with open(args[args.index("--input") + 1]) as inp:
+            input_text = inp.read()
+    fh.write(json.dumps({"argv": args, "stdin": stdin, "input_text": input_text,
+                         "no_color": os.environ.get("NO_COLOR")}) + "\\n")
 with open(os.path.join(log, "spec.json")) as fh:
     spec = json.load(fh)
 joined = " ".join(args[1:])
@@ -1481,6 +1486,302 @@ class BloblTest(ToolCheckBase):
                 self.assertIn("not found", out["errors"][0]["message"])
                 self.assertTrue(out["errors"][0]["file"].startswith(str(self.work)))
         self.assertEqual(self.calls(), [], "binary must not run")
+
+
+def _load_module():
+    spec = importlib.util.spec_from_file_location("rpcn_check_samples", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _samples_doc(samples: list | None = None, key: str = "m.blobl", **top: object) -> dict:
+    doc = {
+        "format": "samples@1",
+        "pipeline": "orders",
+        "mappings": {key: samples if samples is not None else [{"name": "one", "input": {"n": 1}, "output": {"d": 2}}]},
+    }
+    doc.update(top)
+    return doc
+
+
+class ParseSamplesTest(unittest.TestCase):
+    """parse_samples: the samples-format.md parser (story 2.7)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.m = _load_module()
+
+    def bad(self, text: str, fragment: str, line: int | None = None) -> None:
+        with self.assertRaises(self.m.SamplesError) as ctx:
+            self.m.parse_samples(text)
+        self.assertIn(fragment, str(ctx.exception))
+        self.assertEqual(ctx.exception.line, line)
+
+    def bad_doc(self, doc: object, fragment: str) -> None:
+        self.bad(json.dumps(doc), fragment)
+
+    def test_doc_example_parses(self) -> None:
+        ex = doc_examples(FORMATS / "samples-format.md")
+        self.assertEqual(set(ex), {"orders.enrich.blobl", "orders.samples.json"})
+        doc = self.m.parse_samples(ex["orders.samples.json"])
+        self.assertEqual(doc["pipeline"], "orders")
+        self.assertEqual(list(doc["mappings"]), ["orders.enrich.blobl"])
+        self.assertEqual(len(doc["mappings"]["orders.enrich.blobl"]), 2)
+
+    def test_deleted_sample(self) -> None:
+        doc = self.m.parse_samples(json.dumps(_samples_doc([{"name": "drop", "input": 1, "deleted": True}])))
+        self.assertTrue(doc["mappings"]["m.blobl"][0]["deleted"])
+
+    def test_any_json_input_and_output(self) -> None:
+        samples = [{"name": f"s{i}", "input": v, "output": v} for i, v in enumerate(["x", 0, None, [1], False])]
+        self.m.parse_samples(json.dumps(_samples_doc(samples)))
+
+    def test_syntax_error_names_the_line(self) -> None:
+        self.bad('{\n  "format": "samples@1",\n  "pipeline": \n}\n', "not valid JSON", line=4)
+
+    def test_not_an_object(self) -> None:
+        self.bad("[]", "one JSON object")
+
+    def test_top_level_keys(self) -> None:
+        self.bad_doc(_samples_doc(extra=1), "extra: unknown key")
+        doc = _samples_doc()
+        del doc["pipeline"]
+        self.bad_doc(doc, "pipeline: required key is missing")
+        self.bad_doc(_samples_doc(format="samples@2"), "format: must be 'samples@1'")
+        self.bad_doc(_samples_doc(pipeline=" "), "pipeline: must be a non-empty string")
+        self.bad_doc(_samples_doc(mappings={}), "mappings: must be a non-empty object")
+        self.bad_doc(_samples_doc(mappings=[]), "mappings: must be a non-empty object")
+
+    def test_mapping_keys(self) -> None:
+        for key in ("pipes/m.blobl", "m.yaml", ".blobl", "a\\m.blobl"):
+            with self.subTest(key=key):
+                self.bad_doc(_samples_doc(key=key), "must be a bare .blobl file name")
+        self.bad_doc(_samples_doc([]), 'mappings["m.blobl"]: must be a non-empty array')
+        self.bad_doc(_samples_doc(key="m.blobl", mappings={"m.blobl": {}}), "non-empty array")
+
+    def test_sample_rules(self) -> None:
+        cases = [
+            (["x"], '[0]: must be an object'),
+            ([{"name": "a", "input": 1, "output": 1, "meta": {}}], "[0].meta: unknown key"),
+            ([{"input": 1, "output": 1}], "[0].name: must be a non-empty string"),
+            ([{"name": "", "input": 1, "output": 1}], "[0].name: must be a non-empty string"),
+            ([{"name": "a", "input": 1, "output": 1}, {"name": "a", "input": 2, "output": 2}],
+             "[1].name: 'a' is used twice"),
+            ([{"name": "a", "output": 1}], "[0].input: required key is missing"),
+            ([{"name": "a", "input": 1}], "[0]: needs exactly one of output and deleted"),
+            ([{"name": "a", "input": 1, "output": 1, "deleted": True}], "needs exactly one of output and deleted"),
+            ([{"name": "a", "input": 1, "deleted": False}], "[0].deleted: must be true"),
+        ]
+        for samples, fragment in cases:
+            with self.subTest(fragment=fragment):
+                self.bad_doc(_samples_doc(samples), fragment)
+
+    def test_nan_and_infinity_rejected(self) -> None:
+        for constant in ("NaN", "Infinity", "-Infinity"):
+            with self.subTest(constant=constant):
+                text = json.dumps(_samples_doc()).replace('"output": {"d": 2}', f'"output": {{"d": {constant}}}')
+                self.assertIn(constant, text)
+                self.bad(text, f'mappings["m.blobl"][0].output.d: {constant} is not a JSON value')
+
+    def test_repeated_key(self) -> None:
+        self.bad('{"format": "samples@1", "format": "samples@1", "pipeline": "p", "mappings": {}}',
+                 "duplicate key 'format'")
+
+    def test_json_equal(self) -> None:
+        eq = self.m.json_equal
+        self.assertTrue(eq({"a": 1, "b": [1.0, "x"]}, {"b": [1, "x"], "a": 1.0}))
+        self.assertFalse(eq(True, 1))
+        self.assertFalse(eq(1, True))
+        self.assertFalse(eq("1", 1))
+        self.assertFalse(eq({"a": 1}, {"a": 1, "b": None}))
+        self.assertFalse(eq([1, 2], [2, 1]))
+        self.assertTrue(eq(None, None))
+        self.assertFalse(eq(None, 0))
+
+
+class BloblSamplesTest(ToolCheckBase):
+    """`blobl --samples`: run a mapping's samples and compare (fake binary)."""
+
+    def samples(self, doc: dict, name: str = "orders.samples.json") -> str:
+        return self.make(name, json.dumps(doc))
+
+    def test_all_pass(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", '{"d":2}\n'], ["O", '{"d":4}\n']]})
+        m = self.make("m.blobl")
+        s = self.samples(_samples_doc([
+            {"name": "one", "input": {"n": 1, "a": "x"}, "output": {"d": 2.0}},
+            {"name": "two", "input": {"n": 2}, "output": {"d": 4}},
+        ]))
+        code, out = self.cmd("blobl", m, "--samples", s)
+        self.assertEqual(code, 0, out)
+        data = out["data"]
+        self.assertEqual((data["mapping"], data["samples_file"], data["passed"], data["failed"]), (m, s, 2, 0))
+        self.assertEqual(data["samples"][0], {
+            "name": "one", "input": '{"a":"x","n":1}', "expected": '{"d":2.0}', "deleted": False,
+            "actual": '{"d":2}', "error": None, "result": "pass",
+        })
+        self.assertEqual([r["line"] for r in data["results"]], [1, 2])
+        call = self.calls()[0]
+        self.assertEqual(call["argv"][:4], ["connect", "blobl", "--file", m])
+        self.assertEqual(call["argv"][4], "--input")
+        self.assertEqual(call["input_text"], '{"a":"x","n":1}\n{"n":2}\n')
+        self.assertFalse(os.path.exists(call["argv"][5]), "the temp input file is removed")
+        self.assertNoForbiddenFlags()
+
+    def test_mismatch_names_expected_and_actual(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", '{"d":3}\n'], ["O", '{"d":4}\n']]})
+        m = self.make("m.blobl")
+        s = self.samples(_samples_doc([
+            {"name": "one", "input": {"n": 1}, "output": {"d": 2}},
+            {"name": "two", "input": {"n": 2}, "output": {"d": 4}},
+        ]))
+        before = Path(s).read_bytes()
+        code, out = self.cmd("blobl", m, "--samples", s)
+        self.assertEqual(code, 1, out)
+        self.assertEqual((out["data"]["passed"], out["data"]["failed"]), (1, 1))
+        first = out["data"]["samples"][0]
+        self.assertEqual((first["expected"], first["actual"], first["result"]), ('{"d":2}', '{"d":3}', "fail"))
+        self.assertEqual(out["errors"], [
+            {"file": s, "line": None, "column": None, "message": "sample 'one': expected {\"d\":2}, got {\"d\":3}"}
+        ])
+        self.assertEqual(Path(s).read_bytes(), before, "the samples file is never changed")
+
+    def test_bool_is_not_a_number(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", "1\n"]]})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m, "--samples", self.samples(_samples_doc(
+            [{"name": "flag", "input": {}, "output": True}])))
+        self.assertEqual(code, 1, out)
+
+    def test_raw_string_output(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", "hello world\n"]]})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m, "--samples", self.samples(_samples_doc(
+            [{"name": "greet", "input": {}, "output": "hello world"}])))
+        self.assertEqual(code, 0, out)
+
+    def test_string_expected_compares_the_raw_text(self) -> None:
+        """A string root prints without quotes, so "123", "true" and JSON text compare as printed."""
+        self.fake({"match": "^blobl", "out": [["O", "123\n"], ["O", "true\n"], ["O", '{"a":1}\n'],
+                                               ["O", "123\n"], ["O", '{"a": 1}\n']]})
+        m = self.make("m.blobl")
+        s = self.samples(_samples_doc([
+            {"name": "digits", "input": {}, "output": "123"},
+            {"name": "word true", "input": {}, "output": "true"},
+            {"name": "json text", "input": {}, "output": '{"a":1}'},
+            {"name": "number", "input": {}, "output": 123},
+            {"name": "json text spaced differently", "input": {}, "output": '{"a":1}'},
+        ]))
+        code, out = self.cmd("blobl", m, "--samples", s)
+        self.assertEqual(code, 1, out)
+        self.assertEqual([e["result"] for e in out["data"]["samples"]], ["pass", "pass", "pass", "pass", "fail"])
+        self.assertEqual(out["data"]["samples"][0]["expected"], '"123"')
+
+    def test_deleted(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", "\n"], ["O", '{"a":1}\n'], ["O", "\n"]]})
+        m = self.make("m.blobl")
+        s = self.samples(_samples_doc([
+            {"name": "dropped", "input": {"x": 1}, "deleted": True},
+            {"name": "kept but should drop", "input": {"x": 2}, "deleted": True},
+            {"name": "dropped but should keep", "input": {"x": 3}, "output": {"a": 1}},
+        ]))
+        code, out = self.cmd("blobl", m, "--samples", s)
+        self.assertEqual(code, 1, out)
+        self.assertEqual([e["result"] for e in out["data"]["samples"]], ["pass", "fail", "fail"])
+        self.assertIsNone(out["data"]["samples"][0]["expected"])
+        self.assertTrue(out["data"]["samples"][0]["deleted"])
+        messages = [e["message"] for e in out["errors"]]
+        self.assertIn("expected the message deleted", messages[0])
+        self.assertIn("got a deleted message", messages[1])
+
+    def test_line_error_is_a_failed_sample(self) -> None:
+        self.fake({"match": "^blobl", "out": [["E", "failed to execute map: expected number value\n"]]})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m, "--samples", self.samples(_samples_doc()))
+        self.assertEqual(code, 1, out)
+        entry = out["data"]["samples"][0]
+        self.assertEqual((entry["actual"], entry["error"], entry["result"]), (None, "expected number value", "fail"))
+        self.assertEqual(out["errors"][0]["message"], "sample 'one': expected number value")
+
+    def test_mapping_that_does_not_parse_is_a_check_failure(self) -> None:
+        self.fake({"match": "^blobl", "out": [["E", "failed to parse mapping: line 2 char 1: required: expected query\n"]],
+                   "exit": 1})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m, "--samples", self.samples(_samples_doc()))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["errors"], [{"file": m, "line": 2, "column": 1, "message": "required: expected query"}])
+        self.assertEqual((out["data"]["samples"], out["data"]["passed"], out["data"]["failed"]), ([], 0, 0))
+
+    def test_mapping_matched_by_file_name(self) -> None:
+        self.fake({"match": "^blobl", "out": [["O", '{"d":2}\n']]})
+        sub = self.work / "pipes"
+        sub.mkdir()
+        m = sub / "orders.enrich.blobl"
+        m.write_text("x\n")
+        s = self.samples(_samples_doc(key="orders.enrich.blobl"))
+        code, out = self.cmd("blobl", str(m), "--samples", s)
+        self.assertEqual(code, 0, out)
+
+    def test_no_entry_for_the_mapping(self) -> None:
+        self.fake({"match": "^blobl"})
+        m = self.make("other.blobl")
+        s = self.samples(_samples_doc())
+        code, out = self.cmd("blobl", m, "--samples", s)
+        self.assertEqual(code, 2, out)
+        self.assertIn("no samples for 'other.blobl'", out["errors"][0]["message"])
+        self.assertIn("m.blobl", out["errors"][0]["message"])
+        self.assertEqual(out["errors"][0]["file"], s)
+        self.assertEqual(self.calls(), [], "binary must not run")
+
+    def test_invalid_samples_file(self) -> None:
+        self.fake({"match": "^blobl"})
+        m = self.make("m.blobl")
+        cases = [
+            ('{"format": "samples@1",\n "pipeline": "p",\n "mappings": {,}}\n', 3, "not valid JSON"),
+            (json.dumps(_samples_doc([{"name": "a", "input": 1}])), None, 'mappings["m.blobl"][0]: needs exactly one'),
+        ]
+        for text, line, fragment in cases:
+            with self.subTest(fragment=fragment):
+                s = self.make("bad.samples.json", text)
+                code, out = self.cmd("blobl", m, "--samples", s)
+                self.assertEqual(code, 2, out)
+                self.assertIsNone(out["binary"])
+                self.assertEqual(len(out["errors"]), 1)
+                err = out["errors"][0]
+                self.assertEqual((err["file"], err["line"]), (s, line))
+                self.assertIn(fragment, err["message"])
+                self.assertEqual(out["data"], {"mapping": m, "results": [], "samples_file": s,
+                                               "samples": [], "passed": 0, "failed": 0})
+        self.make("latin.samples.json", "")
+        (self.work / "latin.samples.json").write_bytes(b'{"pipeline": "\xff"}')
+        code, out = self.cmd("blobl", m, "--samples", str(self.work / "latin.samples.json"))
+        self.assertEqual(code, 2, out)
+        self.assertIn("cannot read samples file", out["errors"][0]["message"])
+        self.assertEqual(self.calls(), [], "binary must not run")
+
+    def test_missing_samples_file(self) -> None:
+        self.fake({"match": "^blobl"})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m, "--samples", str(self.work / "nope.samples.json"))
+        self.assertEqual(code, 2, out)
+        self.assertIn("samples file not found", out["errors"][0]["message"])
+        self.assertEqual(self.calls(), [])
+
+    def test_input_and_samples_together_is_usage_error(self) -> None:
+        self.fake({"match": "^blobl"})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m, "--input", self.make("i.jsonl"), "--samples", self.samples(_samples_doc()))
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {})
+        self.assertIn("not allowed with argument", out["errors"][0]["message"])
+
+    def test_without_samples_the_shape_is_unchanged(self) -> None:
+        self.fake({"match": "^blobl", "out": []})
+        m = self.make("m.blobl")
+        code, out = self.cmd("blobl", m)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"], {"mapping": m, "results": []})
 
 
 class ListTest(ToolCheckBase):
@@ -1890,7 +2191,7 @@ class RealBinaryLintTest(unittest.TestCase):
     "real-binary tests skipped: set RPCN_TEST_BINARIES to binary paths (see tools/fetch_rpcn.py)",
 )
 class RealBinaryCommandsTest(unittest.TestCase):
-    """blobl, list, fields, run and test on each binary in RPCN_TEST_BINARIES."""
+    """blobl (with --samples), list, fields, run and test on each binary in RPCN_TEST_BINARIES, and `from` paths."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -1899,12 +2200,12 @@ class RealBinaryCommandsTest(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def check(self, binary: str, *args: str, timeout: int = 120) -> tuple[int, dict]:
+    def check(self, binary: str, *args: str, timeout: int = 120, cwd: Path = FIXTURES) -> tuple[int, dict]:
         proc = subprocess.run(
             [sys.executable, str(SCRIPT), *args],
             capture_output=True,
             text=True,
-            cwd=FIXTURES,
+            cwd=cwd,
             env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", ""), "RPCN_BINARY": binary},
             timeout=timeout,
         )
@@ -1949,6 +2250,80 @@ class RealBinaryCommandsTest(unittest.TestCase):
             code, out = self.check(b, "blobl", "double.blobl")
             self.assertEqual(code, 0, out)
             self.assertEqual(out["data"]["results"], [])
+
+    def test_blobl_samples(self) -> None:
+        ex = doc_examples(FORMATS / "samples-format.md")
+        good = self.tmp / "orders.enrich.blobl"
+        good.write_text(ex["orders.enrich.blobl"])
+        samples = self.tmp / "orders.samples.json"
+        samples.write_text(ex["orders.samples.json"])
+        buggy_dir = self.tmp / "buggy"
+        buggy_dir.mkdir()
+        buggy = buggy_dir / "orders.enrich.blobl"
+        buggy.write_text(ex["orders.enrich.blobl"].replace("* 100", "* 10"))
+        broken_dir = self.tmp / "broken"
+        broken_dir.mkdir()
+        broken = broken_dir / "orders.enrich.blobl"
+        broken.write_text(ex["orders.enrich.blobl"] + "root.half =\n")
+        # Output facts (SOURCES.md): a string root prints raw, without quotes, and a
+        # deleted message prints an empty line.
+        facts = self.tmp / "facts.blobl"
+        facts.write_text(
+            'root = if this.k == "s" { "123" } else if this.k == "d" { deleted() }'
+            ' else { {"a": 1}.format_json(no_indent: true) }\n'
+        )
+        facts_samples = self.tmp / "facts.samples.json"
+        facts_samples.write_text(json.dumps({"format": "samples@1", "pipeline": "facts", "mappings": {"facts.blobl": [
+            {"name": "string root", "input": {"k": "s"}, "output": "123"},
+            {"name": "deleted", "input": {"k": "d"}, "deleted": True},
+            {"name": "json text", "input": {"k": "j"}, "output": '{"a":1}'},
+        ]}}))
+        for b in self.each():
+            code, out = self.check(b, "blobl", str(good), "--samples", str(samples))
+            self.assertEqual(code, 0, out)
+            self.assertEqual((out["data"]["passed"], out["data"]["failed"]), (2, 0))
+
+            code, out = self.check(b, "blobl", str(buggy), "--samples", str(samples))
+            self.assertEqual(code, 1, out)
+            self.assertEqual((out["data"]["passed"], out["data"]["failed"]), (0, 2))
+            first = out["data"]["samples"][0]
+            self.assertIn('"total_cents":1250', first["expected"])
+            self.assertIn('"total_cents":125}', first["actual"])
+            self.assertEqual(samples.read_text(), ex["orders.samples.json"])
+
+            code, out = self.check(b, "blobl", str(facts), "--samples", str(facts_samples))
+            self.assertEqual(code, 0, out)
+            self.assertEqual([r["output"] for r in out["data"]["results"]], ["123", "", '{"a":1}'])
+            self.assertEqual(out["data"]["passed"], 3)
+
+            code, out = self.check(b, "blobl", str(broken), "--samples", str(samples))
+            self.assertEqual(code, 1, out)
+            self.assertEqual((out["errors"][0]["file"], out["errors"][0]["line"]), (str(broken), 5))
+            self.assertEqual(out["data"]["samples"], [])
+
+    def test_from_resolves_against_the_working_directory(self) -> None:
+        """A pipeline's `from "<path>"` is read from the process's working directory,
+        not the config's folder (SOURCES.md; rpcn-author's pipeline-files.md)."""
+        pipes = self.tmp / "pipes"
+        pipes.mkdir()
+        (pipes / "p.double.blobl").write_text("root = this\nroot.doubled = this.n * 2\n")
+        (pipes / "p.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - label: double\n      mapping: 'from \"./pipes/p.double.blobl\"'\n"
+            "output:\n  stdout: {}\n"
+        )
+        (self.tmp / "in.jsonl").write_text('{"n":21}\n')
+        for b in self.each():
+            code, out = self.check(b, "lint", "pipes/p.yaml", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+            code, out = self.check(b, "run", "pipes/p.yaml", "--input", "in.jsonl", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["outputs"], ['{"doubled":42,"n":21}'])
+            # From the config's own folder the same path is not found.
+            code, out = self.check(b, "lint", "p.yaml", cwd=pipes)
+            self.assertEqual(code, 1, out)
+            self.assertIn("failed to read import", out["errors"][0]["message"])
+            self.assertIn("pipes/pipes/p.double.blobl", out["errors"][0]["message"])
 
     def test_list(self) -> None:
         for b in self.each():

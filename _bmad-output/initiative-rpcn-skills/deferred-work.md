@@ -37,3 +37,12 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-author-builds-from-a-design-note-and-records-deviations-plan.md`
   summary: The 2.6 scenarios don't check the design-note rows' status and reply parts: the edited note in `artifacts` (deviation), the not-ready line in `open_questions` and the reply (not_ready, draft), or that the deviation pipeline really dropped `orders.dlq`.
   evidence: Story 2.6 quick review (2026-11-09). The runner's `[status]` check uses exact equality, and it has no "does not contain" or `open_questions` content check. That limitation predates this story (see the 2.5 hunk-mismatch deferral). It needs a new runner capability.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-bloblang-mappings-come-with-samples-and-test-runs-them-plan.md`
+  summary: No scenario asserts that rpcn-author keeps a mapping of 3 lines or fewer inline (no `.blobl` written).
+  evidence: Story 2.7 matrix audit (2026-11-10). The runner has no "file does not exist" check. The existing write scenarios pass but don't assert it. The user chose to defer it.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-bloblang-mappings-come-with-samples-and-test-runs-them-plan.md`
+  summary: No scenario covers rpcn-test with a `.blobl` that doesn't parse (one `fail` row with the parse error, verdict `fail`, not `blocked`).
+  evidence: Story 2.7 matrix audit (2026-11-10). Only `rpcn_check` unit tests cover the exit-1 parse error. The user chose to defer the skill-level scenario to keep the eval cost down.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-bloblang-mappings-come-with-samples-and-test-runs-them-plan.md`
+  summary: `rpcn-test__samples_written` proves the written samples file is valid only through the skill's own status block and substring checks. Add a runner check that validates a samples file left behind, for example by running `rpcn_check blobl --samples`.
+  evidence: Story 2.7 quick review (2026-11-10). The runner has no samples-file check. That limitation predates this story, like the 2.6 status/reply assertion deferral. Adding one needs a new `expect.toml` key.

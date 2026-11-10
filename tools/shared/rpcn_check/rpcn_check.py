@@ -22,6 +22,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 SCHEMA_VERSION = 1
@@ -746,25 +747,180 @@ def _blobl_result(n: int, text: str) -> dict:
     return {"line": n, "output": text, "error": None}
 
 
-def cmd_blobl(args: argparse.Namespace) -> int:
-    mapping: str = args.mapping
-    input_file: str | None = args.input
-    env_file: str | None = args.env_file
-    data: dict = {"mapping": mapping, "results": []}
+SAMPLES_FORMAT = "samples@1"
+_SAMPLES_TOP_KEYS = ("format", "pipeline", "mappings")
+_SAMPLE_KEYS = ("name", "input", "output", "deleted")
 
-    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
-        return _emit(_envelope("blobl", ok, binary, errors, data), code)
 
-    missing = _missing_files(
-        [("mapping file", mapping), ("input file", input_file), ("env file", env_file)]
-    )
-    if missing:
-        return result(False, None, missing, EXIT_ENV)
-    found, code = _binary_or_error("blobl", data)
-    if found is None:
-        return code
-    binary = _public(found)
+class SamplesError(Exception):
+    """A samples file that does not follow samples-format.md."""
 
+    def __init__(self, message: str, line: int | None = None, column: int | None = None) -> None:
+        super().__init__(message)
+        self.line = line
+        self.column = column
+
+
+def _no_duplicate_keys(pairs: list[tuple[str, object]]) -> dict:
+    out: dict = {}
+    for key, value in pairs:
+        if key in out:
+            raise SamplesError(f"duplicate key {key!r}")
+        out[key] = value
+    return out
+
+
+def _reject_constant(name: str) -> object:
+    raise SamplesError(f"{name} is not a JSON value")
+
+
+class _Constant:
+    """What parse_constant returns for NaN, Infinity or -Infinity, so the key can be named."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+def _find_constant(value: object, path: str) -> str | None:
+    """`<key path>: <constant>` for the first NaN or Infinity in value, or None."""
+    if isinstance(value, _Constant):
+        return f"{path or '<top>'}: {value.name}"
+    if isinstance(value, dict):
+        for k, v in value.items():
+            step = (f".{k}" if path else k) if k.isidentifier() else f"[{json.dumps(k)}]"
+            found = _find_constant(v, path + step)
+            if found:
+                return found
+    if isinstance(value, list):
+        for i, v in enumerate(value):
+            found = _find_constant(v, f"{path}[{i}]")
+            if found:
+                return found
+    return None
+
+
+def parse_samples(text: str) -> dict:
+    """Parse and validate a `<name>.samples.json` (samples@1); raise SamplesError naming the line or key."""
+    try:
+        # NaN and Infinity are parsed here and rejected below, naming their key.
+        doc = json.loads(text, object_pairs_hook=_no_duplicate_keys, parse_constant=_Constant)
+    except json.JSONDecodeError as exc:
+        raise SamplesError(f"not valid JSON: {exc.msg}", exc.lineno, exc.colno) from None
+    bad = _find_constant(doc, "")
+    if bad:
+        raise SamplesError(f"{bad} is not a JSON value")
+    if not isinstance(doc, dict):
+        raise SamplesError("the file must hold one JSON object")
+    for key in doc:
+        if key not in _SAMPLES_TOP_KEYS:
+            raise SamplesError(f"{key}: unknown key")
+    for key in _SAMPLES_TOP_KEYS:
+        if key not in doc:
+            raise SamplesError(f"{key}: required key is missing")
+    if doc["format"] != SAMPLES_FORMAT:
+        raise SamplesError(f"format: must be {SAMPLES_FORMAT!r}, got {doc['format']!r}")
+    if not isinstance(doc["pipeline"], str) or not doc["pipeline"].strip():
+        raise SamplesError("pipeline: must be a non-empty string")
+    mappings = doc["mappings"]
+    if not isinstance(mappings, dict) or not mappings:
+        raise SamplesError("mappings: must be a non-empty object")
+    for key, samples in mappings.items():
+        where = f"mappings[{json.dumps(key)}]"
+        if not key.endswith(".blobl") or "/" in key or "\\" in key or key == ".blobl":
+            raise SamplesError(f"{where}: the key must be a bare .blobl file name")
+        if not isinstance(samples, list) or not samples:
+            raise SamplesError(f"{where}: must be a non-empty array of samples")
+        names: set[str] = set()
+        for i, sample in enumerate(samples):
+            at = f"{where}[{i}]"
+            if not isinstance(sample, dict):
+                raise SamplesError(f"{at}: must be an object")
+            for k in sample:
+                if k not in _SAMPLE_KEYS:
+                    raise SamplesError(f"{at}.{k}: unknown key")
+            name = sample.get("name")
+            if not isinstance(name, str) or not name.strip():
+                raise SamplesError(f"{at}.name: must be a non-empty string")
+            if name in names:
+                raise SamplesError(f"{at}.name: {name!r} is used twice in this mapping")
+            names.add(name)
+            if "input" not in sample:
+                raise SamplesError(f"{at}.input: required key is missing")
+            if ("output" in sample) == ("deleted" in sample):
+                raise SamplesError(f"{at}: needs exactly one of output and deleted")
+            if "deleted" in sample and sample["deleted"] is not True:
+                raise SamplesError(f"{at}.deleted: must be true")
+    return doc
+
+
+def _compact(value: object) -> str:
+    return json.dumps(value, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+
+
+def json_equal(a: object, b: object) -> bool:
+    """JSON value equality: 1 equals 1.0, but true never equals 1."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return type(a) is type(b) and a == b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return a == b
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(json_equal(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(json_equal(x, y) for x, y in zip(a, b))
+    return type(a) is type(b) and a == b
+
+
+def compare_sample(sample: dict, result: dict) -> dict:
+    """One `data.samples[]` entry: the sample, what it expected and what the mapping printed."""
+    deleted = sample.get("deleted") is True
+    entry = {
+        "name": sample["name"],
+        "input": _compact(sample["input"]),
+        "expected": None if deleted else _compact(sample["output"]),
+        "deleted": deleted,
+        "actual": result["output"],
+        "error": result["error"],
+        "result": "fail",
+    }
+    actual = result["output"]
+    if actual is None:
+        return entry
+    if actual == "":  # a deleted message (an empty string prints the same)
+        entry["result"] = "pass" if deleted else "fail"
+        return entry
+    if deleted:
+        return entry
+    expected = sample["output"]
+    if isinstance(expected, str):
+        # A string root prints raw, without quotes: compare the text as printed.
+        entry["result"] = "pass" if actual == expected else "fail"
+        return entry
+    try:
+        value = json.loads(actual, parse_constant=_reject_constant)
+    except (ValueError, SamplesError):
+        entry["result"] = "fail"  # not JSON, so it can't equal a non-string value
+        return entry
+    entry["result"] = "pass" if json_equal(expected, value) else "fail"
+    return entry
+
+
+def _sample_error(entry: dict, samples_file: str) -> dict:
+    name = entry["name"]
+    if entry["error"] is not None:
+        message = f"sample {name!r}: {entry['error']}"
+    elif entry["deleted"]:
+        message = f"sample {name!r}: expected the message deleted, got {entry['actual']}"
+    elif entry["actual"] == "":
+        message = f"sample {name!r}: expected {entry['expected']}, got a deleted message"
+    else:
+        message = f"sample {name!r}: expected {entry['expected']}, got {entry['actual']}"
+    return _error(message, file=samples_file)
+
+
+def _blobl_exec(
+    found: dict, mapping: str, env_file: str | None, input_file: str | None
+) -> tuple[list[dict] | None, list[dict], int]:
+    """Run the mapping over input_file's lines: (results, [], 0), or (None, errors, exit code)."""
     base = [*found["argv"], "blobl"]
     if env_file:
         base += ["--env-file", env_file]
@@ -777,7 +933,7 @@ def cmd_blobl(args: argparse.Namespace) -> int:
             with open(input_file, encoding="utf-8", errors="replace") as fh:
                 lines = _go_lines(fh.read())
         except OSError as exc:
-            return result(False, binary, [_error(f"cannot read input file: {exc}", file=input_file)], EXIT_ENV)
+            return None, [_error(f"cannot read input file: {exc}", file=input_file)], EXIT_ENV
 
     deadline_err = [_error(f"blobl timed out after {CHECK_TIMEOUT_S}s")]
     start = time.monotonic()  # one 60 s budget for the whole call, fallback included
@@ -785,51 +941,124 @@ def cmd_blobl(args: argparse.Namespace) -> int:
         # stderr merged into stdout keeps each line's output or error in input order.
         returncode, out, _ = _run_io(cmd, CHECK_TIMEOUT_S, merge_stderr=True)
     except OSError as exc:
-        return result(False, binary, [_error(f"could not run blobl: {exc}")], EXIT_ENV)
+        return None, [_error(f"could not run blobl: {exc}")], EXIT_ENV
     if returncode is None:
-        return result(False, binary, deadline_err, EXIT_ENV)
+        return None, deadline_err, EXIT_ENV
     if returncode != 0:
         err = _blobl_parse_error(out, mapping)
         if err is None:
             if not out.strip():
-                return result(
-                    False, binary, [_error(f"blobl exited {returncode} with no output", file=mapping)], EXIT_ENV
-                )
+                return None, [_error(f"blobl exited {returncode} with no output", file=mapping)], EXIT_ENV
             err = _error(f"blobl exited {returncode}: {_tail(out)}", file=mapping)
-        return result(False, binary, [err], EXIT_CHECK_FAILED)
+        return None, [err], EXIT_CHECK_FAILED
 
     printed = _go_lines(out)
     if len(printed) == len(lines):
-        results = [_blobl_result(i + 1, text) for i, text in enumerate(printed)]
-    else:
-        # Some output spans several lines (a string with newlines), so lines
-        # cannot be matched by position: run each input line on its own.
-        results = []
-        for i, line in enumerate(lines):
-            remaining = CHECK_TIMEOUT_S - (time.monotonic() - start)
-            if remaining <= 0:
-                return result(False, binary, deadline_err, EXIT_ENV)
-            try:
-                rc, one_out, one_err = _run_io(base, remaining, stdin_text=line + "\n")
-            except OSError as exc:
-                return result(False, binary, [_error(f"could not run blobl: {exc}")], EXIT_ENV)
-            if rc is None:
-                return result(False, binary, deadline_err, EXIT_ENV)
-            failed = [ln for ln in one_err.splitlines() if ln.startswith(_BLOBL_EXEC_PREFIX)]
-            if failed:
-                results.append(_blobl_result(i + 1, failed[0]))
-            elif rc != 0:
-                tail = _tail(f"{one_out}\n{one_err}")
-                message = f"blobl exited {rc}" + (f": {tail}" if tail else " with no output")
-                results.append({"line": i + 1, "output": None, "error": message})
-            else:
-                results.append({"line": i + 1, "output": one_out[:-1] if one_out.endswith("\n") else one_out, "error": None})
+        return [_blobl_result(i + 1, text) for i, text in enumerate(printed)], [], EXIT_OK
+    # Some output spans several lines (a string with newlines), so lines
+    # cannot be matched by position: run each input line on its own.
+    results = []
+    for i, line in enumerate(lines):
+        remaining = CHECK_TIMEOUT_S - (time.monotonic() - start)
+        if remaining <= 0:
+            return None, deadline_err, EXIT_ENV
+        try:
+            rc, one_out, one_err = _run_io(base, remaining, stdin_text=line + "\n")
+        except OSError as exc:
+            return None, [_error(f"could not run blobl: {exc}")], EXIT_ENV
+        if rc is None:
+            return None, deadline_err, EXIT_ENV
+        failed = [ln for ln in one_err.splitlines() if ln.startswith(_BLOBL_EXEC_PREFIX)]
+        if failed:
+            results.append(_blobl_result(i + 1, failed[0]))
+        elif rc != 0:
+            tail = _tail(f"{one_out}\n{one_err}")
+            message = f"blobl exited {rc}" + (f": {tail}" if tail else " with no output")
+            results.append({"line": i + 1, "output": None, "error": message})
+        else:
+            results.append({"line": i + 1, "output": one_out[:-1] if one_out.endswith("\n") else one_out, "error": None})
+    return results, [], EXIT_OK
+
+
+def cmd_blobl(args: argparse.Namespace) -> int:
+    mapping: str = args.mapping
+    input_file: str | None = args.input
+    samples_file: str | None = args.samples
+    env_file: str | None = args.env_file
+    data: dict = {"mapping": mapping, "results": []}
+    if samples_file is not None:
+        data.update({"samples_file": samples_file, "samples": [], "passed": 0, "failed": 0})
+
+    def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
+        return _emit(_envelope("blobl", ok, binary, errors, data), code)
+
+    missing = _missing_files(
+        [("mapping file", mapping), ("input file", input_file), ("samples file", samples_file),
+         ("env file", env_file)]
+    )
+    if missing:
+        return result(False, None, missing, EXIT_ENV)
+
+    samples: list[dict] = []
+    if samples_file is not None:
+        # The samples file is checked before the binary is looked up or run.
+        try:
+            with open(samples_file, encoding="utf-8") as fh:
+                doc = parse_samples(fh.read())
+        except (OSError, UnicodeDecodeError) as exc:
+            return result(False, None, [_error(f"cannot read samples file: {exc}", file=samples_file)], EXIT_ENV)
+        except SamplesError as exc:
+            err = {"file": samples_file, "line": exc.line, "column": exc.column, "message": str(exc)}
+            return result(False, None, [err], EXIT_ENV)
+        key = os.path.basename(mapping)
+        if key not in doc["mappings"]:
+            return result(
+                False, None,
+                [_error(f"no samples for {key!r} in mappings (keys: {', '.join(doc['mappings'])})",
+                        file=samples_file)],
+                EXIT_ENV,
+            )
+        samples = doc["mappings"][key]
+
+    found, code = _binary_or_error("blobl", data)
+    if found is None:
+        return code
+    binary = _public(found)
+
+    if samples_file is None:
+        results, errors, code = _blobl_exec(found, mapping, env_file, input_file)
+        if results is None:
+            return result(False, binary, errors, code)
+        data["results"] = results
+        errors = [
+            {"file": input_file, "line": r["line"], "column": None, "message": r["error"]}
+            for r in results
+            if r["error"] is not None
+        ]
+        if errors:
+            return result(False, binary, errors, EXIT_CHECK_FAILED)
+        return result(True, binary, [], EXIT_OK)
+
+    # Samples: one compact JSON input per line, in the file's order.
+    with tempfile.TemporaryDirectory(prefix="rpcn-samples-") as tmp:
+        lines_file = os.path.join(tmp, "inputs.jsonl")
+        with open(lines_file, "w", encoding="utf-8") as fh:
+            fh.write("".join(_compact(s["input"]) + "\n" for s in samples))
+        results, errors, code = _blobl_exec(found, mapping, env_file, lines_file)
+    if results is None:
+        return result(False, binary, errors, code)
+    if len(results) != len(samples):
+        return result(
+            False, binary,
+            [_error(f"blobl gave {len(results)} results for {len(samples)} samples", file=mapping)],
+            EXIT_ENV,
+        )
     data["results"] = results
-    errors = [
-        {"file": input_file, "line": r["line"], "column": None, "message": r["error"]}
-        for r in results
-        if r["error"] is not None
-    ]
+    entries = [compare_sample(s, r) for s, r in zip(samples, results)]
+    data["samples"] = entries
+    data["passed"] = sum(e["result"] == "pass" for e in entries)
+    data["failed"] = len(entries) - data["passed"]
+    errors = [_sample_error(e, samples_file) for e in entries if e["result"] == "fail"]
     if errors:
         return result(False, binary, errors, EXIT_CHECK_FAILED)
     return result(True, binary, [], EXIT_OK)
@@ -1245,9 +1474,13 @@ def build_parser() -> _Parser:
     )
     p_hash.set_defaults(func=cmd_hash)
 
-    p_blobl = sub.add_parser("blobl", help="run a Bloblang mapping over JSON lines")
+    p_blobl = sub.add_parser("blobl", help="run a Bloblang mapping over JSON lines, or check it against its samples")
     p_blobl.add_argument("mapping", metavar="<mapping>", help="Bloblang mapping file")
-    p_blobl.add_argument("--input", metavar="<file>", help="input file, one JSON document per line")
+    blobl_in = p_blobl.add_mutually_exclusive_group()
+    blobl_in.add_argument("--input", metavar="<file>", help="input file, one JSON document per line")
+    blobl_in.add_argument(
+        "--samples", metavar="<file>", help="a <name>.samples.json: run and compare this mapping's samples"
+    )
     p_blobl.add_argument("--env-file", metavar="<file>", help="dotenv file for env() lookups")
     p_blobl.set_defaults(func=cmd_blobl)
 

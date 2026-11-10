@@ -23,6 +23,9 @@ Readers reject a major they do not know, through `rpcn_check.py hash --check`.
   - each resources file passed to lint or the tests: `<name>.resources.yaml`,
     or a resources file shared with other pipelines, recorded relative to
     the report's folder (for example `../resources.yaml`)
+  - each `.blobl` file the pipeline loads, such as `<name>.<label>.blobl`
+    loaded with `from "./pipes/<name>.<label>.blobl"`, recorded relative to
+    the report's folder (`<name>.<label>.blobl`)
   - the design note `<name>.design.md`, when the Design check used it
 
   The `.env` or `.env.example` file, the test cases file and the samples file
@@ -54,8 +57,15 @@ why (for example `Not run: no design note.`).
    `line`, `column`, `message` (an empty cell for `null`).
 3. **Bloblang samples**: one row per sample run with `rpcn_check.py blobl`:
    `mapping` (the processor label, its config path such as
-   `pipeline.processors.0`, or the `.blobl` file), `sample`, `expected`,
-   `actual`, `result` (`pass` or `fail`).
+   `pipeline.processors.0`, or the `.blobl` file; rpcn-test writes the
+   `.blobl` file name, because it samples only `.blobl` files, each against
+   `<name>.samples.json` in `samples-format.md`), `sample` (the sample's
+   name and its input), `expected`, `actual`, `result` (`pass` or `fail`).
+   `expected` and `actual` may also be the value `deleted`, for a message
+   the mapping deletes. A mapping that didn't run (it does not parse, or
+   its samples file stays invalid) is one `fail` row, with empty `sample`
+   and `expected` and the error as `actual`. A pipeline that loads no
+   `.blobl` file has `Not run: no .blobl file.`
 4. **Unit tests**: the test cases file run with `rpk connect test`, through
    `rpcn_check.py test`: the file, the count passed and failed, and one row per
    failed case with its name and message.
@@ -79,6 +89,7 @@ After `rpcn_check.py hash --check <name>.test-report.md` reports
 - [ ] The six sections are present, with the headings above, in order.
 - [ ] Summary has a `**Verdict:**` line of `pass` or `fail`.
 - [ ] Every section that did not run says `Not run` and why.
+- [ ] `inputs` lists every `.blobl` file the pipeline loads.
 - [ ] `inputs` lists the design note when Design check ran. (That the
       pipeline file comes first is checked by `hash --check`.)
 
@@ -123,7 +134,18 @@ output:
         topic: orders.dlq
 ```
 
-Its design note is the example in `design-format.md`. The report:
+Its design note is the example in `design-format.md`. Its one mapping is
+inline, so it has no samples; `samples-format.md` has a pipeline that loads
+a `.blobl` file. A failing row for the first sample of that example, with
+`* 10` in place of `* 100` in the mapping, looks like this:
+
+```markdown
+| mapping | sample | expected | actual | result |
+|---|---|---|---|---|
+| `orders.enrich.blobl` | `small order is normal priority` `{"currency":"usd","id":"o1","total":12.5}` | `{"currency":"USD","id":"o1","priority":"normal","total":12.5,"total_cents":1250}` | `{"currency":"USD","id":"o1","priority":"normal","total":12.5,"total_cents":125}` | `fail` |
+```
+
+The report:
 
 <!-- The two sha256 values are the real hashes of the example orders.yaml above and of the
      example orders.design.md in design-format.md; the rpcn_check tests check them. -->
@@ -151,7 +173,7 @@ updated: 2026-10-23
 **Verdict:** pass
 
 - Lint: 0 errors
-- Bloblang samples: 2 passed, 0 failed
+- Bloblang samples: not run
 - Unit tests: 3 passed, 0 failed
 - Design check: 2 ok, 1 deviation-recorded, 0 mismatch
 - Proposed changes: 1
@@ -162,10 +184,7 @@ updated: 2026-10-23
 
 ## Bloblang samples
 
-| mapping | sample | expected | actual | result |
-|---|---|---|---|---|
-| pipeline.processors.0 | `{"id":"o1","total":12.5}` | `{"id":"o1","total":12.5,"total_cents":1250}` | `{"id":"o1","total":12.5,"total_cents":1250}` | pass |
-| pipeline.processors.0 | `{"id":"o2","total":0.1}` | `{"id":"o2","total":0.1,"total_cents":10}` | `{"id":"o2","total":0.1,"total_cents":10}` | pass |
+Not run: no .blobl file.
 
 ## Unit tests
 

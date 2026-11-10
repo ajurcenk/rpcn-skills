@@ -26,8 +26,8 @@ If `${CLAUDE_SKILL_DIR}` is not expanded, use this SKILL.md's folder's
 absolute path, here and below.
 
 Each call prints a JSON object (`ok`, `binary`, `errors`, `data`). **Exit 2**
-in any step (but Step 2's design-note check) means the run can't continue: write
-nothing, show each `errors[].message` (headless: `blocked`).
+in any step (but Step 2's design-note check) means stop: write nothing,
+show each `errors[].message` (headless: `blocked`).
 
 ## Step 2: Name the files
 
@@ -38,7 +38,7 @@ or `.yml`), else a short snake_case `<name>.yaml`; if only a `.design.md` is
 named, `<name>` is its `pipeline`. `<dir>/` is the folder of the file the
 user names (pipeline or `.design.md`), or nothing for the project root.
 
-If `<dir>/<pipeline>` exists, never write over it: ask the user
+If `<dir>/<pipeline>` exists, never write over it: ask
 (headless: `blocked`, question in `open_questions`).
 
 Check `<file>` = `<dir>/<name>.design.md`:
@@ -54,8 +54,7 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <file>
 
 ## Step 3: Pick components
 
-For each part (input, processors, output, resources), list what the binary
-has:
+For each part (input, processors, output, resources):
 
 ```bash
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py list <category>
@@ -79,9 +78,10 @@ close matches: pick one that fits, else ask (headless:
 
 ## Step 5: Write the files
 
-Write `<dir>/<pipeline>`: plain YAML, no header or comment block. Secrets,
-addresses and credentials are always `${ENV_VAR}`, never inline. For a
-resource or env var, follow `references/pipeline-files.md`.
+Write `<dir>/<pipeline>`: plain YAML, no comment block. Secrets, addresses
+and credentials are always `${ENV_VAR}`, never inline. For a resource, env
+var or mapping over 3 lines, follow `references/pipeline-files.md`
+(with `references/blobl-files.md`).
 
 ## Step 6: Lint
 
@@ -112,7 +112,7 @@ Follow `references/apply-report.md`, with `references/test-report-format.md`.
 - Lint failing: fix it, lint with rpcn-test.
 - Report not ready: re-run rpcn-test.
 - File exists: re-run with a new name.
-- Binary missing or old: fix it, re-run.
+- Binary missing or old: fix, re-run.
 
 ## Status block (headless only)
 
