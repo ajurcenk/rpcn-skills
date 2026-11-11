@@ -268,6 +268,7 @@ from pathlib import Path
 p = argparse.ArgumentParser()
 p.add_argument("--source")
 p.add_argument("--runs", type=int)
+p.add_argument("--jobs", type=int)
 p.add_argument("--scenario", action="append", default=[])
 a = p.parse_args()
 with open(os.environ["FAKE_LOG"], "a") as f:
@@ -397,8 +398,9 @@ class RunEvalsTests(unittest.TestCase):
         # the documented command lines, and no comparison scenario by default
         calls = self.calls()
         self.assertIn("plugin eval . --ablation none --runs 3 --tag trigger --no-publish "
-                      "--trust-plugin --json ", calls)
-        self.assertIn(f"--source local:{self.repo.resolve()} --runs 3 --scenario rpcn-test__lint_broken", calls)
+                      "--trust-plugin --concurrency 4 --json ", calls)
+        self.assertIn(f"--source local:{self.repo.resolve()} --runs 3 --jobs 4 "
+                      "--scenario rpcn-test__lint_broken", calls)
         self.assertNotIn("compare_lint", calls)
         # progress lines, and the children's own output passed through
         for step in ("trigger:", "gate: accuracy=1.0", "scenarios:", "record: evals/results/"):
@@ -470,6 +472,22 @@ class RunEvalsTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("--runs 4 --tag trigger", self.calls())
         self.assertEqual(self.only_record()["scenarios"][0]["runs"], 4)
+
+    def test_concurrency_and_jobs_pass_through(self) -> None:
+        proc = self.run_evals("--concurrency", "2", "--jobs", "8")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        calls = self.calls()
+        self.assertIn("--trust-plugin --concurrency 2 --json ", calls)
+        self.assertIn("--runs 3 --jobs 8 --scenario", calls)
+
+    def test_concurrency_and_jobs_out_of_range_exit_2(self) -> None:
+        for flag, value in (("--concurrency", "0"), ("--concurrency", "9"), ("--jobs", "0"), ("--jobs", "9")):
+            with self.subTest(flag=flag, value=value):
+                proc = self.run_evals(flag, value)
+                self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+                self.assertIn(f"{flag} must be from 1 to 8", proc.stderr)
+        self.assertEqual(self.calls(), "")
+        self.assertEqual(self.records(), [])
 
     def test_with_compare_adds_comparison_scenarios(self) -> None:
         proc = self.run_evals("--with-compare")

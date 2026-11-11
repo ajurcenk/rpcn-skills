@@ -79,6 +79,7 @@ record exists for the exact skill content.
 
 ```
 uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 3] [--with-compare]
+                          [--concurrency 4] [--jobs 4]
 ```
 
 It runs, in order: the `rpcn-test-skills` runner's own unit tests
@@ -98,6 +99,21 @@ scenario runs.
 
 A record can pass only with `--runs` 3 or more, because the gate requires 3
 runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
+
+**Run time and parallelism.** One session at a time, a full default run
+took about 58 minutes (story 2.8: 954 s for the trigger gate's 90 sessions,
+2,522 s for the 69 scenario runs). Two flags run sessions in parallel at the
+same cost and the same 3-run bar, aiming at about 16-18 minutes:
+
+- `--concurrency <n>` (1-8, default 4) is passed to `claude plugin eval` as
+  `--concurrency`: up to n trigger sessions at once. Results keep case order.
+- `--jobs <n>` (1-8, default 4) is passed to `run_scenarios.py` as `--jobs`:
+  up to n scenario runs at once. `results.json` keeps scenario and run order;
+  comparison scenarios still run one at a time, after the others.
+
+The stages stay in order: the trigger gate finishes before any scenario
+starts. Every session shares one Claude account rate limit, so a higher value
+can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
 
 - **Commit the record** with the change. CI's step `Eval record matches the
   skills (R12)` runs `uv run tools/eval_record_check.py` and fails unless a

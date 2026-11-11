@@ -11,10 +11,10 @@ own output passes through live:
          own unit tests, free); a failure stops the run before any paid step
   1. the skills hash (tools/eval_record.py)
   2. claude plugin eval . --ablation none --runs <n> --tag trigger
-         --no-publish --trust-plugin --json <tmp>
+         --no-publish --trust-plugin --concurrency <c> --json <tmp>
   3. uv run tools/eval_gate.py <tmp> --cases-dir <this repo>/evals
   4. in the test project: uv run run_scenarios.py --source local:<this repo>
-         --runs <n> --scenario <s>... for every scenario that is not a
+         --runs <n> --jobs <j> --scenario <s>... for every scenario that is not a
          comparison ([compare] enabled = true in expect.toml), plus the
          comparison scenarios with --with-compare (about +$4)
 
@@ -43,10 +43,17 @@ Exit codes:
      the test project's own tests failed, the trigger eval wrote no result,
      eval_gate exited 2 (a suite problem, such as a missing or extra case), run_scenarios.py reported a setup
      error, or the skills hash changed while the run was in progress
+  130 interrupted (Ctrl-C), no record; a running run_scenarios.py is
+     sent SIGINT and terminated if it does not exit within 15 s
 
 A default run costs about $6.40 (trigger suite ~$3.50, scenarios ~$2.90).
+Sessions run in parallel: --concurrency (default 4) trigger sessions at once,
+then --jobs (default 4) scenario runs at once; the stages stay in order and
+comparison scenarios still run one at a time. All sessions share one account
+rate limit. --concurrency 1 --jobs 1 is the old sequential run (about 58 min).
 
 Run: uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 3] [--with-compare]
+                               [--concurrency 4] [--jobs 4]
 """
 
 from __future__ import annotations
@@ -56,6 +63,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -67,6 +75,8 @@ import eval_record
 import fetch_rpcn
 
 TOOLS_DIR = Path(__file__).resolve().parent
+DEFAULT_PARALLEL = 4  # default --concurrency and --jobs
+MAX_PARALLEL = 8  # the 1..8 range of both flags
 GATE = TOOLS_DIR / "eval_gate.py"
 START = time.monotonic()
 
@@ -131,10 +141,11 @@ def claude_version() -> str | None:
     return out.stdout.strip() or None
 
 
-def run_trigger(root: Path, runs: int, out_json: Path) -> float | None:
+def run_trigger(root: Path, runs: int, out_json: Path, concurrency: int = DEFAULT_PARALLEL) -> float | None:
     """Run the trigger suite; return its cost. SetupError when no result file appears."""
     cmd = ["claude", "plugin", "eval", ".", "--ablation", "none", "--runs", str(runs),
-           "--tag", "trigger", "--no-publish", "--trust-plugin", "--json", str(out_json)]
+           "--tag", "trigger", "--no-publish", "--trust-plugin", "--concurrency", str(concurrency),
+           "--json", str(out_json)]
     say(f"trigger: {' '.join(cmd)}")
     code = subprocess.run(cmd, cwd=root, check=False).returncode
     try:
@@ -203,12 +214,14 @@ def scenario_binaries(root: Path) -> list[Path]:
     return [p.resolve() for p in paths]
 
 
-def run_scenarios(root: Path, project: Path, names: list[str], runs: int) -> tuple[dict, bool]:
+def run_scenarios(root: Path, project: Path, names: list[str], runs: int,
+                  jobs: int = DEFAULT_PARALLEL) -> tuple[dict, bool]:
     """Run the scenarios; return (the parsed results.json, whether the whole run passed).
 
     The run passed only when run_scenarios.py exited 0, its top-level `passed`
     is true and no comparison arm crashed."""
-    cmd = ["uv", "run", "run_scenarios.py", "--source", f"local:{root}", "--runs", str(runs)]
+    cmd = ["uv", "run", "run_scenarios.py", "--source", f"local:{root}", "--runs", str(runs),
+           "--jobs", str(jobs)]
     for name in names:
         cmd += ["--scenario", name]
     binaries = scenario_binaries(root)
@@ -218,13 +231,17 @@ def run_scenarios(root: Path, project: Path, names: list[str], runs: int) -> tup
     results_path = None
     proc = subprocess.Popen(cmd, cwd=project, stdout=subprocess.PIPE, text=True, bufsize=1, env=env)
     assert proc.stdout is not None
-    for line in proc.stdout:
-        sys.stdout.write(line)
-        sys.stdout.flush()
-        m = re.match(r"results: (.+results\.json)\s*$", line)
-        if m:
-            results_path = Path(m.group(1))
-    code = proc.wait()
+    try:
+        for line in proc.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            m = re.match(r"results: (.+results\.json)\s*$", line)
+            if m:
+                results_path = Path(m.group(1))
+        code = proc.wait()
+    except KeyboardInterrupt:
+        stop_child(proc)
+        raise
     if code == 2:
         raise SetupError("run_scenarios.py reported a setup error (exit 2)")
     if results_path is None:
@@ -243,6 +260,23 @@ def run_scenarios(root: Path, project: Path, names: list[str], runs: int) -> tup
         say(f"scenarios: run not passed (exit {code}, passed={data.get('passed')}, "
             f"arms_crashed={crashed})")
     return data, ok
+
+
+def stop_child(proc: subprocess.Popen, grace_s: float = 15) -> None:
+    """On Ctrl-C: SIGINT the child, so it kills its sessions and saves its
+    finished runs; terminate it if it has not exited within grace_s."""
+    try:
+        proc.send_signal(signal.SIGINT)
+        proc.wait(timeout=grace_s)
+    except subprocess.TimeoutExpired:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+    except (OSError, KeyboardInterrupt):  # a second Ctrl-C: stop waiting
+        proc.kill()
 
 
 def _num(v: object) -> float:
@@ -288,10 +322,18 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         "only with 3 or more, fewer is a smoke run that never passes")
     p.add_argument("--with-compare", action="store_true",
                    help="also run the comparison (benchmark) scenarios, about +$4")
+    p.add_argument("--concurrency", type=int, default=DEFAULT_PARALLEL,
+                   help=f"trigger sessions at once, 1-{MAX_PARALLEL} (default %(default)s)")
+    p.add_argument("--jobs", type=int, default=DEFAULT_PARALLEL,
+                   help=f"scenario runs at once, 1-{MAX_PARALLEL} (default %(default)s); "
+                        "comparison scenarios always run one at a time")
     p.add_argument("--repo", type=Path, default=eval_record.REPO_ROOT, help=argparse.SUPPRESS)
     args = p.parse_args(argv)
     if args.runs < 1:
         p.error("--runs must be at least 1")
+    for flag in ("concurrency", "jobs"):
+        if not 1 <= getattr(args, flag) <= MAX_PARALLEL:
+            p.error(f"--{flag} must be from 1 to {MAX_PARALLEL}")
     return args
 
 
@@ -326,9 +368,9 @@ def main(argv: list[str] | None = None) -> int:
 
         with tempfile.TemporaryDirectory(prefix="run_evals-") as tmp:
             out_json = Path(tmp) / "trigger.json"
-            trigger_cost = run_trigger(root, args.runs, out_json)
+            trigger_cost = run_trigger(root, args.runs, out_json, args.concurrency)
             gate = run_gate(out_json, root / "evals")
-        results, scenarios_ok = run_scenarios(root, project, names, args.runs)
+        results, scenarios_ok = run_scenarios(root, project, names, args.runs, args.jobs)
         rows, winners, scenario_cost = summarize(results, names)
 
         after = eval_record.skills_hash(root)
@@ -338,6 +380,9 @@ def main(argv: list[str] | None = None) -> int:
     except (SetupError, eval_record.HashError) as exc:
         say(f"error: {exc}")
         return 2
+    except KeyboardInterrupt:
+        say("interrupted: no record written")
+        return 130
 
     record["trigger"] = gate
     record["scenarios"] = rows
