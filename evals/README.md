@@ -9,7 +9,7 @@ Skill tool was called for. Nothing else is graded.
 
 | Cases | Name | Grader | Passes when |
 |---|---|---|---|
-| 10 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
+| 11 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
 | 5 out-of-repo negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
 | 2 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
 | 9 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
@@ -49,6 +49,7 @@ are new phrasings, so read the results with that in mind:
 | `trigger_inline_broken` | new phrasing: a broken config pasted inline, with no trigger phrase |
 | `trigger_bloblang_samples` | contains "check my Bloblang mapping against its samples" verbatim |
 | `trigger_dry_run` | contains "dry-run my pipeline" verbatim |
+| `trigger_unit_tests` | contains "write rpk connect unit tests" verbatim |
 
 ## Run it
 
@@ -122,8 +123,8 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $24 for a default run (trigger suite ~$6.90, the twenty-two
-  pass scenarios x 3 ~$15, most of it the `rpcn-author` scenarios, and the
+- **Cost:** about $32 for a default run (trigger suite ~$7.10, the twenty-six
+  pass scenarios x 3 ~$25, most of it the `rpcn-author` scenarios, and the
   two-skill `rpcn-author__apply_report` loop the largest). The record's `cost_usd`
   holds the measured total.
 
@@ -151,5 +152,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $6.30 for the full 30 cases x 3 runs.
+About $0.07 and 7 s per run, so roughly $6.50 for the full 31 cases x 3 runs.
 These evals run locally only, never in CI (CI holds no Claude credentials).

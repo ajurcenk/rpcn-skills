@@ -2634,6 +2634,161 @@ class RealBinaryCommandsTest(unittest.TestCase):
                  "passed": 1, "failed": 0},
             )
 
+    def test_test_unit_case_facts(self) -> None:
+        """Binary facts rpcn-test's unit tests rely on (SOURCES.md), on each binary:
+        - `test pipes/<name>.yaml` finds the sibling `pipes/<name>_benthos_test.yaml`;
+        - `json_equals` and `json_contains` work, and a `json_contains` mismatch is a
+          failing case with its line;
+        - `mocks` replace a processor by its label, or by its path when it has none;
+        - an unset `${VAR}` in the pipeline does not stop a test;
+        - `from "<path>"` is read from the working directory."""
+        pipes = self.tmp / "pipes"
+        pipes.mkdir()
+        (pipes / "orders.enrich.blobl").write_text("root = this\nroot.total_cents = (this.total * 100).round()\n")
+        (pipes / "orders.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - label: enrich\n      mapping: 'from \"./pipes/orders.enrich.blobl\"'\n"
+            "    - label: lookup\n      http:\n        url: ${LOOKUP_URL_UNSET_P29}\n        verb: GET\n"
+            "    - http:\n        url: http://localhost:1/unlabelled\n        verb: GET\n"
+            "    - mapping: 'root = this.merge({\"at\": now()})'\n"
+            "output:\n  stdout: {}\n"
+        )
+        case = (
+            "  - name: {name}\n    target_processors: /pipeline/processors\n"
+            "    mocks:\n      lookup:\n        mapping: 'root = this.merge({{\"looked_up\": true}})'\n"
+            "      /pipeline/processors/2:\n        mapping: 'root = this.merge({{\"second\": true}})'\n"
+            "    input_batch:\n      - content: '{{\"id\":\"o1\",\"total\":12.5}}'\n"
+            "    output_batches:\n      - - {check}\n"
+        )
+        passing = "tests:\n" + case.format(
+            name="contains cents",
+            check='json_contains: {"id": "o1", "total_cents": 1250, "looked_up": true, "second": true}'
+        )
+        for b in self.each():
+            (pipes / "orders_benthos_test.yaml").write_text(passing)
+            code, out = self.check(b, "test", "pipes/orders.yaml", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["targets"], [{"file": "pipes/orders.yaml", "passed": True}])
+
+            # json_equals on a deterministic copy of the pipeline (no now())
+            det = (pipes / "orders.yaml").read_text().replace(
+                "    - mapping: 'root = this.merge({\"at\": now()})'\n", ""
+            )
+            (pipes / "det.yaml").write_text(det)
+            (pipes / "det_benthos_test.yaml").write_text("tests:\n" + case.format(
+                name="equals",
+                check='json_equals: {"id": "o1", "total": 12.5, "total_cents": 1250, "looked_up": true, "second": true}',
+            ))
+            code, out = self.check(b, "test", "pipes/det.yaml", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+
+            (pipes / "orders_benthos_test.yaml").write_text(passing + case.format(
+                name="wrong cents", check='json_contains: {"id": "o1", "total_cents": 125}'
+            ))
+            code, out = self.check(b, "test", "pipes/orders.yaml", cwd=self.tmp)
+            self.assertEqual(code, 1, out)
+            self.assertEqual(len(out["data"]["failures"]), 1, out)
+            failure = out["data"]["failures"][0]
+            self.assertEqual((failure["target"], failure["case"], failure["line"]),
+                             ("pipes/orders.yaml", "wrong cents", 13))
+            self.assertIn("json_contains", failure["message"])
+            self.assertIn("1250 => 125", failure["message"])
+
+            # without the mocks the http processors run: no merged fields, so the case fails
+            (pipes / "orders_benthos_test.yaml").write_text(
+                re.sub(r"    mocks:\n(      .*\n        .*\n)+", "", passing)
+            )
+            self.assertNotIn("mocks", (pipes / "orders_benthos_test.yaml").read_text())
+            code, out = self.check(b, "test", "pipes/orders.yaml", cwd=self.tmp)
+            self.assertEqual(code, 1, out)
+            # a failing case, not a target that failed to start: the unset ${VAR} didn't stop it
+            self.assertEqual([f["case"] for f in out["data"]["failures"]], ["contains cents"], out)
+
+    def test_test_content_equals_branch_mock_and_resources(self) -> None:
+        """More facts unit-tests.md relies on (SOURCES.md), on each binary:
+        - `content_equals` checks non-JSON output;
+        - a mock keyed by a nested JSON-pointer path replaces a processor inside a `branch`;
+        - a cache resource defined in a resources file stops the target from starting
+          without `--resources` and works with it."""
+        (self.tmp / "lines.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - mapping: 'root = content().uppercase()'\n"
+            "output:\n  stdout: {}\n"
+        )
+        (self.tmp / "lines_benthos_test.yaml").write_text(
+            "tests:\n  - name: upper\n    target_processors: /pipeline/processors\n"
+            "    input_batch:\n      - content: 'hello'\n"
+            "    output_batches:\n      - - content_equals: HELLO\n"
+            "  - name: wrong\n    target_processors: /pipeline/processors\n"
+            "    input_batch:\n      - content: 'hello'\n"
+            "    output_batches:\n      - - content_equals: hello\n"
+        )
+        (self.tmp / "br.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - branch:\n        request_map: 'root = this'\n"
+            "        processors:\n          - http:\n              url: http://localhost:1/x\n              verb: GET\n"
+            "        result_map: 'root.tier = this.tier'\n"
+            "output:\n  stdout: {}\n"
+        )
+        (self.tmp / "br_benthos_test.yaml").write_text(
+            "tests:\n  - name: tier\n    target_processors: /pipeline/processors\n"
+            "    mocks:\n      /pipeline/processors/0/branch/processors/0:\n"
+            "        mapping: 'root = {\"tier\": \"gold\"}'\n"
+            "    input_batch:\n      - content: '{\"id\":1}'\n"
+            "    output_batches:\n      - - json_equals: {\"id\": 1, \"tier\": \"gold\"}\n"
+        )
+        (self.tmp / "dedupe.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - cache:\n        resource: seen\n        operator: set\n"
+            "        key: '${! json(\"id\") }'\n        value: '${! content() }'\n"
+            "output:\n  stdout: {}\n"
+        )
+        (self.tmp / "dedupe.resources.yaml").write_text("cache_resources:\n  - label: seen\n    memory: {}\n")
+        (self.tmp / "dedupe_benthos_test.yaml").write_text(
+            "tests:\n  - name: passes through\n    target_processors: /pipeline/processors\n"
+            "    input_batch:\n      - content: '{\"id\":1}'\n"
+            "    output_batches:\n      - - json_equals: {\"id\": 1}\n"
+        )
+        for b in self.each():
+            code, out = self.check(b, "test", "lines.yaml", cwd=self.tmp)
+            self.assertEqual(code, 1, out)
+            self.assertEqual([f["case"] for f in out["data"]["failures"]], ["wrong"], out)
+
+            code, out = self.check(b, "test", "br.yaml", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+
+            code, out = self.check(b, "test", "dedupe.yaml", cwd=self.tmp)
+            self.assertEqual(code, 1, out)
+            self.assertEqual(out["data"]["failures"], [])
+            self.assertIn("cache resource 'seen' was not found", out["errors"][0]["message"])
+            code, out = self.check(b, "test", "--resources", "dedupe.resources.yaml", "dedupe.yaml", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+
+    def test_test_dropped_messages(self) -> None:
+        """A dropped message has no output entry, and a case whose every message is
+        dropped passes with `output_batches: []` (SOURCES.md)."""
+        (self.tmp / "d.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - mapping: 'root = if this.drop { deleted() } else { this }'\n"
+            "output:\n  stdout: {}\n"
+        )
+        (self.tmp / "d_benthos_test.yaml").write_text(
+            "tests:\n"
+            "  - name: all dropped\n    target_processors: /pipeline/processors\n"
+            "    input_batch:\n      - content: '{\"drop\":true}'\n    output_batches: []\n"
+            "  - name: one dropped\n    target_processors: /pipeline/processors\n"
+            "    input_batch:\n      - content: '{\"drop\":true}'\n      - content: '{\"drop\":false,\"a\":1}'\n"
+            "    output_batches:\n      - - json_equals: {\"drop\": false, \"a\": 1}\n"
+            "  - name: dropped but expected\n    target_processors: /pipeline/processors\n"
+            "    input_batch:\n      - content: '{\"drop\":true}'\n"
+            "    output_batches:\n      - - json_equals: {\"drop\": true}\n"
+        )
+        for b in self.each():
+            code, out = self.check(b, "test", "d.yaml", cwd=self.tmp)
+            self.assertEqual(code, 1, out)
+            self.assertEqual([f["case"] for f in out["data"]["failures"]], ["dropped but expected"])
+            self.assertIn("wrong batch count", out["data"]["failures"][0]["message"])
+
     def test_missing_file_not_passed_to_binary(self) -> None:
         for b in self.each():
             for args in (["blobl", "nope.blobl"], ["run", "nope.yaml"], ["test", "nope.yaml"],

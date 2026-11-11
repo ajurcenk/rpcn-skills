@@ -55,3 +55,9 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-dry-runs-a-pipeline-with-bounded-input-plan.md`
   summary: No scenario covers rpcn-test's dry run when the pipeline hangs (Dry run `failed`, "timed out", with the outputs so far, not `blocked`).
   evidence: Story 2.8 matrix audit (2026-11-11). Only the `rpcn_check` unit tests cover `run`'s timeout exit 2. A fixture that hangs deterministically on both binaries without an outside service is hard to build. The user chose to defer it.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-writes-and-runs-rpk-connect-test-cases-plan.md`
+  summary: Add an rpcn-test scenario for unit tests with unclear intent (`Not run: intent unclear.`, a question in `open_questions`, no `_benthos_test.yaml` written).
+  evidence: Story 2.9 matrix audit (2026-11-11). Only `unit-tests.md` §1 states the row; no scenario checks it. The runner has no check that a file is absent. The user chose to defer it to keep the eval cost down.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-writes-and-runs-rpk-connect-test-cases-plan.md`
+  summary: Add an rpcn-test scenario where the unit-test target fails to start (`Failed to execute test target`), reported as one `fail` row with every case counted as failed, not `blocked`.
+  evidence: Story 2.9 matrix audit (2026-11-11). Only `rpcn_check`'s parser unit tests cover the init failure. The user chose to defer the skill-level scenario.

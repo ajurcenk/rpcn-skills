@@ -102,9 +102,30 @@ why (for example `Not run: no design note.`).
    outside service (such as `http_client`, a `redis` cache or `sql`). A
    failed dry run makes the verdict `fail`; a dry run that did not run does
    not.
-5. **Unit tests**: the test cases file run with `rpk connect test`, through
-   `rpcn_check.py test`: the file, the count passed and failed, and one row per
-   failed case with its name and message.
+5. **Unit tests**: the test cases file `<name>_benthos_test.yaml` beside the
+   pipeline, run with `rpk connect test` through `rpcn_check.py test
+   [--resources <res>] <name>.yaml`: `--resources` with the same resources
+   file as lint when there is one, and no other flag, so the developer's own
+   `rpk connect test [--resources <res>] <name>.yaml` runs the same cases.
+   rpcn-test writes the file when there is none, and runs an existing one as
+   it is. The section is the line
+   `` `<name>_benthos_test.yaml`: <p> passed, <f> failed. ``, where `<f>` is
+   the number of failing cases and `<p>` the cases in the file less `<f>`
+   (never below 0: a file with no cases is `0 passed, 1 failed`), then the
+   line `` Run with `rpk connect test [--resources <res>] <name>.yaml`. ``
+   naming the command as run. When any case failed, a table follows with
+   columns `case` (its name), `line` (its line in the test file; empty for
+   `null`) and `message` (the first line of its message). A target that
+   failed to start (any failure with no failing case, such as
+   `Failed to execute test target` or a test file the binary can't parse)
+   is one row with an empty `case` and `line` and the error as `message`,
+   and counts every case as failed (at least 1). The section holds
+   `Not run: lint failed.` when lint has errors,
+   `Not run: intent unclear.` when nothing says what the output should be,
+   and `Not run: <message>` when `rpcn_check` could not run the test at all
+   (exit 2). The Summary line is `Unit tests: <p> passed, <f> failed`, or
+   `Unit tests: not run` for any `Not run`. A failed case or a target that
+   failed to start makes the verdict `fail`.
 6. **Design check**: the pipeline against the design note's Error handling,
    Delivery and ordering, and Idempotency (AD-7). One row per section:
    `section`, `finding`, `result`. `result` is one of:
@@ -246,6 +267,7 @@ Result: passed
 ## Unit tests
 
 `orders_benthos_test.yaml`: 3 passed, 0 failed.
+Run with `rpk connect test orders.yaml`.
 
 ## Design check
 
