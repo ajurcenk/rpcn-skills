@@ -36,7 +36,7 @@ path, and the script runs it as `rpk connect`. `binary.version` has no leading
 | Code | When |
 |---|---|
 | 0 | `ok` is `true` |
-| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready, `blobl` when the mapping does not parse, a line failed or a sample's output differs, `fields` when the component does not exist, `run` when the binary exits non-zero, `test` when a case or target fails or no tests were found |
+| 1 | A check failed: `lint` when the binary reports errors, `hash --check` when the hand-off is not ready, `blobl` when the mapping does not parse, a line failed or a sample's output differs, `fields` when the component does not exist, `run` when the binary exits non-zero or there is a runtime error, `test` when a case or target fails or no tests were found |
 | 2 | Usage or environment error: bad arguments, a missing input file, no binary, binary below 4.100.0, or a check that could not run (timeout, silent failure) |
 
 ## Binary lookup
@@ -170,7 +170,7 @@ folder, not the working directory.
 {
   "artifact": "test-report",
   "status": "ready",
-  "format": "test-report@1",
+  "format": "test-report@2",
   "format_known": true,
   "inputs": [
     {"file": "orders.yaml", "recorded": "77c7…", "current": "77c7…", "state": "match"}
@@ -186,7 +186,7 @@ folder, not the working directory.
 | `artifact` | str | The header's `artifact` |
 | `status` | str | The header's `status`: `draft`, `ready` or `superseded` |
 | `format` | str | The header's `format`, as written |
-| `format_known` | bool | `format` is `<artifact>@<major>` for this `artifact`, the artifact is in `KNOWN_FORMATS` and the major equals its entry |
+| `format_known` | bool | `format` is `<artifact>@<major>` for this `artifact`, the artifact is in `KNOWN_FORMATS` and the major is one of its entries |
 | `inputs` | array | One entry per header `inputs` item, in header order; `[]` for `inputs: []` |
 | `inputs[].file` | str | The path as recorded (relative to the hand-off file's folder) |
 | `inputs[].recorded` | str | The sha256 in the header |
@@ -209,7 +209,9 @@ a `ready` report with the verdict `fail` still exits 0.
   `<pipeline>.yaml` or `<pipeline>.yml`: `file` is the hand-off file, `line`
   is the `inputs` line
 
-`KNOWN_FORMATS` is currently `{"design": 1, "test-report": 1}`.
+`KNOWN_FORMATS` is currently `{"design": (1,), "test-report": (1, 2)}`: rpcn-test
+writes `test-report@2` (story 2.8 added its Dry run section), and a
+`test-report@1` report stays readable.
 
 **Exit codes:**
 
@@ -462,47 +464,104 @@ non-zero exit, no usable binary or a timeout.
 ## `run`
 
 ```
-rpcn_check.py run <config> [--input <file>] [--resources <file>]... [--env-file <file>] [--timeout <s>]
+rpcn_check.py run <config> [--input <file> [--bounded]] [--resources <file>]... [--env-file <file>] [--timeout <s>]
 ```
 
-A bounded dry run (AD-4). The binary is called as:
+A bounded dry run (AD-4). `--bounded` requires `--input`. The binary is called as:
 
 ```
-<binary> run --set http.enabled=false [--resources <f>]... [--env-file <f>] <config>
+<binary> run --set http.enabled=false [<bounded flags>] [--resources <f>]... [--env-file <f>] <config>
 ```
 
 `--input` is passed as stdin; with no `--input`, stdin is empty, so a
 `stdin` input ends at once. `--timeout` is a positive number of seconds,
 default 10. On timeout the whole process group is killed.
 
+### `run --bounded`
+
+Added in story 2.8, without a schema bump: it is additive to AD-4's `run`.
+`--bounded` adds these `<bounded flags>`, each its own `--set`, because the
+binary splits a `--set` value on commas (`SOURCES.md`), so no value has one:
+
+```
+--set 'input={"stdin":{}}' --set 'output={"stdout":{}}'
+--set logger.format=logfmt --set logger.level=info
+--set 'output.processors=[{"mapping":"<marker mapping>"}]'
+```
+
+- The config's `input` is replaced by `stdin` and its `output` by `stdout`:
+  a `--set` whose value is an object replaces the whole value at that path,
+  on 4.100.0 and 4.115.0 (`SOURCES.md`). The input's and output's own
+  processors, and any `switch`, `fallback` or `broker` output, go with them,
+  so only `pipeline.processors` run. The pipeline file is never edited
+  (AD-6).
+- The logger is pinned, so a config with `logger.format: json` or
+  `logger.level: none` still logs errors as logfmt.
+- The marker mapping (`RUN_MARKER_MAPPING`) runs as the output's processor.
+  A message that reaches it still errored (`errored()`) is replaced by one
+  line `{"__rpcn_check_unhandled_error__":{"error":<error()>,"input":<content().string()>}}`;
+  every other message passes unchanged.
+
+`--bounded` without `--input` is exit 2 with a usage error and `data` `{}`.
+Resources (caches, processors) are not replaced, so a pipeline that calls an
+outside service still calls it; the caller decides not to run those.
+
 `data`:
 
 ```json
-{"config": "pipeline.yaml", "outputs": ["{\"doubled\":2}", "{\"doubled\":6}"], "exit": 0}
+{
+  "config": "pipeline.yaml",
+  "outputs": ["{\"doubled\":2}", "{\"doubled\":6}"],
+  "exit": 0,
+  "runtime_errors": []
+}
 ```
 
 | Field | Type | Meaning |
 |---|---|---|
 | `config` | str | The config file as given |
-| `outputs` | array of str | The binary's stdout, one entry per line, in the order printed (logs go to stderr and are not included). On a timeout, the lines printed before it |
+| `outputs` | array of str | The binary's stdout, one entry per line, in the order printed (logs go to stderr and are not included), without marker lines. On a timeout, the lines printed before it |
 | `exit` | int \| null | The binary's exit code; `null` on a timeout or when it did not run |
+| `runtime_errors` | array | `[{"path": str\|null, "message": str, "input": str\|null}]`, in the order printed; `[]` when there are none. Added in story 2.8; see below |
 
 The order of `outputs` is the binary's: a pipeline that processes messages in
-parallel may print them in any order.
+parallel may print them in any order. A processor that fails on a message
+logs the error and passes the message on unchanged, flagged as failed.
 
-**Errors.** On a non-zero exit, each stderr log line
+**Runtime errors.** When a processor fails on a message (a mapping meets a
+field of the wrong type, for example), the binary logs
+`level=error msg="<error>" … label=<label> path=<path>` and still exits 0. It
+logs the same line when a later `catch` handles the error (`SOURCES.md`,
+4.100.0 and 4.115.0), so a log line alone does not say the message failed.
+Log lines are parsed as logfmt (quoted values unescaped); `info`, `warn`
+and path-less `error` lines are ignored.
+
+- **With `--bounded`:** only unhandled errors count. Each marker line is
+  moved out of `outputs` into `runtime_errors`: `message` is its `error`,
+  `input` its `input` (the message as it reached the output), and `path` the
+  `path=` of the first not yet matched logged error with the same message,
+  else `null`. Logged errors that no marker matches (caught ones) are not
+  failures and are not reported.
+- **Without `--bounded`:** detection is log-based, as before: one entry per
+  logged error line, `path` its `path=`, `message` its `msg`, `input`
+  `null`. A caught error counts too.
+
+**Errors.** Each runtime error gives one error with `file` the config,
+`line` and `column` `null`, and `message` `<path>: <message>` (or just the
+message when `path` is `null`). On a non-zero exit, each stderr log line
 `level=error msg="Config lint error" lint="<file>(<l>,<c>) <msg>"` becomes
-`{"file", "line", "column", "message"}`, in the order printed. With no such
-line, one error `run exited <code>: <stderr tail>` (the last 10 non-empty
-lines). A timeout is one error `run timed out after <s>s`.
+`{"file", "line", "column", "message"}`, in the order printed, before the
+runtime errors. With neither, one error `run exited <code>: <stderr tail>`
+(the last 10 non-empty lines). A timeout is one error
+`run timed out after <s>s`, followed by any runtime errors before it.
 
 **Exit codes:**
 
 | Code | When |
 |---|---|
-| 0 | The binary exited 0 |
-| 1 | The binary exited non-zero |
-| 2 | A timeout (outputs so far kept), a missing file, a bad `--timeout`, or no usable binary |
+| 0 | The binary exited 0 and there is no runtime error |
+| 1 | The binary exited non-zero, or there is a runtime error (whatever its exit code) |
+| 2 | A timeout (outputs and runtime errors so far kept), a missing file, a bad `--timeout`, `--bounded` without `--input`, or no usable binary |
 
 ## `test`
 

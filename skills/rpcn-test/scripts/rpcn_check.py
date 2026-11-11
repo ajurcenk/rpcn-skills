@@ -369,9 +369,10 @@ def cmd_lint(args: argparse.Namespace) -> int:
 
 # --- hash: file hashes and the hand-off staleness check (AD-6) ----------------
 
-# Hand-off formats this copy can read: artifact -> the one major it knows. Later
+# Hand-off formats this copy can read: artifact -> the majors it knows. Later
 # epics add an entry next to their own `tools/shared/formats/<artifact>-format.md`.
-KNOWN_FORMATS = {"design": 1, "test-report": 1}
+# test-report@2 added the Dry run section; @1 stays readable.
+KNOWN_FORMATS = {"design": (1,), "test-report": (1, 2)}
 
 HANDOFF_SCALAR_KEYS = (
     "artifact", "format", "pipeline", "status", "produced_by", "rpcn_version", "updated",
@@ -507,11 +508,11 @@ def report_verdict(artifact: str, body: str) -> str | None:
 
 
 def format_known(artifact: str, fmt: str) -> bool:
-    """`fmt` is `<artifact>@<major>`, names this artifact, and its major is the known one."""
+    """`fmt` is `<artifact>@<major>`, names this artifact, and its major is a known one."""
     m = _FORMAT_RE.match(fmt)
     if not m or m.group("artifact") != artifact:
         return False
-    return KNOWN_FORMATS.get(artifact) == int(m.group("major"))
+    return int(m.group("major")) in KNOWN_FORMATS.get(artifact, ())
 
 
 def _hash_files(files: list[str]) -> int:
@@ -633,6 +634,24 @@ def cmd_hash(args: argparse.Namespace) -> int:
 CHECK_TIMEOUT_S = 60  # every binary call except `run`
 RUN_TIMEOUT_S = 10.0  # `run` default (AD-4)
 RUN_ARGS = ("run", "--set", "http.enabled=false")  # fixed by AD-4
+# `run --bounded`: the config's input and output are replaced by stdin and stdout
+# (each `--set` with an object replaces the whole value; SOURCES.md), the logger
+# is pinned so errors are logged as logfmt, and an output processor turns each
+# message that reaches the output still errored into a marker line. The binary
+# splits a `--set` value on commas, so each value, the mapping included, has none.
+RUN_MARKER_KEY = "__rpcn_check_unhandled_error__"
+RUN_MARKER_MAPPING = (
+    "if errored() {\\n  root = {}\\n"
+    f"  root.{RUN_MARKER_KEY}.error = error()\\n"
+    f"  root.{RUN_MARKER_KEY}.input = content().string()\\n}}"
+)
+RUN_BOUNDED_ARGS = (
+    "--set", 'input={"stdin":{}}',
+    "--set", 'output={"stdout":{}}',
+    "--set", "logger.format=logfmt",
+    "--set", "logger.level=info",
+    "--set", f'output.processors=[{{"mapping":"{RUN_MARKER_MAPPING}"}}]',
+)
 LIST_STATUSES = ("stable", "beta", "experimental")
 STDERR_TAIL_LINES = 10
 
@@ -641,6 +660,7 @@ _BLOBL_PARSE_RE = re.compile(
     r"^failed to parse mapping: line (?P<line>\d+) char (?P<col>\d+): (?P<message>.*)$"
 )
 _RUN_LINT_RE = re.compile(r'msg="Config lint error".*?\blint="(?P<lint>(?:[^"\\]|\\.)*)"')
+_LOGFMT_PAIR_RE = re.compile(r'(?:^|\s)(?P<key>[A-Za-z_@][\w.@-]*)=(?P<value>"(?:[^"\\]|\\.)*"|\S*)')
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 _TEST_RESULT_RE = re.compile(r"^Test '(?P<file>.+)' (?P<result>failed|succeeded)$")
 _TEST_INIT_RE = re.compile(r"^Failed to execute test target '(?P<file>.+?)': (?P<message>.*)$")
@@ -1255,6 +1275,70 @@ def parse_run_lint_errors(text: str) -> list[dict]:
     return errors
 
 
+def parse_logfmt(line: str) -> dict[str, str]:
+    """The key=value pairs of one logfmt line, quoted values unescaped; the first of a repeated key wins."""
+    pairs: dict[str, str] = {}
+    for m in _LOGFMT_PAIR_RE.finditer(line):
+        value = m.group("value")
+        if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+            value = _unescape_logfmt(value[1:-1])
+        pairs.setdefault(m.group("key"), value)
+    return pairs
+
+
+def parse_runtime_errors(text: str) -> list[dict]:
+    """`{path, message, input}` for each stderr log line with `level=error` and a `path=`.
+
+    A processor that fails on a message logs this and the binary still exits 0
+    (SOURCES.md). Without `--bounded` these lines are the only sign of a runtime
+    error; `input` is then always null. A caught error logs the same line.
+    """
+    found = []
+    for raw in text.splitlines():
+        fields = parse_logfmt(raw)
+        if fields.get("level") != "error" or not fields.get("path"):
+            continue
+        found.append({"path": fields["path"], "message": fields.get("msg", raw.strip()), "input": None})
+    return found
+
+
+def _marker(line: str) -> dict | None:
+    """The `{error, input}` of a `--bounded` marker line, or None for any other line."""
+    try:
+        value = json.loads(line)
+    except ValueError:
+        return None
+    if not isinstance(value, dict) or list(value) != [RUN_MARKER_KEY]:
+        return None
+    inner = value[RUN_MARKER_KEY]
+    if not isinstance(inner, dict) or not isinstance(inner.get("error"), str):
+        return None
+    return {"error": inner["error"], "input": inner.get("input") if isinstance(inner.get("input"), str) else None}
+
+
+def split_unhandled_errors(outputs: list[str], logged: list[dict]) -> tuple[list[str], list[dict]]:
+    """Move `--bounded` marker lines out of outputs, as `{path, message, input}`.
+
+    `path` is taken from the first logged error with the same message not yet
+    matched (log lines only give the processor path), else null.
+    """
+    kept, unhandled = [], []
+    unused = list(logged)
+    for line in outputs:
+        marker = _marker(line)
+        if marker is None:
+            kept.append(line)
+            continue
+        path = None
+        for i, entry in enumerate(unused):
+            if entry["message"] == marker["error"]:
+                path = entry["path"]
+                del unused[i]
+                break
+        unhandled.append({"path": path, "message": marker["error"], "input": marker["input"]})
+    return kept, unhandled
+
+
 def _positive_float(text: str) -> float:
     try:
         value = float(text)
@@ -1275,11 +1359,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     resources = _unique(args.resources or [])
     env_file: str | None = args.env_file
     timeout: float = args.timeout
-    data: dict = {"config": config, "outputs": [], "exit": None}
+    bounded: bool = args.bounded
+    data: dict = {"config": config, "outputs": [], "exit": None, "runtime_errors": []}
 
     def result(ok: bool, binary: dict | None, errors: list, code: int) -> int:
         return _emit(_envelope("run", ok, binary, errors, data), code)
 
+    if bounded and input_file is None:
+        return _emit(_envelope("run", False, None, [_error("--bounded needs --input")], {}), EXIT_ENV)
     missing = _missing_files(
         [("config file", config), ("input file", input_file)]
         + [("resources file", r) for r in resources]
@@ -1293,6 +1380,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     binary = _public(found)
 
     cmd = [*found["argv"], *RUN_ARGS]
+    if bounded:
+        cmd += RUN_BOUNDED_ARGS
     for res in resources:
         cmd += ["--resources", escape_glob(res)]
     if env_file:
@@ -1303,16 +1392,31 @@ def cmd_run(args: argparse.Namespace) -> int:
     except OSError as exc:
         return result(False, binary, [_error(f"could not run the pipeline: {exc}")], EXIT_ENV)
     data["outputs"] = _go_lines(out)
+    logged = parse_runtime_errors(err)
+    if bounded:
+        # Only a message still errored at the output fails (SOURCES.md): a caught
+        # error logs the same line, so logged errors alone are not failures.
+        data["outputs"], data["runtime_errors"] = split_unhandled_errors(data["outputs"], logged)
+    else:
+        data["runtime_errors"] = logged
+    runtime = [
+        _error(f"{e['path']}: {e['message']}" if e["path"] else e["message"], file=config)
+        for e in data["runtime_errors"]
+    ]
     if returncode is None:
-        return result(False, binary, [_error(f"run timed out after {_fmt_seconds(timeout)}s")], EXIT_ENV)
+        return result(
+            False, binary, [_error(f"run timed out after {_fmt_seconds(timeout)}s"), *runtime], EXIT_ENV
+        )
     data["exit"] = returncode
     if returncode == 0:
+        if runtime:
+            return result(False, binary, runtime, EXIT_CHECK_FAILED)
         return result(True, binary, [], EXIT_OK)
     errors = parse_run_lint_errors(err)
-    if not errors:
+    if not errors and not runtime:
         tail = _tail(err)
         errors = [_error(f"run exited {returncode}" + (f": {tail}" if tail else " with no output"))]
-    return result(False, binary, errors, EXIT_CHECK_FAILED)
+    return result(False, binary, [*errors, *runtime], EXIT_CHECK_FAILED)
 
 
 # --- test ----------------------------------------------------------------------
@@ -1501,6 +1605,10 @@ def build_parser() -> _Parser:
         "--resources", action="append", metavar="<file>", help="resources file (repeatable)"
     )
     p_run.add_argument("--env-file", metavar="<file>", help="dotenv file for interpolations")
+    p_run.add_argument(
+        "--bounded", action="store_true",
+        help="replace the config's input with stdin and its output with stdout (needs --input)",
+    )
     p_run.add_argument(
         "--timeout", type=_positive_float, default=RUN_TIMEOUT_S, metavar="<s>",
         help=f"seconds before the run is stopped (default {RUN_TIMEOUT_S:g})",

@@ -19,7 +19,7 @@ Deploy) put a proposed diff in their own report, and rpcn-author applies it.
 | Key | Value |
 |---|---|
 | `artifact` | `design`, `test-report`, `capacity`, `deploy`, `tune-report` or `migration-report` |
-| `format` | `<artifact>@<major>`, for example `test-report@1` |
+| `format` | `<artifact>@<major>`, for example `test-report@2` |
 | `pipeline` | The pipeline name: `<name>` in `<name>.yaml` (or `<name>.yml`) |
 | `status` | `draft`, `ready` or `superseded` |
 | `produced_by` | `rpcn-<job>@<plugin version>`, for example `rpcn-test@0.1.0` |
@@ -136,10 +136,12 @@ the hand-off stale.
 
 ## Format versions
 
-Each format doc states its `format` line, for example `test-report@1`. A
-breaking change to a format bumps the major (`test-report@2`), and readers
+Each format doc states its `format` line, for example `test-report@2`. A
+breaking change to a format bumps the major (`test-report@3`), and readers
 reject a major they do not know. `rpcn_check.py` holds the majors it knows in
-`KNOWN_FORMATS`; a new format adds its entry there with its format doc.
+`KNOWN_FORMATS`; a new format adds its entry there with its format doc. A
+reader may keep accepting an older major after a bump (`test-report@1` is
+still read), and its format doc says how that major differs.
 
 ## Example
 
@@ -148,7 +150,7 @@ A complete header, from `test-report-format.md`:
 ```yaml
 ---
 artifact: test-report
-format: test-report@1
+format: test-report@2
 pipeline: orders
 status: ready
 produced_by: rpcn-test@0.1.0

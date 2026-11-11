@@ -8,8 +8,11 @@ may have the verdict `pass` or `fail`.
 ## 1. Check the readiness list
 
 Read the report and check the readiness list in `test-report-format.md`
-(in this folder): the six sections in order, a `**Verdict:**` line, and each
-section that did not run says `Not run` and why. If an item fails, treat
+(in this folder): the sections in order (seven for `format: test-report@2`;
+six for `test-report@1`, which has no Dry run), a `**Verdict:**` line, and
+each section that did not run says `Not run` and why. Both formats are read
+the same way otherwise: the Dry run section only informs, and its fixes, if
+any, are Proposed changes items like any other. If an item fails, treat
 the report as not ready: change nothing, say which item failed, and in
 headless mode report `blocked` with that as `reason`.
 

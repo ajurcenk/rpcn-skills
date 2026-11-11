@@ -658,7 +658,7 @@ def sha(text: str) -> str:
 def handoff(
     inputs: list[tuple[str, str]] | None = None,
     artifact: str = "test-report",
-    fmt: str = "test-report@1",
+    fmt: str = "test-report@2",
     status: str = "ready",
     body: str = "# orders: test report\n",
 ) -> str:
@@ -781,7 +781,7 @@ class HashTest(CheckTestBase):
             {
                 "artifact": "test-report",
                 "status": "ready",
-                "format": "test-report@1",
+                "format": "test-report@2",
                 "format_known": True,
                 "inputs": [{"file": "orders.yaml", "recorded": sha(self.PIPE),
                             "current": sha(self.PIPE), "state": "match"}],
@@ -833,10 +833,28 @@ class HashTest(CheckTestBase):
         self.assertEqual(code, 1, out)
         self.assertFalse(out["data"]["ready"])
 
+    def test_old_major_still_read(self) -> None:
+        """test-report@1 (no Dry run section) stays readable after the bump to @2."""
+        self.write("orders.yaml", self.PIPE)
+        body = "# orders: test report\n\n## Summary\n\n**Verdict:** pass\n"
+        report = self.write(
+            "orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))], fmt="test-report@1", body=body)
+        )
+        code, out = self.check(report)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out["data"]["format_known"])
+        self.assertTrue(out["data"]["pipeline_ready"])
+
+    def test_design_major_2_unknown(self) -> None:
+        report = self.write("orders.design.md", handoff(artifact="design", fmt="design@2"))
+        code, out = self.check(report)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["format_known"])
+
     def test_unknown_major(self) -> None:
         self.write("orders.yaml", self.PIPE)
         report = self.write(
-            "orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))], fmt="test-report@2")
+            "orders.test-report.md", handoff([("orders.yaml", sha(self.PIPE))], fmt="test-report@3")
         )
         code, out = self.check(report)
         self.assertEqual(code, 1, out)
@@ -976,12 +994,12 @@ class HashTest(CheckTestBase):
     def test_quoted_values(self) -> None:
         self.write("orders.yaml", self.PIPE)
         text = handoff([("orders.yaml", sha(self.PIPE))]).replace("status: ready", "status: 'ready'").replace(
-            "format: test-report@1", 'format: "test-report@1"'
+            "format: test-report@2", 'format: "test-report@2"'
         )
         report = self.write("orders.test-report.md", text)
         code, out = self.check(report)
         self.assertEqual(code, 0, out)
-        self.assertEqual(out["data"]["format"], "test-report@1")
+        self.assertEqual(out["data"]["format"], "test-report@2")
 
     def test_body_after_header_is_ignored(self) -> None:
         self.write("orders.yaml", self.PIPE)
@@ -1907,7 +1925,9 @@ class RunTest(ToolCheckBase):
         e = self.make("x.env")
         code, out = self.cmd("run", c, "--input", i, "--resources", r, "--resources", r, "--env-file", e)
         self.assertEqual(code, 0, out)
-        self.assertEqual(out["data"], {"config": c, "outputs": ['{"n":1}', '{"n":2}'], "exit": 0})
+        self.assertEqual(
+            out["data"], {"config": c, "outputs": ['{"n":1}', '{"n":2}'], "exit": 0, "runtime_errors": []}
+        )
         call = self.calls()[0]
         self.assertEqual(
             call["argv"],
@@ -1953,6 +1973,139 @@ class RunTest(ToolCheckBase):
         self.assertIn("timed out after 2s", out["errors"][0]["message"])
         self.assertEqual(out["data"]["outputs"], ["first", "second"])
         self.assertIsNone(out["data"]["exit"])
+
+    def test_bounded_replaces_input_and_output(self) -> None:
+        self.fake({"match": "^run", "echo_stdin": True})
+        c = self.make("p.yaml")
+        i = self.make("in.jsonl", '{"n":1}\n')
+        r = self.make("r.yaml")
+        code, out = self.cmd("run", c, "--bounded", "--input", i, "--resources", r)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["outputs"], ['{"n":1}'])
+        call = self.calls()[0]
+        marker = (
+            'output.processors=[{"mapping":"if errored() {\\n  root = {}\\n'
+            '  root.__rpcn_check_unhandled_error__.error = error()\\n'
+            '  root.__rpcn_check_unhandled_error__.input = content().string()\\n}"}]'
+        )
+        self.assertEqual(
+            call["argv"],
+            ["connect", "run", "--set", "http.enabled=false", "--set", 'input={"stdin":{}}',
+             "--set", 'output={"stdout":{}}', "--set", "logger.format=logfmt", "--set", "logger.level=info",
+             "--set", marker, "--resources", r, c],
+        )
+        # the binary splits a --set value on commas, so no bounded value has one
+        for value in call["argv"][5:15:2]:
+            self.assertNotIn(",", value)
+        self.assertEqual(call["stdin"], '{"n":1}\n')
+
+    def test_bounded_needs_input(self) -> None:
+        self.fake({"match": "."})
+        code, out = self.cmd("run", self.make("p.yaml"), "--bounded")
+        self.assertEqual(code, 2, out)
+        self.assertIn("--bounded needs --input", out["errors"][0]["message"])
+        self.assertEqual(out["data"], {})
+        self.assertIsNone(out["binary"])
+        self.assertEqual(self.calls(), [])
+
+    RUNTIME_LOG = (
+        'time="t" level=info msg="Input type stdin is now active" @service=redpanda-connect label="" path=root.input\n'
+        'time="t" level=error msg="failed assignment (line 2): cannot multiply types string (from field '
+        '`this.total`) and number (from number literal)" @service=redpanda-connect label=enrich '
+        'path=root.pipeline.processors.0\n'
+        'time="t" level=error msg="no path on this one" @service=redpanda-connect\n'
+        'time="t" level=info msg="Pipeline has terminated. Shutting down the service" @service=redpanda-connect\n'
+    )
+    RUNTIME_MSG = ("failed assignment (line 2): cannot multiply types string (from field `this.total`) "
+                   "and number (from number literal)")
+    RUNTIME_ERROR = {"path": "root.pipeline.processors.0", "message": RUNTIME_MSG, "input": None}
+
+    @staticmethod
+    def marker(error: str, message: str) -> str:
+        return json.dumps({"__rpcn_check_unhandled_error__": {"error": error, "input": message}}) + "\n"
+
+    def test_runtime_error_without_bounded_is_read_from_the_log(self) -> None:
+        self.fake({"match": "^run", "out": [["O", '{"a":1}\n{"b":"x"}\n'], ["E", self.RUNTIME_LOG]]})
+        c = self.make("p.yaml")
+        code, out = self.cmd("run", c, "--input", self.make("in.jsonl", "{}\n"))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["exit"], 0)
+        self.assertEqual(out["data"]["runtime_errors"], [self.RUNTIME_ERROR])
+        self.assertEqual(out["data"]["outputs"], ['{"a":1}', '{"b":"x"}'])
+        self.assertEqual(
+            out["errors"],
+            [{"file": c, "line": None, "column": None,
+              "message": "root.pipeline.processors.0: " + self.RUNTIME_MSG}],
+        )
+
+    def test_bounded_unhandled_error_is_a_marker_line(self) -> None:
+        bad = '{"b":"x"}'
+        stdout = '{"a":1}\n' + self.marker(self.RUNTIME_MSG, bad) + self.marker("other error", "raw, text")
+        self.fake({"match": "^run", "out": [["O", stdout], ["E", self.RUNTIME_LOG]]})
+        c = self.make("p.yaml")
+        code, out = self.cmd("run", c, "--bounded", "--input", self.make("in.jsonl", "{}\n"))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["exit"], 0)
+        self.assertEqual(out["data"]["outputs"], ['{"a":1}'])
+        self.assertEqual(
+            out["data"]["runtime_errors"],
+            [{"path": "root.pipeline.processors.0", "message": self.RUNTIME_MSG, "input": bad},
+             {"path": None, "message": "other error", "input": "raw, text"}],
+        )
+        self.assertEqual(
+            [e["message"] for e in out["errors"]],
+            ["root.pipeline.processors.0: " + self.RUNTIME_MSG, "other error"],
+        )
+
+    def test_bounded_logged_but_caught_error_passes(self) -> None:
+        self.fake({"match": "^run", "out": [["O", '{"a":1}\n{"b":"x","dlq":true}\n'], ["E", self.RUNTIME_LOG]]})
+        code, out = self.cmd("run", self.make("p.yaml"), "--bounded", "--input", self.make("in.jsonl", "{}\n"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["runtime_errors"], [])
+        self.assertEqual(out["data"]["outputs"], ['{"a":1}', '{"b":"x","dlq":true}'])
+
+    def test_marker_lookalikes_stay_outputs(self) -> None:
+        lines = ['{"__rpcn_check_unhandled_error__":{"error":1}}',
+                 '{"__rpcn_check_unhandled_error__":{"error":"e"},"x":1}', "not json"]
+        self.fake({"match": "^run", "out": [["O", "\n".join(lines) + "\n"]]})
+        code, out = self.cmd("run", self.make("p.yaml"), "--bounded", "--input", self.make("in.jsonl", "{}\n"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["outputs"], lines)
+
+    def test_info_lines_with_path_are_not_errors(self) -> None:
+        log = 'level=info msg="Output type stdout is now active" path=root.output\nlevel=warn msg="w" path=root.input\n'
+        self.fake({"match": "^run", "out": [["E", log]]})
+        code, out = self.cmd("run", self.make("p.yaml"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["runtime_errors"], [])
+
+    def test_runtime_error_kept_on_timeout(self) -> None:
+        stdout = "first\n" + self.marker(self.RUNTIME_MSG, "m")
+        self.fake({"match": "^run", "out": [["O", stdout], ["E", self.RUNTIME_LOG]], "sleep": 30})
+        code, out = self.cmd("run", self.make("p.yaml"), "--bounded", "--input", self.make("in.jsonl", "{}\n"),
+                             "--timeout", "2")
+        self.assertEqual(code, 2, out)
+        self.assertIn("timed out after 2s", out["errors"][0]["message"])
+        self.assertEqual(out["data"]["runtime_errors"],
+                         [{"path": "root.pipeline.processors.0", "message": self.RUNTIME_MSG, "input": "m"}])
+        self.assertEqual(out["data"]["outputs"], ["first"])
+
+    def test_runtime_error_with_nonzero_exit_keeps_both(self) -> None:
+        self.fake({"match": "^run", "out": [["E", self.RUNTIME_LOG]], "exit": 3})
+        code, out = self.cmd("run", self.make("p.yaml"))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(len(out["errors"]), 1)
+        self.assertEqual(out["data"]["runtime_errors"], [self.RUNTIME_ERROR])
+        self.assertEqual(out["data"]["exit"], 3)
+
+    def test_parse_logfmt(self) -> None:
+        spec = importlib.util.spec_from_file_location("rpcn_check_logfmt", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(
+            module.parse_logfmt('time="a b" level=error msg="say \\"hi\\"" label="" path=root.x'),
+            {"time": "a b", "level": "error", "msg": 'say "hi"', "label": "", "path": "root.x"},
+        )
 
     def test_bad_timeout(self) -> None:
         self.fake({"match": "."})
@@ -2366,11 +2519,13 @@ class RealBinaryCommandsTest(unittest.TestCase):
             "output:\n  stdout:\n    codec: lines\n"
         )
         for b in self.each():
+            # samples.jsonl's line 2 is not JSON: the binary exits 0, the log names the processor
             code, out = self.check(b, "run", "stdin_pipeline.yaml", "--input", "samples.jsonl")
-            self.assertEqual(code, 0, out)
+            self.assertEqual(code, 1, out)
             self.assertEqual(out["data"]["exit"], 0)
             self.assertIn('{"doubled":2}', out["data"]["outputs"])
             self.assertIn('{"doubled":6}', out["data"]["outputs"])
+            self.assertEqual([e["path"] for e in out["data"]["runtime_errors"]], ["root.pipeline.processors.0"])
 
             code, out = self.check(b, "run", "multi_error.yaml")
             self.assertEqual(code, 1, out)
@@ -2384,6 +2539,69 @@ class RealBinaryCommandsTest(unittest.TestCase):
             self.assertIn("timed out after 2s", out["errors"][0]["message"])
             self.assertIsNone(out["data"]["exit"])
             self.assertIn('{"n":1}', out["data"]["outputs"])
+
+    def test_run_bounded(self) -> None:
+        """Binary facts (SOURCES.md), on each binary:
+        - `--set` with an object replaces the whole input and output, so a Kafka
+          pipeline runs on stdin and stdout with no broker;
+        - a mapping error logs `level=error ... path=<processor>` and the binary
+          exits 0, and the same line is logged when a later `catch` handles it;
+        - `errored()` still holds at the output for an uncaught error, so the
+          `--bounded` marker processor reports it (and not the caught one), even
+          when the config sets a JSON logger at level none."""
+        mapping = (
+            "    - label: enrich\n      mapping: |\n"
+            "        root = this\n        root.total_cents = this.total * 100\n"
+        )
+        kafka = self.tmp / "orders.yaml"
+        kafka.write_text(
+            "input:\n  kafka:\n    addresses: [ \"localhost:1\" ]\n    topics: [ orders ]\n"
+            "    consumer_group: g\n"
+            "pipeline:\n  processors:\n" + mapping +
+            "output:\n  kafka:\n    addresses: [ \"localhost:1\" ]\n    topic: out\n"
+        )
+        caught = self.tmp / "caught.yaml"
+        caught.write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n" + mapping +
+            "    - label: dlq\n      catch:\n        - mapping: 'root = this.merge({\"dlq\": true})'\n"
+            "output:\n  stdout: {}\n"
+        )
+        quiet = self.tmp / "quiet.yaml"
+        quiet.write_text(
+            "logger:\n  level: none\n  format: json\n"
+            "input:\n  stdin: {}\npipeline:\n  processors:\n" + mapping + "output:\n  stdout: {}\n"
+        )
+        good = self.tmp / "good.jsonl"
+        good.write_text('{"id":"a","total":2}\n')
+        bad = self.tmp / "bad.jsonl"
+        bad.write_text('{"id":"a","total":2}\n{"id":"b","total":"x"}\n')
+        for b in self.each():
+            code, out = self.check(b, "run", str(kafka), "--bounded", "--input", str(good), timeout=60)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["outputs"], ['{"id":"a","total":2,"total_cents":200}'])
+            self.assertEqual(out["data"]["runtime_errors"], [])
+
+            for config in (kafka, quiet):
+                code, out = self.check(b, "run", str(config), "--bounded", "--input", str(bad), timeout=60)
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out["data"]["exit"], 0, "the binary exits 0 on a mapping error")
+                self.assertEqual(len(out["data"]["runtime_errors"]), 1, out)
+                err = out["data"]["runtime_errors"][0]
+                self.assertEqual(err["path"], "root.pipeline.processors.0")
+                self.assertIn("cannot multiply types string", err["message"])
+                self.assertEqual(err["input"], '{"id":"b","total":"x"}')
+                # the marker line is moved out of the outputs
+                self.assertEqual(out["data"]["outputs"], ['{"id":"a","total":2,"total_cents":200}'])
+
+            # caught: the error is still logged (seen without --bounded), but the message
+            # leaves the catch no longer errored, so the bounded run passes
+            code, out = self.check(b, "run", str(caught), "--input", str(bad), timeout=60)
+            self.assertEqual(code, 1, out)
+            self.assertEqual([e["path"] for e in out["data"]["runtime_errors"]], ["root.pipeline.processors.0"])
+            code, out = self.check(b, "run", str(caught), "--bounded", "--input", str(bad), timeout=60)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out["data"]["runtime_errors"], [])
+            self.assertIn('{"dlq":true,"id":"b","total":"x"}', out["data"]["outputs"])
 
     def test_test(self) -> None:
         for b in self.each():

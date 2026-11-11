@@ -1,4 +1,4 @@
-# Test report format, `test-report@1`
+# Test report format, `test-report@2`
 
 The test report `<name>.test-report.md` is what rpcn-test writes after it
 checks `<name>.yaml` or `<name>.yml` (AD-6). It sits beside the pipeline in the developer's
@@ -7,12 +7,18 @@ project, and rpcn-test is its only writer. Its header follows
 
 ```yaml
 artifact: test-report
-format: test-report@1
+format: test-report@2
 ```
 
 A breaking change to this format (a section renamed, removed or reordered, a
-table column or result value changed) bumps the major to `test-report@2`.
+table column or result value changed) bumps the major to `test-report@3`.
 Readers reject a major they do not know, through `rpcn_check.py hash --check`.
+
+**`test-report@1`** is still read (`KNOWN_FORMATS` accepts both), but no
+longer written. It is this format without the Dry run section: six sections,
+with Unit tests right after Bloblang samples, and a verdict that does not
+depend on a dry run. Everything else is the same. A reader that checks the
+sections expects six for `@1` and seven for `@2`.
 
 ## Header
 
@@ -44,14 +50,15 @@ report can never vouch for a pipeline it did not test.
 
 ## Sections
 
-The body has exactly these six `##` sections, with these headings, in this
+The body has exactly these seven `##` sections, with these headings, in this
 order. A section whose check did not run holds `Not run.` and one line saying
 why (for example `Not run: no design note.`).
 
 1. **Summary**: the line `**Verdict:** pass` or `**Verdict:** fail`, then one
    line per check with its result. The verdict is `pass` only when Lint has 0
-   errors, no Bloblang sample or unit test failed, and Design check has no
-   `mismatch`. A check that did not run does not fail the verdict.
+   errors, no Bloblang sample or unit test failed, the Dry run did not fail,
+   and Design check has no `mismatch`. A check that did not run does not fail
+   the verdict.
 2. **Lint**: the `rpcn_check.py lint` result. A line `0 errors.`, or a table
    of its `errors` in the order the script gives them, with columns `file`,
    `line`, `column`, `message` (an empty cell for `null`).
@@ -66,17 +73,46 @@ why (for example `Not run: no design note.`).
    its samples file stays invalid) is one `fail` row, with empty `sample`
    and `expected` and the error as `actual`. A pipeline that loads no
    `.blobl` file has `Not run: no .blobl file.`
-4. **Unit tests**: the test cases file run with `rpk connect test`, through
+4. **Dry run**: the pipeline's `pipeline.processors` run once with
+   `rpcn_check.py run --bounded`, on a fixed set of messages fed through
+   stdin in place of its input, with its output going to stdout in place of
+   its sink. Its first line is `Result: passed` or `Result: failed`, then:
+   - **Skipped** (only when there is something to name): one line
+     `Skipped: <what>.` listing what the bounded run replaced and so did not
+     run: `input.processors`, `output.processors`, and a `switch`,
+     `fallback` or `broker` output (such as
+     `Skipped: output.processors, the fallback output.`).
+   - **Input messages:** exactly the `--input` file the run used, one
+     message per line: a fenced `json` block when every line is JSON,
+     else a fenced `text` block with the lines verbatim.
+   - **Outputs:** `data.outputs`, one per line in the order printed, in a
+     fenced `json` block (or `text`, by the same rule), or `None.` when
+     there are none.
+   - **Errors** (only when failed): a table with columns `path` (the
+     processor's config path, such as `root.pipeline.processors.0`; empty
+     when `rpcn_check` gives none), `message` (the error) and `input` (the
+     failing message, from `runtime_errors[].input`). A timeout is a row
+     with an empty `path` and `input` and the message
+     `run timed out after <s>s`, after any rows for errors before it.
+
+   A message fails only when it reaches the output still errored: an
+   error that a later `catch` handles (DLQ routing) is not a failure. The
+   section holds `Not run: lint failed.` when lint has errors, and
+   `Not run: needs <component>` when a processor or resource calls an
+   outside service (such as `http_client`, a `redis` cache or `sql`). A
+   failed dry run makes the verdict `fail`; a dry run that did not run does
+   not.
+5. **Unit tests**: the test cases file run with `rpk connect test`, through
    `rpcn_check.py test`: the file, the count passed and failed, and one row per
    failed case with its name and message.
-5. **Design check**: the pipeline against the design note's Error handling,
+6. **Design check**: the pipeline against the design note's Error handling,
    Delivery and ordering, and Idempotency (AD-7). One row per section:
    `section`, `finding`, `result`. `result` is one of:
    - `ok`: the pipeline does what the section says
    - `mismatch`: it does not, and no unresolved Deviations row covers it
    - `deviation-recorded`: it does not, and an unresolved Deviations row
      covers it (the row's `what` goes in `finding`)
-6. **Proposed changes**: rpcn-test never edits the pipeline (AD-6). Each
+7. **Proposed changes**: rpcn-test never edits the pipeline (AD-6). Each
    change it proposes is a numbered item: one line on why, then a fenced
    `diff` block in unified format against the input file, for rpcn-author to
    apply. Write `None.` when there are none.
@@ -86,7 +122,8 @@ why (for example `Not run: no design note.`).
 After `rpcn_check.py hash --check <name>.test-report.md` reports
 `ready: true`, every reader checks:
 
-- [ ] The six sections are present, with the headings above, in order.
+- [ ] The seven sections are present, with the headings above, in order
+      (six for `test-report@1`, without Dry run).
 - [ ] Summary has a `**Verdict:**` line of `pass` or `fail`.
 - [ ] Every section that did not run says `Not run` and why.
 - [ ] `inputs` lists every `.blobl` file the pipeline loads.
@@ -134,8 +171,9 @@ output:
         topic: orders.dlq
 ```
 
-Its design note is the example in `design-format.md`. Its one mapping is
-inline, so it has no samples; `samples-format.md` has a pipeline that loads
+Its design note is the example in `design-format.md`. Its input and output
+are replaced by stdin and stdout for the dry run, so it needs no broker or
+API. Its one mapping is inline, so it has no samples; `samples-format.md` has a pipeline that loads
 a `.blobl` file. A failing row for the first sample of that example, with
 `* 10` in place of `* 100` in the mapping, looks like this:
 
@@ -153,7 +191,7 @@ The report:
 ````markdown
 ---
 artifact: test-report
-format: test-report@1
+format: test-report@2
 pipeline: orders
 status: ready
 produced_by: rpcn-test@0.1.0
@@ -174,6 +212,7 @@ updated: 2026-10-23
 
 - Lint: 0 errors
 - Bloblang samples: not run
+- Dry run: passed
 - Unit tests: 3 passed, 0 failed
 - Design check: 2 ok, 1 deviation-recorded, 0 mismatch
 - Proposed changes: 1
@@ -185,6 +224,24 @@ updated: 2026-10-23
 ## Bloblang samples
 
 Not run: no .blobl file.
+
+## Dry run
+
+Result: passed
+
+**Input messages:**
+
+```json
+{"id":"o1","total":12.5}
+{"id":"o2","total":150}
+```
+
+**Outputs:**
+
+```json
+{"id":"o1","total":12.5,"total_cents":1250}
+{"id":"o2","total":150,"total_cents":15000}
+```
 
 ## Unit tests
 

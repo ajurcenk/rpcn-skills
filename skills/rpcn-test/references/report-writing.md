@@ -3,6 +3,7 @@
 Follow `test-report-format.md` and `handoff-header.md` (both in this folder).
 
 **Header:**
+- `format: test-report@2`
 - `status: ready`
 - `produced_by: rpcn-test@<data.plugin_version>`
 - `rpcn_version` from `binary.version`
@@ -17,11 +18,13 @@ Follow `test-report-format.md` and `handoff-header.md` (both in this folder).
     - hashed as `pipes/orders.enrich.blobl`: record `orders.enrich.blobl`
 
 **Sections:**
-- Summary: `**Verdict:** pass` only with 0 lint errors and no `fail`
-  sample row, else `fail`.
+- Summary: `**Verdict:** pass` only with 0 lint errors, no `fail`
+  sample row and a Dry run that did not fail, else `fail`.
 - Lint: `0 errors.` or the error table.
 - Bloblang samples: as `samples.md` says.
+- Dry run: as `dry-run.md` says.
 - Unit tests, Design check: `Not run: not in this version of rpcn-test.`
 - Proposed changes: one numbered item and `diff` block per fix (lint fixes
-  against the pipeline, sample fixes against the `.blobl`), or `None.`
+  against the pipeline, sample fixes against the `.blobl`, dry-run fixes
+  against the file that holds the failing processor), or `None.`
   End an unverified fix's item title with `(unverified)`.

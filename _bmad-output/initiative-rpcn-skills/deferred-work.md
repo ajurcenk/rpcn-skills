@@ -52,3 +52,6 @@
 - source_plan: none
   summary: Speed up `run_evals.py`. Run `run_scenarios.py` scenarios in parallel (about 4 workers; each run already has its own folder), and run the trigger gate alongside the scenarios. A full eval would drop from about 55 to 15-20 minutes at the same cost and the same 3-run bar.
   evidence: Story 2.7 (2026-11-10). Three full evals at about 50 minutes each. The suite grew from 5 scenarios (2.2) to 20 (2.7) and runs strictly one session at a time. Re-running only failed scenarios would need an AD-13/AD-14 change and is not part of this item.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-dry-runs-a-pipeline-with-bounded-input-plan.md`
+  summary: No scenario covers rpcn-test's dry run when the pipeline hangs (Dry run `failed`, "timed out", with the outputs so far, not `blocked`).
+  evidence: Story 2.8 matrix audit (2026-11-11). Only the `rpcn_check` unit tests cover `run`'s timeout exit 2. A fixture that hangs deterministically on both binaries without an outside service is hard to build. The user chose to defer it.

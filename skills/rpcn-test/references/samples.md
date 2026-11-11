@@ -86,5 +86,5 @@ item's title with `(unverified)`.
 
 ## 5. Status block
 
-`checks.tests` is `fail` when any sample row is `fail`, `pass` when samples
-ran and all passed, and `skipped` when none ran.
+The samples feed `checks.tests` together with the dry run, as
+`status-block.md` says: any `fail` sample row makes it `fail`.
