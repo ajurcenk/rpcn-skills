@@ -3,7 +3,7 @@ title: 'Test dry-runs a pipeline with bounded input'
 type: 'feature'
 ticket: '8'
 created: '2026-11-11'
-status: 'built'
+status: done
 baseline_revision: '1d1bec03f0c022366a3bc5846f88947a20420850'
 route: 'full'
 route_source: 'auto'
@@ -121,6 +121,7 @@ context: []
   - **Smoke run:** `rpcn-test__dry_run_*` and `rpcn-author__apply_report` passed 1/1 on both binaries.
 - **After the review fixes:** the validator passes with no new warning (`rpcn-author` 4,792 characters, `rpcn-test` 4,798), and so do `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries, and T's tests. Smoke run of 23 scenarios (everything except `compare_lint`): 23/23 pass on both binaries (`T/runs/20261111-094818`).
 - **Eval record:** `evals/results/2026-11-11-3c6d8e1c18bd.json` passed with `dirty: false`, at $26.96, on the first full run. Trigger accuracy was 1.0, and all 23 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. That includes the @1-report author scenarios and the reworded `apply_report` loop.
+- **Pushed:** `1d1bec0..0e32a44`. CI run 43062637944 was green.
 
 ## Plan Change Log
 
