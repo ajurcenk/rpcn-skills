@@ -49,3 +49,6 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-bloblang-mappings-come-with-samples-and-test-runs-them-plan.md`
   summary: rpcn-author's `.blobl` rule doesn't say what wins when the user asks for one mapping processor that also needs `now()` or `uuid_v4()`. Today Author keeps the whole mapping inline, so it gets no samples.
   evidence: Story 2.7 second full eval (2026-11-10). `write_blobl` run 1 kept a 5-line mapping with `now()` inline because the prompt asked for "one mapping processor". The scenario prompt was changed. The rule itself needs a decision (split anyway, or keep inline and say so).
+- source_plan: none
+  summary: Speed up `run_evals.py`. Run `run_scenarios.py` scenarios in parallel (about 4 workers; each run already has its own folder), and run the trigger gate alongside the scenarios. A full eval would drop from about 55 to 15-20 minutes at the same cost and the same 3-run bar.
+  evidence: Story 2.7 (2026-11-10). Three full evals at about 50 minutes each. The suite grew from 5 scenarios (2.2) to 20 (2.7) and runs strictly one session at a time. Re-running only failed scenarios would need an AD-13/AD-14 change and is not part of this item.

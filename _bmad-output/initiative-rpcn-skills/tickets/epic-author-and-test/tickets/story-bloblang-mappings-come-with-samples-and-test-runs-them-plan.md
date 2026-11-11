@@ -3,7 +3,7 @@ title: 'Bloblang mappings come with samples, and Test runs them'
 type: 'feature'
 ticket: '7'
 created: '2026-11-10'
-status: 'built'
+status: done
 baseline_revision: 'c886d57ccf6573cc7fedbaf9edabd12a0d546ce3'
 route: 'full'
 route_source: 'auto'
@@ -131,6 +131,7 @@ context: []
 - **First full eval ($22.05) failed on an install timeout only:** in `design_deviation` run 3, `npx skills add` timed out after 300s before the agent ran. Every other run and check passed, and the gate scored accuracy 1.0. The user chose to fix the cause: the runner now retries a failed install once (T commit after `6468412`). The failed record was deleted unused, and the eval re-ran from the same `skills/`.
 - **Second full eval stopped:** `write_blobl` run 1 kept its 5-line mapping inline. The prompt asked for "one mapping processor" that also adds the current time, which conflicts with the review rule that keeps `now()` out of a `.blobl`, and Author honoured the request. The prompt dropped `received_at` (T commit after `de48a00`), and `write_blobl` then passed 3/3. `skills/` is unchanged. The conflict between the rule and such a request is logged in `deferred-work.md`.
 - **Eval record:** `evals/results/2026-11-10-09b052df00c8.json` passed with `dirty: false`, at $22.01. Trigger accuracy was 1.0 (29 cases), and all 20 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. This was the third full run; the first two lost runs to an install timeout and a scenario-prompt conflict.
+- **Pushed:** `c886d57..139dbb4`. CI run 43032673940 was green.
 
 ## Plan Change Log
 
