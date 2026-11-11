@@ -3,7 +3,7 @@ title: 'Eval speed-up: parallel trigger runs and scenario runs'
 type: 'chore'
 ticket: ''
 created: '2026-11-11'
-status: 'built'
+status: 'done'
 baseline_revision: 'adf5e59b9606601c5940c89a9b5b440d1c9b91ec'
 route: 'full'
 route_source: 'auto'
@@ -111,6 +111,7 @@ context: []
   - **Status check:** the last status-shaped json block wins (an object with a `status` key and only AD-8 keys). Earlier blocks are ignored, and no matching block is still a failure.
   - **Prints:** `rejudge` prints go through `say_line`.
   - **Second smoke run** (`--jobs 4 --runs 1 --no-judge`, 23 non-compare scenarios, both binaries): 23/23 passed. Wall time 221 s, against 812 s summed run time. Cost $6.48.
+- **Pushed:** `adf5e59..134af75`. CI run 43075713210 was green.
 
 ## Plan Change Log
 
