@@ -32,7 +32,8 @@ sections expects six for `@1` and seven for `@2`.
   - each `.blobl` file the pipeline loads, such as `<name>.<label>.blobl`
     loaded with `from "./pipes/<name>.<label>.blobl"`, recorded relative to
     the report's folder (`<name>.<label>.blobl`)
-  - the design note `<name>.design.md`, when the Design check used it
+  - the design note `<name>.design.md`, when the Design check ran (it wrote
+    rows)
 
   The `.env` or `.env.example` file, the test cases file and the samples file
   are not inputs: rpcn-test writes the last two itself.
@@ -126,13 +127,34 @@ why (for example `Not run: no design note.`).
    (exit 2). The Summary line is `Unit tests: <p> passed, <f> failed`, or
    `Unit tests: not run` for any `Not run`. A failed case or a target that
    failed to start makes the verdict `fail`.
-6. **Design check**: the pipeline against the design note's Error handling,
-   Delivery and ordering, and Idempotency (AD-7). One row per section:
-   `section`, `finding`, `result`. `result` is one of:
+6. **Design check**: the pipeline (and its resources file) against the
+   design note's Error handling, Delivery and ordering, and Idempotency
+   (AD-7), read from the YAML: it never runs the pipeline, and it runs even
+   when lint has errors. It uses the note only when the note is ready:
+   `hash --check` reports it ready and it passes the Readiness list in
+   `design-format.md`. The note is an input only when the Design check ran
+   (it wrote rows), never with a `Not run` line. One row per section, in
+   that order: `section`, `finding`, `result`. `result` is one of:
    - `ok`: the pipeline does what the section says
    - `mismatch`: it does not, and no unresolved Deviations row covers it
    - `deviation-recorded`: it does not, and an unresolved Deviations row
      covers it (the row's `what` goes in `finding`)
+
+   A Deviations row covers a departure only when its `section` is the
+   section's heading and it says `resolved: no`; a `resolved: yes` row
+   covers nothing. A section that asks for nothing the pipeline can be
+   checked against (`None.`, or a job of the outside service, such as the
+   API deduplicating) is `ok`, and its `finding` says why. When a section
+   has several findings, `finding` names them all and the worst result
+   wins: `mismatch`, then `deviation-recorded`, then `ok`. The section holds
+   `Not run: no design note.` when there is no `<name>.design.md`,
+   `Not run: design note not ready (<reason>).` when there is one that is
+   not ready (draft, stale, malformed, or a `[blocking]` open decision), and
+   `Not run: the pipeline does not parse.` when the YAML does not parse. The
+   Summary line is
+   `Design check: <o> ok, <d> deviation-recorded, <m> mismatch`, or
+   `Design check: not run` for any `Not run`. A `mismatch` makes the verdict
+   `fail`; a `deviation-recorded` row does not.
 7. **Proposed changes**: rpcn-test never edits the pipeline (AD-6). Each
    change it proposes is a numbered item: one line on why, then a fenced
    `diff` block in unified format against the input file, for rpcn-author to

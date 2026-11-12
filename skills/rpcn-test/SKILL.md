@@ -1,6 +1,6 @@
 ---
 name: rpcn-test
-description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, runs its Bloblang mappings against samples, dry-runs it, writes and runs rpk connect test cases, explains each failure with its cause and a proposed fix, and writes a <name>.test-report.md beside it. Also reports the rpk connect (or redpanda-connect) path and version against the 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Bloblang mapping against its samples", "dry-run my pipeline", "write rpk connect unit tests", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", and when the user pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it. Not for writing pipelines or applying a report''s changes (use rpcn-author), designing or deploying them.'
+description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, runs its Bloblang mappings against samples, dry-runs it, writes and runs rpk connect tests, checks it against its design note, explains each failure with a proposed fix, and writes a <name>.test-report.md. Also reports the rpk connect (or redpanda-connect) version against the 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Bloblang mapping against its samples", "dry-run my pipeline", "write rpk connect unit tests", "check my pipeline against its design note", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", or pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it. Not for writing pipelines or applying a report''s changes (use rpcn-author), designing or deploying them.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -9,9 +9,9 @@ metadata:
 
 # rpcn-test
 
-Run the binary only as one `uv run …/rpcn_check.py` command per Bash call:
-no `cd`, `&&`, `;`, variables, `cat` or heredocs. Use Read and Write for
-files. Never edit the pipeline or a `.blobl`: propose fixes as diffs.
+One `uv run …/rpcn_check.py` command per Bash call: no `cd`, `&&`, `;`,
+variables, `cat` or heredocs. Use Read and Write for files. Never edit the
+pipeline or a `.blobl`: propose fixes as diffs.
 
 **Headless** if the prompt says unattended, headless or non-interactive,
 or a script reports `data.headless: true`: never ask; end with the status
@@ -23,29 +23,31 @@ block.
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py binary
 ```
 
-Unexpanded `${CLAUDE_SKILL_DIR}`: use this file's folder's absolute
-path.
+Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path.
 
-Calls print JSON. **Exit 2** in Steps 1–3 (but `blobl`, `run`,
-`test`) means it can't test: write no report, show each `errors[].message`;
-for a binary error show the fix in `references/binary-fixes.md`.
+Calls print JSON. **Exit 2** in Steps 1–3 (but the note's `hash --check`,
+`blobl`, `run`, `test`) means it can't test: write no report, show each
+`errors[].message`; for a binary error, the fix in
+`references/binary-fixes.md`.
 
-If asked only about the binary, report `binary.path` and `binary.version`
+Asked only about the binary: report `binary.path` and `binary.version`
 (`…/rpk` runs as `rpk connect`), then Next.
 
-**Pasted config** (not a file name): see
-`references/pasted-config.md`.
+**Pasted config:** `references/pasted-config.md`.
 
 ## Step 2: Hash the inputs
 
-`<pipeline>` is the pipeline's file name (`<name>.yaml` or `.yml`). `<dir>/`
-is its folder as the user gave it (such as `pipes/`), or nothing for the
-project root. `<res>` is the resources file the user names, else
+`<pipeline>` is `<name>.yaml` (or `.yml`). `<dir>/` is its folder as given
+(`pipes/`), or nothing. `<res>` is the resources file named, else
 `<dir>/<name>.resources.yaml` (`.resources.yml` for `.yml`) if it exists.
-`<blobl>` is each `from "<path>"` file it loads.
+`<blobl>` is each `from "<path>"` file it loads. First check
+`<file>` = `<name>.design.md` (line 1). Exit 2, not found: no note. Ready by
+`references/design-check.md` (with `references/design-format.md`): `<note>`
+is `<dir>/<file>`. Else not ready. Then line 2:
 
 ```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <dir>/<pipeline> [<res>] [<blobl>]...
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <dir>/<file>
+uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <dir>/<pipeline> [<res>] [<blobl>]... [<note>]
 ```
 
 ## Step 3: Lint
@@ -74,13 +76,14 @@ Then `references/unit-tests.md`:
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py test [--resources <res>] <dir>/<pipeline>
 ```
 
+Then `references/design-check.md`.
+
 ## Step 4: Explain the errors
 
-On lint errors, read `references/lint-errors.md`. For each entry in
-`errors`, in order, give its file, line, column, cause and fix as a unified
-diff. Never add or drop an error. Write the fixed pipeline to
-`<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<pipeline>` (unexpanded:
-end the folder in 8 random letters) and follow
+On lint errors, read `references/lint-errors.md`. For each of `errors`, in
+order, give its file, line, column, cause and fix as a unified diff; never
+add or drop one. Write the fixed pipeline to
+`<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<pipeline>` and follow
 `references/fix-check.md`.
 
 ## Step 5: Write the report
@@ -88,21 +91,14 @@ end the folder in 8 random letters) and follow
 Write `<dir>/<name>.test-report.md` as `references/report-writing.md` says
 (with `references/test-report-format.md`, `references/handoff-header.md`).
 
-Check it:
-
-```bash
-uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <dir>/<name>.test-report.md
-```
-
-It must report `data.ready: true`. If not, fix only the report's header or
-format once and recheck; never re-hash an input or change a `sha256`.
-Still not ready: set `status: draft`, say why, headless report `blocked`.
+Check it with Step 2's line 1, `<file>` = `<name>.test-report.md`.
+It must report `data.ready: true`, else see `references/report-writing.md`.
 
 Reply with the verdict, errors, diffs and report path.
 
 ## Next
 
-- Failed checks: apply the proposed changes with rpcn-author, then re-run rpcn-test.
+- Failed checks: apply the changes with rpcn-author, re-run rpcn-test.
 - Binary fixed: re-run rpcn-test.
 - No pipeline yet: use rpcn-author.
 

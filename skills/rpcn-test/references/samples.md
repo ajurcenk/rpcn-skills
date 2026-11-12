@@ -80,7 +80,8 @@ then a `diff` against the `.blobl` file (`--- a/<name>.<label>.blobl`,
 rpcn-author to apply.
 
 Check it: write the fixed mapping, under the same file name, into the temp
-folder Step 4 names, and run the `blobl` command on that copy with the same
+folder `<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/` (if the variable
+is not expanded, end the folder name in 8 random letters), and run the `blobl` command on that copy with the same
 `--samples <samples>`. Revise at most twice; if it still fails, end the
 item's title with `(unverified)`.
 

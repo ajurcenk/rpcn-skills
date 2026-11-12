@@ -454,12 +454,9 @@ class RealRepo(unittest.TestCase):
         rules = {w["rule"] for w in rep["warnings"]}
         # Story 2.3 brought SKILL.md under the 1,200-token budget (AD-9).
         self.assertNotIn("size", rules)
-        self.assertIn("file-refs", rules)
-        self.assertTrue(
-            any("references/design-format.md" in w["message"] for w in rep["warnings"]
-                if w["rule"] == "file-refs"),
-            rep,
-        )
+        # Story 2.10: SKILL.md names references/design-format.md for the
+        # Design check, which cleared the last file-refs warning.
+        self.assertEqual(rep["warnings"], [], rep)
 
     def test_rpcn_author_has_no_warnings(self) -> None:
         # Story 2.4: the new skill is clean, and names its sibling in "Not for".

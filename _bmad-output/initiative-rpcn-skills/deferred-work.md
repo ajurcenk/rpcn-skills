@@ -61,3 +61,6 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-writes-and-runs-rpk-connect-test-cases-plan.md`
   summary: Add an rpcn-test scenario where the unit-test target fails to start (`Failed to execute test target`), reported as one `fail` row with every case counted as failed, not `blocked`.
   evidence: Story 2.9 matrix audit (2026-11-11). Only `rpcn_check`'s parser unit tests cover the init failure. The user chose to defer the skill-level scenario.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-checks-the-pipeline-against-the-design-note-plan.md`
+  summary: Add an rpcn-test scenario for a design note that isn't ready (a `[blocking]` open decision): `Not run: design note not ready (<reason>).`, a line in `open_questions`, and the note left out of `inputs`.
+  evidence: Story 2.10 matrix audit (2026-11-12). Only `design-check.md` §1 states the row. It reuses the `hash --check` and readiness-list branch that rpcn-author's `design_not_ready` covers. The user chose to defer it.

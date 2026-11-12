@@ -1,6 +1,8 @@
 # Fix check
 
-After writing the fully fixed pipeline to the temp path Step 4 names:
+After writing the fully fixed pipeline to the temp path Step 4 names
+(if `${CLAUDE_SESSION_ID}` is not expanded, end the folder name in 8 random
+letters):
 
 1. Lint it with the same `--resources` and `--env-file` as Step 3.
 2. Revise at most twice, then mark any fix that still fails as unverified.
