@@ -3,7 +3,7 @@ title: 'Test writes and runs rpk connect test cases'
 type: 'feature'
 ticket: '9'
 created: '2026-11-11'
-status: 'built'
+status: 'done'
 baseline_revision: '07b9d0e0fde29097b0ef707dfd9b9533d68e201f'
 route: 'full'
 route_source: 'auto'
@@ -119,6 +119,8 @@ context: []
 - `[[unit]]` fails a run whose `rpcn_check test` printed `No tests were found`, so a never-written file can't pass as `ok = false`.
 - **Matrix audit follow-up (2026-11-11, user):** `rpcn-test__lint_broken` also checks `Unit tests: not run`. `rpcn-test__unit_pass` has a `stamp` processor that adds `checked_at: now()`, so its cases must use `json_contains`. Both passed 1/1 on both binaries. "Intent unclear" and "target fails to start" are deferred in `deferred-work.md`.
 - **After the review fixes:** the validator shows no new warning (`rpcn-test` is 4,803 characters, exactly the limit). `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries (185 tests) and T's tests pass. Smoke run with `--jobs 4 --runs 1 --no-judge`, 26 non-compare scenarios: 26/26 on both binaries (`T/runs/20261111-164303`).
+- **Eval record:** `evals/results/2026-11-11-f4965b3b0001.json` passed with `dirty: false`, at $32.97, on the first full run. Trigger accuracy was 1.0, and all 26 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. Wall time was 27 minutes (16:48–17:15), the first full run since the speed-up. The trigger gate took 226 s, against 954 s for story 2.8. `run_evals`' monotonic timer reads 1,144 s, so the 8-minute gap is probably a system suspend.
+- **Pushed:** `134af75..6cc14e6`. CI run 43250217148 was green.
 
 ## Plan Change Log
 
