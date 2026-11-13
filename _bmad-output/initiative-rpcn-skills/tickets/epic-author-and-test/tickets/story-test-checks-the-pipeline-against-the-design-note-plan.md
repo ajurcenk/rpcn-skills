@@ -3,7 +3,7 @@ title: 'Test checks the pipeline against the design note'
 type: 'feature'
 ticket: '10'
 created: '2026-11-12'
-status: 'built'
+status: 'done'
 baseline_revision: 'd957cec52f4d608dd088e2040d0fc71dee50000a'
 route: 'full'
 route_source: 'auto'
@@ -131,6 +131,8 @@ context: []
 - `rpcn-test__design_deviation_resolved` was added at the matrix audit (user choice, 2026-11-12) to cover the `resolved: yes` row (the recorded fixture with the row marked `resolved: yes`: `mismatch`, verdict `fail`), so four design_* scenarios ship.
 - Delivery and ordering in `design-check.md` keeps only what the YAML shows directly (`max_in_flight`, `broker` or parallel outputs, batching, parallel processors); the `memory` buffer and `auto_replay_nacks: false` examples were dropped, since no SOURCES.md row or real-binary test proves them (AD-15).
 - **After the review fixes:** the validator shows no warnings (`rpcn-test` 4,793 characters, description 995). `sync_shared --check`, all four `tools/` suites, `rpcn_check` on both binaries (185 tests) and T's tests pass. Smoke run with `--jobs 4 --runs 1 --no-judge`, 30 non-compare scenarios: 30/30 on both binaries (`T/runs/20261112-130317`).
+- **Eval record:** `evals/results/2026-11-12-c28124e01f52.json` passed with `dirty: false`, at $41.65, on the first full run. Trigger accuracy was 1.0, and all 30 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. Wall time was 22.5 minutes.
+- **Pushed:** `6cc14e6..160884b`. CI run 43442422908 was green.
 
 ## Plan Change Log
 
