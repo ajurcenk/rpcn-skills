@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "skills_hash": "6db288bec93386e9d165781a6e5cc5057ec145d460fbad977d7e68532c1e4a61",
+  "date": "2026-11-13",
+  "git_head": "6b8de05906a3a740a94f7cf6ccc25d71298184d0",
+  "dirty": false,
+  "plugin_version": "0.1.0",
+  "claude_version": "2.1.323 (Claude Code)",
+  "trigger": {
+    "ok": true,
+    "accuracy": 1.0,
+    "runs_total": 96,
+    "runs_correct": 96,
+    "positives": {
+      "runs": 63,
+      "correct": 63
+    },
+    "negatives": {
+      "runs": 33,
+      "correct": 33
+    },
+    "failed_runs": [],
+    "partial": false
+  },
+  "scenarios": [
+    {
+      "name": "rpcn-author__apply_report",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__design_deviation",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__design_draft",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__design_not_ready",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__design_note",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__draft_report",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__existing_file",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__npx_miss",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__npx_trigger",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__stale_report",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__write_blobl",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-author__write_resources_yml",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__design_deviation_recorded",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__design_deviation_resolved",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__design_mismatch",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__design_ok",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__dry_run_error",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__dry_run_needs_service",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__dry_run_pass",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__fix_own_tests",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_broken",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__lint_subfolder_valid",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__npx_miss",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__npx_trigger",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__samples_bug",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__samples_pass",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__samples_written",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__unit_bug",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__unit_existing",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    },
+    {
+      "name": "rpcn-test__unit_pass",
+      "result": "PASS",
+      "runs": 3,
+      "passed": 3
+    }
+  ],
+  "compare": null,
+  "passed": true,
+  "cost_usd": 44.8287
+}
