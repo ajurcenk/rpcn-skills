@@ -82,9 +82,8 @@ Then `references/design-check.md`.
 
 On lint errors, read `references/lint-errors.md`. For each of `errors`, in
 order, give its file, line, column, cause and fix as a unified diff; never
-add or drop one. Write the fixed pipeline to
-`<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/<pipeline>` and follow
-`references/fix-check.md`.
+add or drop one. Check each fix, of any check, as
+`references/fix-check.md` says.
 
 ## Step 5: Write the report
 
@@ -99,6 +98,7 @@ Reply with the verdict, errors, diffs and report path.
 ## Next
 
 - Failed checks: apply the changes with rpcn-author, re-run rpcn-test.
+- Only rpcn-test's own files fixed: re-run rpcn-test.
 - Binary fixed: re-run rpcn-test.
 - No pipeline yet: use rpcn-author.
 

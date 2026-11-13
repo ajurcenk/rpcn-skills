@@ -109,7 +109,8 @@ why (for example `Not run: no design note.`).
    file as lint when there is one, and no other flag, so the developer's own
    `rpk connect test [--resources <res>] <name>.yaml` runs the same cases.
    rpcn-test writes the file when there is none, and runs an existing one as
-   it is. The section is the line
+   it is, but for a fault in the file itself, which it fixes and re-runs
+   (Proposed changes). The section is the line
    `` `<name>_benthos_test.yaml`: <p> passed, <f> failed. ``, where `<f>` is
    the number of failing cases and `<p>` the cases in the file less `<f>`
    (never below 0: a file with no cases is `0 passed, 1 failed`), then the
@@ -156,9 +157,21 @@ why (for example `Not run: no design note.`).
    `Design check: not run` for any `Not run`. A `mismatch` makes the verdict
    `fail`; a `deviation-recorded` row does not.
 7. **Proposed changes**: rpcn-test never edits the pipeline (AD-6). Each
-   change it proposes is a numbered item: one line on why, then a fenced
-   `diff` block in unified format against the input file, for rpcn-author to
-   apply. Write `None.` when there are none.
+   failed check (lint, samples, dry run, unit tests, Design check) gets one
+   numbered item per cause:
+   - a title line saying what changes, naming the check;
+   - a cause line, `Cause: <why it failed>`;
+   - a fenced `diff` block in unified format against the file to change
+     (`--- a/<file>`, `+++ b/<file>`, relative to the report's folder).
+
+   rpcn-test checks each diff on a copy against the check that failed. A
+   diff that still fails after two revisions, or that can't be checked, ends
+   its title with `(unverified)`. A diff to the pipeline, a resources file or
+   a `.blobl` is for rpcn-author to apply. A fix to a file rpcn-test owns
+   (`<name>.samples.json`, `<name>_benthos_test.yaml`) is one rpcn-test
+   already applied and re-ran: its title ends with `(applied by rpcn-test)`,
+   the diff shows what it changed, and the check's section shows the re-run.
+   Write `None.` when there are none.
 
 ## Readiness list
 
@@ -301,8 +314,9 @@ Run with `rpk connect test orders.yaml`.
 
 ## Proposed changes
 
-1. Key DLQ messages by `customer_id`, so a replay from `orders.dlq` keeps
-   each customer's orders on one partition, in order (Delivery and ordering).
+1. Key DLQ messages by `customer_id` (Design check: Delivery and ordering).
+   Cause: the DLQ output has no `key`, so a replay from `orders.dlq`
+   spreads a customer's orders over partitions and loses their order.
 
 ```diff
 --- a/orders.yaml

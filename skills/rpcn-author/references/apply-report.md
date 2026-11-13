@@ -28,8 +28,9 @@ The report's `inputs` are relative to the report's folder `<dir>/`:
 
 ## 3. Pick the changes
 
-Proposed changes holds numbered items, each a line on why and a fenced
-`diff` block, or `None.`. With `None.` there is nothing to apply: change no
+Proposed changes holds numbered items, each a title, a `Cause:` line and
+a fenced `diff` block, or `None.`. An older item with one line on why in
+place of the title and `Cause:` line is applied the same way. With `None.` there is nothing to apply: change no
 file, say so, and skip lint.
 
 Apply an item, of any kind (a lint fix, a design fix or any other change),
@@ -45,7 +46,9 @@ itself, `<name>_benthos_test.yaml`, a samples file or any other file rpcn-test
 owns (rpcn-test applies its own files), another pipeline, or any file not in
 the list above. Never edit the report.
 
-An item whose title ends with `(unverified)` is still applied: lint decides.
+An item whose title ends with `(applied by rpcn-test)` is already applied
+to rpcn-test's own file: skip it and say so. An item whose title ends with
+`(unverified)` is still applied: lint decides.
 
 ## 4. Apply each diff
 

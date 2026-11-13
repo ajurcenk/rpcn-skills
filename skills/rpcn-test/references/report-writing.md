@@ -29,13 +29,13 @@ Follow `test-report-format.md` and `handoff-header.md` (both in this folder).
 - Dry run: as `dry-run.md` says.
 - Unit tests: as `unit-tests.md` says.
 - Design check: as `design-check.md` says.
-- Proposed changes: one numbered item and `diff` block per fix (lint fixes
-  against the pipeline, sample fixes against the `.blobl`, dry-run and
-  unit-test fixes against the file that holds the failing processor,
-  design fixes against the pipeline, or `<res>` when the component is
-  there, with the `<res>` copy linted as `design-check.md` section 4 says),
-  or `None.`
-  End an unverified fix's item title with `(unverified)`.
+- Proposed changes: one numbered item per cause, each a title, a
+  `Cause:` line and a `diff` block (`fix-check.md`): lint fixes against the
+  pipeline, sample fixes against the `.blobl`, dry-run and unit-test fixes
+  against the file that holds the failing processor, design fixes against
+  the pipeline, or `<res>` when the component is there. Or `None.`
+  End an unverified fix's item title with `(unverified)`, and a fix
+  rpcn-test applied to its own file with `(applied by rpcn-test)`.
 
 **Not ready:** when Step 5's `hash --check` does not report
 `data.ready: true`, fix only the report's header or format once and

@@ -45,7 +45,9 @@ lint had one:
 - **Exit 2:** the samples file is invalid, or has no entry for the mapping
   (`errors[0].message` names the key or line). Fix the file's shape once,
   whoever wrote it, and run again: JSON syntax, keys, a missing entry
-  (written as in section 1). Never change an expected value. If it still
+  (written as in section 1). Never change an expected value here. A shape
+  fix to a file that existed before this run is an item
+  `(applied by rpcn-test)` (`fix-check.md`). If it still
   exits 2, that mapping gets one `fail` row with the message as `actual`,
   counted as 1 failed, and the same message goes in `open_questions`. The
   run goes on.
@@ -69,21 +71,23 @@ every `<blobl>` (`data.passed` and `data.failed`, plus 1 failed for each
 such row). Any `fail` row makes the verdict `fail`.
 
 **Never change an expected value to make a sample pass.** A mismatch stays
-a `fail` row, and the expected values stay as they were.
+a `fail` row, and the expected values stay as they were. The one exception:
+a sample in an existing `<samples>` whose expected value the request or a
+ready design note states differently. Fix that value to what they say, as
+`fix-check.md` says for rpcn-test's own files, and quote the sentence in
+the item. Never change a value to what the mapping printed.
 
 ## 4. Propose the fix
 
-For each mapping with a `fail` row from its code (not from an exit 2), add
-one Proposed changes item: a line naming the failed samples and the cause,
-then a `diff` against the `.blobl` file (`--- a/<name>.<label>.blobl`,
-`+++ b/<name>.<label>.blobl`, relative to the report's folder) for
-rpcn-author to apply.
+For each cause of a `fail` row from the mapping's code (not from an exit
+2), add one Proposed changes item as `fix-check.md` says: a title naming
+the failed samples, the cause, then a `diff` against the `.blobl` file
+(`--- a/<name>.<label>.blobl`, `+++ b/<name>.<label>.blobl`, relative to
+the report's folder) for rpcn-author to apply. A mapping that didn't run
+(it does not parse) gets one too.
 
-Check it: write the fixed mapping, under the same file name, into the temp
-folder `<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/` (if the variable
-is not expanded, end the folder name in 8 random letters), and run the `blobl` command on that copy with the same
-`--samples <samples>`. Revise at most twice; if it still fails, end the
-item's title with `(unverified)`.
+Check it: run the `blobl` command on the fixed copy in the temp folder with
+the same `--samples <samples>`. Every sample of that mapping passes.
 
 ## 5. Status block
 

@@ -92,16 +92,22 @@ A `mismatch` makes the verdict `fail` and `checks.tests` `fail`. A
 
 Each `mismatch` gets one Proposed changes item:
 
-- its title names the section, such as "Send failed orders to `orders.dlq`
-  after the retries, as Error handling says (Error handling)"
+- its title names the check and the section, such as "Send failed orders
+  to `orders.dlq` after the retries (Design check: Error handling)"
 - one line, with the words `Deviations row`, saying that keeping the
   departure instead means having rpcn-author record a Deviations row for it
   in the note
 - a `diff` block against the pipeline (or `<res>`) that makes it do what
   the section says
 
-Write the whole fixed pipeline (with every lint fix too) to the Step 4 temp
-path and check it as `fix-check.md` says. A fix to `<res>` writes the fixed
-`<res>` copy, under the same file name, to the same temp folder, and that
-lint passes `--resources` set to that copy. End the item's title with
-`(unverified)` when lint can't confirm it, or when it can't be checked.
+Its cause line says what the section asks for and what the pipeline does
+instead. Write the whole fixed pipeline (with every lint fix too) to the
+temp folder and check it as `fix-check.md` says, in two parts:
+
+1. Lint the copy. A fix to `<res>` writes the fixed `<res>` copy, under
+   the same file name, to the same temp folder, and that lint passes
+   `--resources` set to that copy.
+2. Read the copy against the section as sections 2 and 3 do.
+
+It is verified only when lint passes and the row would now be `ok`;
+otherwise `(unverified)` and revisions are as `fix-check.md` says.

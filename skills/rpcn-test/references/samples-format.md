@@ -65,8 +65,9 @@ major to `samples@2`. The file is JSON, so it has no hand-off header: its
   instead.
 - An expected value is never changed to match what the mapping gives. A
   mismatch is a finding for the test report, and the fix is a proposed diff
-  to the `.blobl` file. A sample is changed only when the intent itself
-  changed (a new request or design note).
+  to the `.blobl` file. A sample is changed only when the request or a
+  ready design note states its value differently, and the test report's
+  item then quotes that sentence.
 - Samples cover one message's content only: never metadata, a batch of
   several messages, or the inside of a `branch` or `workflow` processor.
 - The samples file is not a test report input: changing it does not make

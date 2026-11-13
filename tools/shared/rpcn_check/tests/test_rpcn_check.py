@@ -2764,6 +2764,35 @@ class RealBinaryCommandsTest(unittest.TestCase):
             code, out = self.check(b, "test", "--resources", "dedupe.resources.yaml", "dedupe.yaml", cwd=self.tmp)
             self.assertEqual(code, 0, out)
 
+    def test_test_stale_mock_label(self) -> None:
+        """A mock keyed by a label the target no longer has stops the target from
+        starting, naming the label (SOURCES.md); renaming the key to the current
+        label makes the case pass. unit-tests.md section 2 relies on it."""
+        (self.tmp / "tier.yaml").write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n"
+            "    - branch:\n        request_map: 'root = this'\n"
+            "        processors:\n          - label: tier_api\n"
+            "            http:\n              url: http://localhost:1/x\n              verb: GET\n"
+            "        result_map: 'root.tier = this.tier'\n"
+            "output:\n  stdout: {}\n"
+        )
+        case = (
+            "tests:\n  - name: tier\n    target_processors: /pipeline/processors\n"
+            "    mocks:\n      {key}:\n        mapping: 'root = {{\"tier\": \"gold\"}}'\n"
+            "    input_batch:\n      - content: '{{\"id\":1}}'\n"
+            "    output_batches:\n      - - json_equals: {{\"id\": 1, \"tier\": \"gold\"}}\n"
+        )
+        for b in self.each():
+            (self.tmp / "tier_benthos_test.yaml").write_text(case.format(key="lookup_tier"))
+            code, out = self.check(b, "test", "tier.yaml", cwd=self.tmp)
+            self.assertEqual(code, 1, out)
+            self.assertEqual(out["data"]["failures"], [], out)
+            self.assertIn("mock for label 'lookup_tier' could not be applied as the label was not found",
+                          out["errors"][0]["message"])
+            (self.tmp / "tier_benthos_test.yaml").write_text(case.format(key="tier_api"))
+            code, out = self.check(b, "test", "tier.yaml", cwd=self.tmp)
+            self.assertEqual(code, 0, out)
+
     def test_test_dropped_messages(self) -> None:
         """A dropped message has no output entry, and a case whose every message is
         dropped passes with `output_batches: []` (SOURCES.md)."""

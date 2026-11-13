@@ -26,10 +26,22 @@ is written, and the verdict and `checks.tests` are unaffected, when:
 
 ## 2. An existing file
 
-When `<tests>` exists, whoever wrote it, run it as it is (section 4).
-Never edit, extend or rewrite it, even when a case looks wrong, and write
-no other test file. Its failing cases are reported like any others
-(section 5); fixes to the file itself are not proposed.
+When `<tests>` exists, whoever wrote it, run it (section 4). Never add or
+remove cases, or rewrite it, and write no other test file. Edit it only for a fault in
+the file itself, found from the run:
+
+- its shape: YAML or keys the binary can't parse
+- a missing or stale mock: a mock keyed by a label or path the pipeline no
+  longer has (`mock for label '<label>' could not be applied as the label
+  was not found`), or a processor that calls an outside service with no
+  mock. Key it by the processor's current label or path, as section 3 says.
+- an expected value that the request or a ready design note states
+  differently; the item quotes that sentence.
+
+Never change a value to match what the pipeline outputs. Apply the fix,
+re-run, and fill the section from the re-run, as `fix-check.md` says for
+rpcn-test's own files. Any other failing case is reported like any other
+(sections 5 and 6).
 
 ## 3. Write the cases when there is none
 
@@ -131,26 +143,29 @@ the command as run (`<res>` and `<dir>/` as given), then the table
 makes the verdict `fail`.
 
 **Never change a case to make it pass**, nor rerun with another file.
+A section 2 fault fix is not that: it never takes a value from the output.
 
 ## 6. Propose the fix
 
 For cases rpcn-test wrote in this run, add one Proposed changes item per
-cause: a line naming the failing cases and the cause, then a `diff`
-against the file that holds the wrong processor, the pipeline
-(`+++ b/<pipeline>`) or its `.blobl`, so it outputs what the intent says.
-For a failed target, the fix makes the pipeline start. A dry-run or sample
-fix that already covers the cause is not repeated.
+cause, as `fix-check.md` says: a title naming the failing cases, the
+cause, then a `diff` against the file that holds the wrong processor, the
+pipeline (`+++ b/<pipeline>`) or its `.blobl`, so it outputs what the
+intent says. For a failed target, the fix makes the pipeline start. A
+dry-run or sample fix that already covers the cause is not repeated.
 
-For cases in an existing file, propose a pipeline fix only when the request
-or design note agree with the case; otherwise add a question saying which
-case and the intent disagree.
+For cases in an existing file (after any section 2 fix), propose a
+pipeline fix when the request or design note agree with the case. When
+they don't settle it, propose the pipeline fix the case implies as
+`(unverified)` and add a question saying which case and the intent
+disagree, as `fix-check.md` step 3 says.
 
 Check it in the temp folder `dry-run.md` names: write the fixed pipeline
 there as `<pipeline>` (for a `.blobl` fix, a copy of the pipeline whose
 `from` path is the fixed copy's absolute path), copy `<tests>` beside it
 unchanged as `<name>_benthos_test.yaml`, and run the `test` command, with
-the same `--resources`, on `<temp>/<pipeline>`. Every case passes. Revise
-at most twice; if it still fails, end the item's title with `(unverified)`.
+the same `--resources`, on `<temp>/<pipeline>`. Every case passes.
+Revisions and `(unverified)` are as `fix-check.md` says.
 
 ## 7. Status block
 

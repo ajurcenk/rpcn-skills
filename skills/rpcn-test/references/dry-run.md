@@ -101,8 +101,9 @@ dry run makes the verdict `fail`.
 
 ## 5. Propose the fix
 
-For each processor with an Errors row, add one Proposed changes item: a
-line naming the error, its `path` and the failing message, then a `diff`
+For each processor with an Errors row, add one Proposed changes item as
+`fix-check.md` says: a title naming the error, its `path` and the failing
+message, the cause, then a `diff`
 against the file that holds that processor: the pipeline, or its `.blobl`
 when the mapping is loaded with `from`. The fix makes the processor handle
 that message the way the intent says (for example `this.total.number()` for
@@ -112,19 +113,16 @@ messages.
 Check it, writing the fixed file under the same name into the temp folder:
 
 - **A fixed pipeline:** run the `run` command on that copy with the same
-  flags. It passes with exit 0.
+  flags and the same `--input <msgs>`. It passes with exit 0.
 - **A fixed `.blobl`:** when `<dir>/<name>.samples.json` has samples for
   it, run the Step 3 `blobl` command on the copy with those `--samples`, as
   `samples.md` section 4 does. When it has none, or the mapping is not the
-  first processor (so the pipeline's input is not its input), don't run
-  it: end the item's title with `(unverified)`.
+  first processor (so the pipeline's input is not its input), it can't be
+  checked.
 
-Revise at most twice; if it still fails, end the item's title with
-`(unverified)`.
-
-For a timeout or a failure that is not a processor error, propose a fix
-only when the cause is clear; otherwise add a question to
-`open_questions` (headless) or the reply.
+A timeout or a failure that is not a processor error also gets an item,
+checked the same way. Revisions, `(unverified)` and an unclear cause are as
+`fix-check.md` says.
 
 ## 6. Status block
 

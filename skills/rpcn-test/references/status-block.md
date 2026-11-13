@@ -16,6 +16,7 @@ Fill the headless status block this way:
   `mismatch`; `pass` when at least one of them ran and none failed;
   `skipped` when none ran (a `Not run` section did not run). There is no
   separate key for the Design check (AD-8 has only `lint` and `tests`).
-- `artifacts`: the report path and, when written in this run, the samples
-  file and `<dir>/<name>_benthos_test.yaml`; or `[]`.
+- `artifacts`: the report path and, when written or edited in this run
+  (an `(applied by rpcn-test)` fix), the samples file and
+  `<dir>/<name>_benthos_test.yaml`; or `[]`.
 - Questions go in `open_questions`, with a not-ready design note's reason.
