@@ -96,6 +96,7 @@ context: []
 - **Matrix audit (2026-11-13):** the row "Only Test-owned fixes → Next: re-run rpcn-test" had no check. T gained `reply_lacks`, and `fix_own_tests` sets it.
 - **After the review fixes:** the validator shows no warnings (`rpcn-test` 4,784 characters). `sync_shared --check`, the `tools/` and skill suites (146), `rpcn_check` on both binaries (186) and T's tests (245) pass. Smoke run with `--jobs 4 --runs 1 --no-judge`, 31 non-compare scenarios: 31/31 on both binaries, and all five `[[fix]]` checks passed (`T/runs/20261113-102111`).
 - **Eval record:** `evals/results/2026-11-13-6db288bec933.json` passed with `dirty: false`, at $44.83, on the first full run. Trigger accuracy was 1.0, and all 31 scenarios passed 3/3, linted on 4.100.0 and 4.115.0. Wall time was about 26 minutes; the trigger gate took 328 s.
+- **Pushed:** `160884b..b9d265f`. CI run 43462235639 was green.
 
 ## Plan Change Log
 
