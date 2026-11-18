@@ -64,3 +64,9 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-test-checks-the-pipeline-against-the-design-note-plan.md`
   summary: Add an rpcn-test scenario for a design note that isn't ready (a `[blocking]` open decision): `Not run: design note not ready (<reason>).`, a line in `open_questions`, and the note left out of `inputs`.
   evidence: Story 2.10 matrix audit (2026-11-12). Only `design-check.md` §1 states the row. It reuses the `hash --check` and readiness-list branch that rpcn-author's `design_not_ready` covers. The user chose to defer it.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-benchmark-author-and-test-against-the-other-skill-sets-plan.md`
+  summary: The judge's redaction leaves `[tool]` placeholders that only `ours` replies show, and the judge marked `ours` down partly for them.
+  evidence: Unverified, medium. 2.12 smoke run `T/runs/20261113-115848`: the judge ranked ours last on compare_diagnose and compare_lint, and its notes mention the placeholders. To settle it, rejudge with neutral substitutions (such as "the checker") and compare the ranks.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-benchmark-author-and-test-against-the-other-skill-sets-plan.md`
+  summary: On compare_write the judge returned the same malformed JSON twice (a stray `}` closing `notes` early), so cost alone decided the winner.
+  evidence: Unverified, medium. 2.12 smoke run `T/runs/20261113-115848`. The retry tests pin this exact reply as their invalid case. To settle it, decide whether `parse_judge` may repair it, or have the retry ask for valid JSON again, then rejudge.

@@ -90,7 +90,15 @@ exit 2 before any paid step, naming the failed tests), the skills hash, the
 trigger suite above, the gate (with `--cases-dir` set to this `evals/`), and
 the `rpcn-test-skills` pass scenarios (`run_scenarios.py --source local:<this
 repo>`). `--with-compare` adds the comparison scenarios (`[compare] enabled =
-true`, about +$4). A passing run writes
+true`: `rpcn-test__compare_lint`, `rpcn-test__compare_diagnose` and
+`rpcn-author__compare_write`, about +$12, so about $55 in all). Each is scored
+the same way in every arm: its `score` is the known causes the reply names
+(`[[compare.errors]]`) plus points on the file the arm writes
+(`[[compare.files]]`: lints clean, a bounded run gives the expected outputs,
+contains a string), with this repo's `rpcn_check.py` on both pinned binaries;
+ties go to the blind judge's rank, then cost (the test project's README has the
+details). The record's `compare` maps each comparison scenario to its winner.
+A passing run writes
 `evals/results/<YYYY-MM-DD>-<skills-hash12>.json`. A failing run still writes
 its record, as `<YYYY-MM-DD>-<skills-hash12>.failed-<HHMMSS>.json`: the check
 ignores that name, so a failed re-run never replaces a passing record. `passed`

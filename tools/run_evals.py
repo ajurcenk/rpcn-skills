@@ -16,7 +16,7 @@ own output passes through live:
   4. in the test project: uv run run_scenarios.py --source local:<this repo>
          --runs <n> --jobs <j> --scenario <s>... for every scenario that is not a
          comparison ([compare] enabled = true in expect.toml), plus the
-         comparison scenarios with --with-compare (about +$4)
+         comparison scenarios with --with-compare (about +$12)
 
 Then it re-checks the skills hash and writes
 `evals/results/<YYYY-MM-DD>-<skills-hash12>.json` when the run passed, or
@@ -321,7 +321,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--runs", type=int, default=3, help="runs per trigger case and scenario (default 3); a record can pass "
                         "only with 3 or more, fewer is a smoke run that never passes")
     p.add_argument("--with-compare", action="store_true",
-                   help="also run the comparison (benchmark) scenarios, about +$4")
+                   help="also run the comparison (benchmark) scenarios, about +$12")
     p.add_argument("--concurrency", type=int, default=DEFAULT_PARALLEL,
                    help=f"trigger sessions at once, 1-{MAX_PARALLEL} (default %(default)s)")
     p.add_argument("--jobs", type=int, default=DEFAULT_PARALLEL,
