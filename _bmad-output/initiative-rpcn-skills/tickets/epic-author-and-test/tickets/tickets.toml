@@ -134,12 +134,67 @@ hitl = false
 risk = "medium"
 
 [[entry]]
+id = 14
+type = "story"
+title = "The benchmark judges every arm's reply fairly"
+description = "The scenario runner's blind judge no longer marks an arm down for the runner's own artifacts: redaction swaps arm-identifying names for neutral words instead of `[tool]`; the trailing status block of a headless run, our machine contract (AD-8), is stripped before judging; a judge reply that still does not parse after the existing retry is handled (`parse_judge` repairs it, or the retry prompt changes; the builder picks and says why), since in 2.12 the judge sent the same broken JSON twice. Evidence: the 2.12 benchmark (judge notes on `ours`, deferred-work.md entries of 2026-11-13). rpcn-test-skills runner only; no skill changes."
+verify = "`--rejudge` of the 2.12 run (`T/runs/20261118-105216`) ranks all four arms in all three comparisons, and runner tests show no `[tool]` placeholder or status-block JSON in any judge prompt."
+covers = ["R12"]
+after = [12]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 15
+type = "story"
+title = "Comparison scenarios the binary can separate"
+description = "In 2.12 every arm scored full marks, so judge style alone picked the winners. Add comparison scoring points, or scenarios, where knowing the installed binary matters (a component or field that differs between 4.100.0 and the newest pin, a mapping that must error on a missing required field, unit cases that must pass), so the arm-neutral score can tell arms apart. The new points are proved on both binaries. A missing-required-field point is the one story 17 makes `ours` meet."
+verify = "A `--runs 1` comparison smoke run where at least one comparison's scores differ between arms, and runner tests for each new point."
+covers = ["R12"]
+after = [14]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 16
+type = "story"
+title = "rpcn-test replies say only what the user needs, at lower cost"
+description = "From the 2.12 judge notes: rpcn-test's reply pads with notes on checks that did not run and costs 2-4x the other arms (22-28 turns against 6-10). The reply gives the verdict, each failure's cause and diff, and the report path; `Not run` lines stay in the report. The skill spends fewer turns for the same checks. A diff whose removed and added lines are the same is never a fix: rpcn-test's fix check (`references/fix-check.md`) rejects it. Every check still runs, and the report and status block are unchanged. It is not pushed alone: 18's eval run is the record for 16 and 17 together (AD-14), so each only smoke-runs its scenarios."
+verify = "rpcn-test scenarios pass with fewer mean turns than the 2.12 run (`T/runs/20261118-105216`) on lint_broken, dry_run_error and unit_bug, a `reply_lacks` check for `Not run` on two of them."
+covers = ["R8", "R9"]
+after = [12]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 17
+type = "story"
+title = "rpcn-author fails loudly on a missing required field"
+description = "From the 2.12 judge notes: two of three compare_write runs used `.string()` on email, so a message with no email passed through instead of reaching the DLQ the request asked for. Author's Bloblang guidance (`skills/rpcn-author/references/`, with a SOURCES.md row proved on 4.100.0 and the newest pin, AD-15) makes a field the request relies on fail when it is missing (no coercion that turns null into a value), so the error path the request names catches it. Story 15 adds the matching benchmark point. Like 16, it is not pushed alone: 18's eval run is its record."
+verify = "In a `--runs 1` smoke run of `rpcn-author__compare_write`, `ours` meets 15's missing-required-field point on both binaries in every run."
+covers = ["R12"]
+after = [15, 16]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 18
+type = "story"
+title = "Re-benchmark Author and Test after the improvements"
+description = "Run `run_evals.py --with-compare` again after 14-17 and record each comparison's winner, per-arm score, judge rank and cost in its plan's Implementation Notes (from `results.json`; the record's `compare` holds only the winners). This run is also the AD-14 eval record for 16 and 17; 16-18 are pushed together after it. Any comparison another arm still wins becomes an improvement story, as in 12."
+verify = "A passing `dirty: false` eval record whose `compare` names a winner for every comparison; each loss is recorded with its evidence."
+covers = ["R12"]
+after = [14, 15, 16, 17]
+hitl = false
+risk = "medium"
+
+[[entry]]
 id = 13
 type = "story"
 title = "Refactor sweep"
 description = "Cleanup only, scoped at its start from plans and review findings the epic deferred."
 verify = "All epic checks still pass after the cleanup."
 covers = []
-after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18]
 hitl = false
 risk = "low"
