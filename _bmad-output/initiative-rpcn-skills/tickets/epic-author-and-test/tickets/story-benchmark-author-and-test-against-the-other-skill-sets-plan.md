@@ -3,7 +3,7 @@ title: 'Benchmark Author and Test against the other skill sets'
 type: 'feature'
 ticket: '12'
 created: '2026-11-13'
-status: 'built'
+status: 'done'
 baseline_revision: 'e3aa77f3d10cabf3e5bb5ae6a11cd899fbce9280'
 route: 'full'
 route_source: 'auto'
@@ -140,6 +140,7 @@ context: []
   - **Mapping correctness in Author:** `.string()` lets a missing field pass through.
   - **Cost and turns:** `ours` spends 2–4× more per Test run.
   - **The runner's redaction:** the `[tool]` placeholders are not the skill's own output (`deferred-work.md`, 2.12). They may account for part of the gap.
+- **Pushed:** `b9d265f..ede4ee5`. CI run 44353960607 was green.
 
 ## Plan Change Log
 
