@@ -83,7 +83,7 @@ context: []
 - [x] `T/run_scenarios.py` `[[compare.files]]` scoring and `pick_winner`, plus tests (each matrix row).
 - [x] `T/scenarios/rpcn-author__compare_write/` (prompt, `expect.toml` with `ours`-only pass checks and file points) and `T/scenarios/rpcn-test__compare_diagnose/` (a failing fixture, the two causes as `[[compare.errors]]`, `ours`-only pass checks).
 - [x] READMEs.
-- [ ] After review and commit: `run_evals.py --with-compare` (about $55), commit the `dirty: false` record, and record each winner, the per-arm scores and any loss in Implementation Notes.
+- [x] After review and commit: `run_evals.py --with-compare` (about $55), commit the `dirty: false` record, and record each winner, the per-arm scores and any loss in Implementation Notes.
 
 **Acceptance Criteria:**
 - Given the repo, when `validate_skills`, `sync_shared --check`, all `tools/` suites and T's tests run, then all pass.
@@ -121,6 +121,25 @@ context: []
   artifact of redaction and headless output, not only reply quality.
 - **Not done here:** the full `run_evals.py --with-compare` (about $55) and its record, which the plan puts after
   review and commit; winners, per-arm scores and losses for Sofia go here after that run.
+- **Eval record:** `evals/results/2026-11-18-6db288bec933.json` passed with `dirty: false`, at $54.24, on the first full run. Trigger accuracy was 1.0, and all 33 pass scenarios passed 3/3, linted on 4.100.0 and 4.115.0. Wall time was about 48 minutes. `compare`: `compare_write` → `bare`, `compare_diagnose` → `skills-repo`, `compare_lint` → `bare`. Full results are in `T/runs/20261118-105216/results.json`.
+- **Benchmark results (3 runs per arm).** Every arm got full marks on all three comparisons, so judge rank decided every winner. The judge ranked `ours` last (4th) in all three.
+
+  | scenario | ours | connect-plugin | skills-repo | bare | winner |
+  |---|---|---|---|---|---|
+  | `compare_write` (score 3) | rank 4, $0.24, 14.3 turns | rank 2, $0.23 | rank 3, $0.36 | rank 1, $0.31 | `bare` |
+  | `compare_diagnose` (score 2) | rank 4, $0.57, 28.0 turns | rank 2, $0.15 | rank 1, $0.25 | rank 3, $0.14 | `skills-repo` |
+  | `compare_lint` (score 4) | rank 4, $0.47, 22.0 turns | rank 2, $0.11 | rank 3, $0.20 | rank 1, $0.10 | `bare` |
+
+- **Losses for Sofia (all three comparisons):**
+  1. **`rpcn-author__compare_write`, won by `bare`.** In the judge's words: runs 2 and 3 use `.string()` on email, so a missing email passes through silently, against their own failure claims; run 3 uses `mutation`; runs 2 and 3 have header problems. The replies end with `[tool]` placeholders and raw status JSON.
+  2. **`rpcn-test__compare_diagnose`, won by `skills-repo`.** The judge left no note on `ours`. `ours` took 28 turns and $0.57, against 7–10 turns and $0.14–0.25 for the others.
+  3. **`rpcn-test__compare_lint`, won by `bare`.** In the judge's words: it finds all four errors and checks the fixes on a copy, but run 2's mapping diff is broken (its old and new lines are the same), the replies leave `[tool]` placeholders, and they pad the answer with notes about skipped checks.
+
+  Themes the judge named:
+  - **Reply quality, a real weakness:** a status block in an interactive reply, notes about checks that didn't run, files nobody asked for, and a broken diff.
+  - **Mapping correctness in Author:** `.string()` lets a missing field pass through.
+  - **Cost and turns:** `ours` spends 2–4× more per Test run.
+  - **The runner's redaction:** the `[tool]` placeholders are not the skill's own output (`deferred-work.md`, 2.12). They may account for part of the gap.
 
 ## Plan Change Log
 
