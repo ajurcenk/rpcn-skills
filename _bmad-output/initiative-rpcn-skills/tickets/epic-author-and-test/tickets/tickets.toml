@@ -176,6 +176,7 @@ covers = ["R12"]
 after = [15, 16]
 hitl = false
 risk = "medium"
+refine = true
 
 [[entry]]
 id = 18
