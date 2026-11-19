@@ -3,7 +3,7 @@ title: "The benchmark judges every arm's reply fairly"
 type: 'feature'
 ticket: '14'
 created: '2026-11-18'
-status: 'built'
+status: 'done'
 baseline_revision: 'd6144b2419108266529d873e3c128fc5db69eb40'
 route: 'full'
 route_source: 'auto'
@@ -115,6 +115,7 @@ context: []
 
 - **Finding:** the judge no longer cites `[tool]` or the status JSON. Its compare_write and compare_lint notes on ours are about substance only. In compare_diagnose it still calls "the report file" and "the skill" placeholders that make ours' replies harder to act on.
 - **After the review fixes:** T's tests (280), R's `tools/` and skill suites (146) and the validator pass. Nothing under `skills/` changed, so the 2.11 eval record still covers the skills.
+- **Pushed:** `ede4ee5..0f652cf`. CI run 44442256944 was green. The runner change is in T `3629a2c` (local only).
 
 ## Plan Change Log
 
