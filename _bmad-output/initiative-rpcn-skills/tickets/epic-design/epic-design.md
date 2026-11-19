@@ -37,3 +37,14 @@ A developer new to RPCN goes from a described pipeline to a linted, tested one i
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
 - architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-6, AD-7, AD-9
+
+## Notes
+
+- Open question: How does `rpcn-design` ask the user for what only they can decide? These are choices the binary can't settle: delivery (at least once, or exactly once with a dedupe key), ordering, where a failed message goes (retry, DLQ or drop), volume and latency, and sink idempotency. To settle when this epic is refined; its stories wait on the answer. Proposed starting point (2026-11-18, user asked for it to be recorded here):
+  - Design runs a short guided interview, in a few rounds, and each question comes with the answer it would pick.
+  - A choice left unanswered is written to the note's Open decisions as `[blocking]`. The note is then not `ready`, and Author and Test won't build from it (`tools/shared/formats/design-format.md`, Open decisions and readiness).
+  - Headless, it never asks. It writes a draft note that lists the open decisions.
+  - Every choice the note settles is one Author never asks about (story 2.17's rule).
+  - It must still meet R15 (a newcomer reaches a linted, tested pipeline in under 10 minutes), so a simple flow gets sensible defaults, not a long interview.
+
+  Still to decide: how many rounds, which decisions Design must always ask, and when one may stay `[blocking]`.
