@@ -7,6 +7,9 @@ and unset `${VAR}`s are not. Each error has `file`, `line`, `column` and
 resources file passed with `--resources`. All three are `null` for a line the
 script could not tie to a file.
 
+For each of `errors`, in order, give its file, line, column, cause and fix as
+a unified diff; never add or drop one.
+
 Match the message to a pattern below. `<x>` stands for the name in the
 message. Read the lines around the position before proposing a fix: the fix is
 a diff against the file as it is now.

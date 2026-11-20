@@ -37,7 +37,31 @@ Follow `test-report-format.md` and `handoff-header.md` (both in this folder).
   End an unverified fix's item title with `(unverified)`, and a fix
   rpcn-test applied to its own file with `(applied by rpcn-test)`.
 
-**Not ready:** when Step 5's `hash --check` does not report
+**Check it** with Step 2's line 1, `<file>` = `<name>.test-report.md`. It
+must report `data.ready: true`.
+
+**Not ready:** when that `hash --check` does not report
 `data.ready: true`, fix only the report's header or format once and
 recheck; never re-hash an input or change a `sha256`. Still not ready: set
 `status: draft`, say why, and in headless mode report `blocked`.
+
+## The reply
+
+Short, with only what the user needs:
+
+- the verdict
+- each failure: its cause and its fix as a diff, copied exactly from its
+  Proposed changes item (in the report's order). If that diff is a no-op
+  (`fix-check.md` step 2), it goes back to `fix-check.md`: revise it, or
+  mark it `(unverified)`, in the report first, then copy it.
+- the report path, and any other file rpcn-test wrote (such as `<tests>` or
+  `<samples>`)
+- each question or reason the references send to the reply, such as the
+  question on a sample or unit case whose intent is unclear, or why a design
+  note is not ready (`design-check.md` section 1). In headless mode these go
+  in `open_questions` instead.
+- Next, then the status block in headless mode
+
+Otherwise leave out the checks that did not run: no `Not run:` line, and
+no note on why a check was skipped (such as "lint failed", "there is no
+design note" or "no `.blobl` files"). Those stay in the report only.

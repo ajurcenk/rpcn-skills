@@ -13,6 +13,11 @@ One `uv run …/rpcn_check.py` command per Bash call: no `cd`, `&&`, `;`,
 variables, `cat` or heredocs. Use Read and Write for files. Never edit the
 pipeline or a `.blobl`: propose fixes as diffs.
 
+**References:** read all a step needs in one turn (Step 3's check
+references together, after lint); never list `references/`. Lint failed:
+skip `dry-run.md`, `unit-tests.md`: `Not run: lint failed.` No design note:
+skip `design-check.md`: `Not run: no design note.`
+
 **Headless** if the prompt says unattended, headless or non-interactive,
 or a script reports `data.headless: true`: never ask; end with the status
 block.
@@ -80,26 +85,19 @@ Then `references/design-check.md`.
 
 ## Step 4: Explain the errors
 
-On lint errors, read `references/lint-errors.md`. For each of `errors`, in
-order, give its file, line, column, cause and fix as a unified diff; never
-add or drop one. Check each fix, of any check, as
-`references/fix-check.md` says.
+Lint errors: explain each as `references/lint-errors.md` says. Check
+every fix as `references/fix-check.md` says.
 
 ## Step 5: Write the report
 
-Write `<dir>/<name>.test-report.md` as `references/report-writing.md` says
-(with `references/test-report-format.md`, `references/handoff-header.md`).
-
-Check it with Step 2's line 1, `<file>` = `<name>.test-report.md`.
-It must report `data.ready: true`, else see `references/report-writing.md`.
-
-Reply with the verdict, errors, diffs and report path.
+Write `<dir>/<name>.test-report.md`, check it and reply as
+`references/report-writing.md` says (with `references/test-report-format.md`,
+`references/handoff-header.md`).
 
 ## Next
 
 - Failed checks: apply the changes with rpcn-author, re-run rpcn-test.
-- Only rpcn-test's own files fixed: re-run rpcn-test.
-- Binary fixed: re-run rpcn-test.
+- Only rpcn-test's own files, or the binary, fixed: re-run rpcn-test.
 - No pipeline yet: use rpcn-author.
 
 ## Status block (headless only)

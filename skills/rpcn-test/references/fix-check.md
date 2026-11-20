@@ -9,11 +9,15 @@ failed:
 1. Write the fixed file, under its own name, into the temp folder
    `<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/` (if the variable is
    not expanded, end the folder name in 8 random letters), with every
-   earlier fix to that file in it too. Never write a fixed copy beside the
-   pipeline.
+   earlier fix to that file in it too. `<system temp dir>` is `/tmp` (on
+   Windows, `%TEMP%`): never run a command to learn the temp dir or the
+   session ID. Never write a fixed copy beside the pipeline.
 2. Re-run the check that failed on the copy, with the same flags as the
    original run; each check's reference says how. It passes when that check
-   would now pass for this cause.
+   would now pass for this cause. A no-op diff is never a fix and fails this
+   check without a re-run: in each hunk the `-` lines equal its `+` lines,
+   in the same order, or the patched file equals the original. A diff that
+   only moves lines is not a no-op.
 3. Revise the diff at most twice. A diff that still fails, or that can't be
    checked, ends its title with `(unverified)`. When the cause itself is
    unclear, propose the best diff as `(unverified)` and add a question to

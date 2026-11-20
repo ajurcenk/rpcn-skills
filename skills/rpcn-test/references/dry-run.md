@@ -14,7 +14,9 @@ pipeline has any of these, the section's `Skipped:` line names them.
 
 **The temp folder** is `<system temp dir>/rpcn-test-${CLAUDE_SESSION_ID}/`
 (if the variable is not expanded, end the folder name in 8 random letters).
-Never write a dry-run file beside the pipeline.
+`<system temp dir>` is `/tmp` (on Windows, `%TEMP%`): never run a command
+to learn it or the session ID. Never write a dry-run file beside the
+pipeline.
 
 ## 1. When it does not run
 

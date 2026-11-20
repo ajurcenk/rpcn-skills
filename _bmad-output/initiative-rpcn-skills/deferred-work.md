@@ -70,3 +70,9 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-benchmark-author-and-test-against-the-other-skill-sets-plan.md`
   summary: On compare_write the judge returned the same malformed JSON twice (a stray `}` closing `notes` early), so cost alone decided the winner.
   evidence: Unverified, medium. 2.12 smoke run `T/runs/20261113-115848`. The retry tests pin this exact reply as their invalid case. To settle it, decide whether `parse_judge` may repair it, or have the retry ask for valid JSON again, then rejudge.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-rpcn-test-replies-say-only-what-the-user-needs-at-lower-cost-plan.md`
+  summary: rpcn-test still sometimes lists its `references/` folder despite the SKILL.md rule. Only `lint_broken` and `dry_run_pass` check it (`bash_lacks`).
+  evidence: The 2.16 smoke run `T/runs/20261120-154109` shows `samples_bug` running one `ls …/rpcn-test/references/`. To settle it, add `bash_lacks = ["rpcn-test/references"]` to every rpcn-test scenario and watch 18's 3-run record for failures. If it fails, find which reference the listing was looking for and name it in SKILL.md.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-rpcn-test-replies-say-only-what-the-user-needs-at-lower-cost-plan.md`
+  summary: The `dry_run_error` turn saving is thin: 27.5 against 28 on runs that write unit tests, and one run equals 28.
+  evidence: 2.16 smoke run `T/runs/20261120-153819`. Story 18's 3-run eval will show whether it holds.
