@@ -22,8 +22,9 @@ cache_resources:
   `cache` processor.
 - Check the component's fields with `fields caches <component>` (or its own
   category): they come without the `cache_resources[]` wrapper.
-- If the resources file already exists, never write over it: ask, or in
-  headless mode stop with `blocked` as for the pipeline.
+- If the resources file already exists, never write over it: ask in the
+  one round (`questions.md`), or in headless mode stop with `blocked` as
+  for the pipeline.
 
 ## Bloblang files
 
@@ -54,8 +55,9 @@ samples. A mapping of 3 lines or less, such as `root = this`, stays inline.
   inline.
 - Lint checks the file through the pipeline, so Step 6 needs no extra
   command.
-- If the `.blobl` file already exists, never write over it: ask, or in
-  headless mode stop with `blocked` as for the pipeline.
+- If the `.blobl` file already exists, never write over it: ask in the
+  one round (`questions.md`), or in headless mode stop with `blocked` as
+  for the pipeline.
 - Never move an existing pipeline's inline mapping into a `.blobl` file,
   unless a test report proposes it.
 - rpcn-test writes `<name>.samples.json`; rpcn-author never writes it.

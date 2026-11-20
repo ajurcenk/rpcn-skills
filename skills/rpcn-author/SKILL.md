@@ -38,8 +38,8 @@ or `.yml`), else a short snake_case `<name>.yaml`; if only a `.design.md` is
 named, `<name>` is its `pipeline`. `<dir>/` is the folder of the file the
 user names (pipeline or `.design.md`), or nothing for the project root.
 
-If `<dir>/<pipeline>` exists, never write over it: ask
-(headless: `blocked`, question in `open_questions`).
+If `<dir>/<pipeline>` exists, never write over it: ask in Step 5's
+round (headless: stop, `blocked`, question in `open_questions`).
 
 Check `<file>` = `<dir>/<name>.design.md`:
 
@@ -73,12 +73,15 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py fields <category> <component>
 
 Set only paths in `data.fields[].path` (as `tls.enabled` or `a[].b`),
 and every field with `required: true`. On exit 1, `data.components` holds
-close matches: pick one that fits, else ask (headless:
-`open_questions`). Never write a component the binary doesn't list.
+close matches: pick one that fits, else ask in Step 5's round
+(headless: `open_questions`). Never write a component the binary doesn't list.
 
-## Step 5: Write the files
+## Step 5: Ask, then write
 
-Write `<dir>/<pipeline>`: plain YAML, no comment block. Secrets, addresses
+First follow `references/questions.md`: a field the processing needs is
+required, and all questions go in one message, before writing.
+
+Then write `<dir>/<pipeline>`: plain YAML, no comment block. Secrets, addresses
 and credentials are always `${ENV_VAR}`, never inline. For a resource, env
 var or mapping over 3 lines, follow `references/pipeline-files.md`
 (with `references/blobl-files.md`).
@@ -116,10 +119,5 @@ Follow `references/apply-report.md`, with `references/test-report-format.md`.
 
 ## Status block (headless only)
 
-End with exactly one fenced `json` block, then nothing:
-
-```json
-{"status": "<complete|blocked>", "skill": "rpcn-author", "reason": null, "artifacts": [], "checks": {"lint": "<pass|fail|skipped>", "tests": "skipped"}, "open_questions": []}
-```
-
-Fill it as `references/status-block.md` says.
+End with exactly one fenced `json` block, then nothing, written and
+filled as `references/status-block.md` says.
