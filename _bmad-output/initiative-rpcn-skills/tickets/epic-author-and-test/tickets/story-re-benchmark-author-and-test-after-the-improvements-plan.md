@@ -3,7 +3,7 @@ title: 'Re-benchmark Author and Test after the improvements'
 type: 'chore'
 ticket: '18'
 created: '2026-11-20'
-status: 'built'
+status: 'done'
 baseline_revision: 'f31f161ed5505c8758f35ba33cb200deea754fb7'
 route: 'oneshot'
 route_source: 'auto'
@@ -52,6 +52,7 @@ context: []
   - `dry_run_error`: 26.7, all three runs writing unit tests, against 28. Met.
   - `unit_bug`: 26.7, against 26.7. **Not met:** story 16's criterion asks for fewer turns, and this run is 16's record. 16's smoke had 25.7. The user decides whether to accept it.
   - Cost, like for like: $0.32 against $0.49, $0.51 against $0.55 (the tests-written runs) and $0.40 against $0.50.
+- **Pushed:** `dd33885..046fe05`, with stories 16–18 together. CI run 44834989733 was green. The eval record is `evals/results/2026-11-20-83e2eea0bd76.json`.
 
 ## Review Triage Log
 

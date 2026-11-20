@@ -3,7 +3,7 @@ title: 'rpcn-author fails loudly on a missing required field'
 type: 'feature'
 ticket: '17'
 created: '2026-11-20'
-status: 'built'
+status: 'done'
 baseline_revision: 'b196eae0cd2f7f5fc76421a7f1ddfc5ed74e7413'
 route: 'full'
 route_source: 'auto'
@@ -145,6 +145,7 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tick
 - In this one run, the interactive pick for the failure path was a DLQ `signups.dlq`, while the headless pick was to log and drop.
 - The headless `open_questions` also listed "email is required", which the guidance answers and so is not a real question.
 - **After the review fixes (2026-11-20):** the validator, `sync_shared --check`, R's suites (146), `rpcn_check` on 4.100.0 and 4.115.0 (187) and T's tests (327, both binaries set) pass. `SKILL.md` is 4,797 characters. Not pushed: 18's eval run is the record for 16 and 17.
+- **Pushed:** `dd33885..046fe05`, with stories 16–18 together. CI run 44834989733 was green. The eval record is `evals/results/2026-11-20-83e2eea0bd76.json`.
 
 ## Plan Change Log
 
