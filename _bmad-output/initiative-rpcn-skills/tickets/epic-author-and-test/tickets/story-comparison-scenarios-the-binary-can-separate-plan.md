@@ -3,7 +3,7 @@ title: 'Comparison scenarios the binary can separate'
 type: 'feature'
 ticket: '15'
 created: '2026-11-18'
-status: 'built'
+status: 'done'
 baseline_revision: '6689c278bf1b6e9b3eb3f22a9e58424a2401992f'
 route: 'full'
 route_source: 'auto'
@@ -157,6 +157,7 @@ context: []
 - **Implementer (2026-11-18):** `lint_binaries` resolves relative `RPCN_TEST_BINARIES` paths (found in smoke run 1). This is outside the Code Map, and it is a one-line fix.
 - **Implementer (2026-11-18):** a SOURCES.md row and a real-binary test were added, because the final scenarios rely on two Bloblang facts (the Code Map's "if the build relies on one").
 - **After the review fixes (2026-11-20):** T's tests (293; one run hit the known `test_ctrl_c_…` timing flake, and two re-runs passed), R's suites (146), `rpcn_check` on 4.100.0 and 4.115.0 (187) and the validator pass. Nothing under `skills/` changed, so the 2.11 eval record still covers the skills. Separation finding: `bare` lost the lint point in `compare_write` for a deprecated `kafka_franz` (`lint --deprecated`, AD-4); the new points tie for every arm.
+- **Pushed:** `0f652cf..dd33885`. CI run 44805143555 was green. The runner change is in T `4172e76` (local only).
 
 ## Plan Change Log
 
