@@ -2603,6 +2603,52 @@ class RealBinaryCommandsTest(unittest.TestCase):
             self.assertEqual(out["data"]["runtime_errors"], [])
             self.assertIn('{"dlq":true,"id":"b","total":"x"}', out["data"]["outputs"])
 
+    def test_run_deleted_root_and_missing_field(self) -> None:
+        """Binary facts the benchmark scenarios rely on (SOURCES.md, story 2.15), on each binary:
+        - an assignment into `root` after `root = deleted()` fails ("non-object
+          type"), and the message goes on unchanged, so it is not deleted
+          (rpcn-test__compare_diagnose's runtime-only cause);
+        - `.lowercase()` on a missing field is a runtime error with the message
+          as `input`, and `.string()` first turns it into "null" with no error
+          (rpcn-author__compare_write's missing_email point)."""
+        deleted = self.tmp / "deleted.yaml"
+        deleted.write_text(
+            "input:\n  stdin: {}\npipeline:\n  processors:\n    - mapping: |\n"
+            "        root = this\n        if this.test == true {\n          root = deleted()\n        }\n"
+            "        root.n = 1\n"
+            "output:\n  stdout: {}\n"
+        )
+        strict = self.tmp / "strict.yaml"
+        coerce = self.tmp / "coerce.yaml"
+        for path, expr in ((strict, "this.email.lowercase()"), (coerce, "this.email.string().lowercase()")):
+            path.write_text(
+                "input:\n  stdin: {}\npipeline:\n  processors:\n    - mapping: |\n"
+                f"        root = this\n        root.email = {expr}\n"
+                "output:\n  stdout: {}\n"
+            )
+        orders = self.tmp / "orders.jsonl"
+        orders.write_text('{"id":"o1"}\n{"id":"t1","test":true}\n')
+        emails = self.tmp / "emails.jsonl"
+        emails.write_text('{"id":"o1","email":"A@X.COM"}\n{"id":"o4"}\n')
+        for b in self.each():
+            code, out = self.check(b, "run", str(deleted), "--bounded", "--input", str(orders), timeout=60)
+            self.assertEqual(code, 1, out)
+            self.assertEqual(out["data"]["outputs"], ['{"id":"o1","n":1}'])
+            (err,) = out["data"]["runtime_errors"]
+            self.assertIn("non-object type", err["message"])
+            self.assertEqual(err["input"], '{"id":"t1","test":true}')  # unchanged, not deleted
+
+            code, out = self.check(b, "run", str(strict), "--bounded", "--input", str(emails), timeout=60)
+            self.assertEqual(code, 1, out)
+            self.assertEqual(out["data"]["exit"], 0)
+            self.assertEqual(out["data"]["outputs"], ['{"email":"a@x.com","id":"o1"}'])
+            self.assertEqual([e["input"] for e in out["data"]["runtime_errors"]], ['{"id":"o4"}'])
+
+            code, out = self.check(b, "run", str(coerce), "--bounded", "--input", str(emails), timeout=60)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(sorted(out["data"]["outputs"]),
+                             ['{"email":"a@x.com","id":"o1"}', '{"email":"null","id":"o4"}'])
+
     def test_test(self) -> None:
         for b in self.each():
             code, out = self.check(b, "test", "stdin_pipeline_benthos_test.yaml")
