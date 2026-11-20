@@ -76,3 +76,6 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-rpcn-test-replies-say-only-what-the-user-needs-at-lower-cost-plan.md`
   summary: The `dry_run_error` turn saving is thin: 27.5 against 28 on runs that write unit tests, and one run equals 28.
   evidence: 2.16 smoke run `T/runs/20261120-153819`. Story 18's 3-run eval will show whether it holds.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-re-benchmark-author-and-test-after-the-improvements-plan.md`
+  summary: In `compare_diagnose`, the blind judge ranks `ours` last without writing a note on it, in both 2.12 and 2.18, so that loss has no judge evidence.
+  evidence: Unverified, medium. `T/runs/20261120-171018/results.json`: the judge's `notes` cover three of the four labels. To settle it, rejudge and look at the raw reply and the prompt for `ours`' label, for example whether its reply is cut short or redacted to near-empty.
