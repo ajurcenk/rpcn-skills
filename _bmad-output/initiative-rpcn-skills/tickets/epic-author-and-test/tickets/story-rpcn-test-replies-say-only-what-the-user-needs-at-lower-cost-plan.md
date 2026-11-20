@@ -165,6 +165,7 @@ context: []
 
   Every mean is lower than its like-for-like baseline, but the dry_run_error margin with tests written is only 0.5, and one of its runs equals the baseline's 28. `samples_bug` (which has no `bash_lacks`) still ran one `ls …/rpcn-test/references/` in this run.
 - **After the second-pass fixes (2026-11-20):** the validator, `sync_shared --check`, R's suites (146), `rpcn_check` on 4.100.0 and 4.115.0 (187) and T's tests (305) pass, and `SKILL.md` is 4,735 characters. Not pushed: under the 2026-11-18 decision, 18's eval run is the record for 16 and 17. Left open: `samples_bug` still listed `references/` once in the smoke run (it has no `bash_lacks`); see `deferred-work.md`.
+- **Decision (2026-11-20, user):** in 2.18's eval record (16's record), `unit_bug` is 26.7 turns against 26.7 in 2.12, so it is not lower. The user accepted it as unchanged (its cost fell, $0.50 to $0.40); `lint_broken` (18.7 against 23.7) and `dry_run_error` (26.7 against 28) are lower.
 
 ## Plan Change Log
 
