@@ -9,6 +9,7 @@ companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/archit
 after: []
 refined: true
 risk: medium
+status: done
 ---
 
 # Author and Test skills
@@ -104,3 +105,8 @@ RPCN developers get pipelines that lint clean on their binary and come with samp
 - Decision (2026-11-18): Re-slice after the story 12 benchmark (`ours` lost all three comparisons on judge rank). The user approved the picks. Five improvement stories are added before the refactor sweep, in this build order: 14 (the benchmark judges every arm fairly), 15 (comparison scenarios the binary can separate), 16 (rpcn-test replies say only what the user needs, at lower cost), 17 (rpcn-author fails loudly on a missing required field), 18 (re-benchmark), then 13 (refactor sweep, which now also waits on 14–18). The epic grows from 13 stories to 18 and keeps them, as entry 12 asked ("an improvement story in this epic"). 16 may run alongside 14 and 15; 15 is the least certain. Evidence: the 2.12 plan's Implementation Notes, and the two judge entries in `deferred-work.md` of 2026-11-13.
 - Decision (2026-11-18): The comparisons run once more, in story 18 (about $55). This replaces the 2026-11-05 "comparisons run once, at the epic's end"; the actual cost of 12's run was $54.24, against the $8 accepted then. 18's `run_evals --with-compare` is also the AD-14 eval record for 16 and 17, so 16–18 are pushed together after it, and 16 and 17 only smoke-run their scenarios.
 - Decision (2026-11-18): Any comparison another arm still wins after 18 is recorded with its evidence and accepted as the epic's result. New stories come from it only if the user asks, so the benchmark does not loop.
+- Decision (2026-11-20, user): Story 2.16's `unit_bug` turn count (26.7 against 26.7 in 2.12) is accepted as unchanged, because its cost fell from $0.50 to $0.40.
+- Decision (2026-11-20, user): Epic closed. The closure check met R1–R12 and every Done when line: the validator is clean, and `evals/results/2026-11-20-83e2eea0bd76.json` matches the skills, with accuracy 1.0 and 38 scenarios 3/3. The user confirmed:
+  - `ours` wins 1 of 3 comparisons (`compare_lint`), and the `compare_write` and `compare_diagnose` losses to `skills-repo` stand (Decision 2026-11-18). The `compare_diagnose` loss has no judge note (backlog story 4).
+  - 4.115.0 counts as the newest release for this epic; the roll to 4.117.0 stays open.
+  - The 2.13 hand-offs are backlog stories 2–5 in `_bmad-output/backlog/`, outside this epic. Story 2 covers 11 matrix rows that are specified but have no scenario.

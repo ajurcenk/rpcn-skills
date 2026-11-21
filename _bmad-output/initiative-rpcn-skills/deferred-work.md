@@ -79,3 +79,10 @@
 - source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-re-benchmark-author-and-test-after-the-improvements-plan.md`
   summary: In `compare_diagnose`, the blind judge ranks `ours` last without writing a note on it, in both 2.12 and 2.18, so that loss has no judge evidence.
   evidence: Unverified, medium. `T/runs/20261120-171018/results.json`: the judge's `notes` cover three of the four labels. To settle it, rejudge and look at the raw reply and the prompt for `ours`' label, for example whether its reply is cut short or redacted to near-empty.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-author-and-test/tickets/story-refactor-sweep-plan.md`
+  summary: Resolution record for epic 2's deferred items, written at epic closure (2026-11-20). The earlier entries are left as written.
+  evidence: |
+    Closed without code: #3 (in epic-release-sync's Notes), #17 and #18 (fixed by 2.14), #20 (confirmed by 2.18).
+    Done in story 2.13: #8, #9, #11, #19.
+    Moved to the backlog (`_bmad-output/backlog/`): story 2 (#1, 2, 4, 5, 6, 7, 10, 13, 14, 15, 16), story 3 (#12), story 4 (#21), and story 5 (2.15's catch-in-processors scoring gap).
+    Numbering is the epic-author-and-test entries in file order, as in the 2.13 plan.
