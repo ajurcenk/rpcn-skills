@@ -158,6 +158,7 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
   - Checks: the validator and `sync_shared` are clean, and R (146), `rpcn_check` on both pins (192) and T (369) pass.
 - **First record run failed (2026-11-21, $37.72, 2 runs):** trigger accuracy was 1.0 and 43 of 45 scenarios passed 2/2. `rpcn-test__lint_broken` and `rpcn-test__samples_bug` were 1/2: rpcn-test ran `ls` on named reference files before reading them, which `bash_lacks` (story 2.13) flags. That is the habit deferred in 2.16, not this story. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-21-4eff486e7703.failed-141456.json`.
 - **Fix (user, 2026-11-21: fix the skill, keep the check):** rpcn-test's `SKILL.md` References rule says to read each reference with Read, never `ls` or test for one (4,761 characters). Smoke: both scenarios passed 6 of 6 runs on both pins.
+- **Eval record:** `evals/results/2026-11-21-aff2ac76fb4e.json` passed with `dirty: false`, at $42.43, on the second run. It is the first record at 2 runs, and the first with sessions on 4.117.0. Trigger accuracy was 1.0, and all 45 pass scenarios passed 2/2, linted on 4.100.0 and 4.117.0. The cost is higher than the $34 estimate: the three-step chain and the five pattern scenarios cost more per run than the scenarios before them.
 
 ## Plan Change Log
 
