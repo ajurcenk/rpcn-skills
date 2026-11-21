@@ -2696,7 +2696,16 @@ class RealBinaryCommandsTest(unittest.TestCase):
         )
         for b in self.each():
             out = self._run_pattern(b, "switch", config, ['{"id":"a","total":2}', '{"id":"b","total":"x"}'])
-            by_id = {json.loads(line)["id"]: json.loads(line) for line in out["data"]["outputs"]}
+            # Two stdout outputs (one per case) share the process's stdout, so their
+            # writes can land on one line ("{...}{...}"): read every JSON object in turn.
+            text, objs, dec, i = "\n".join(out["data"]["outputs"]), [], json.JSONDecoder(), 0
+            while i < len(text):
+                if text[i].isspace():
+                    i += 1
+                    continue
+                obj, i = dec.raw_decode(text, i)
+                objs.append(obj)
+            by_id = {o["id"]: o for o in objs}
             self.assertEqual(set(by_id), {"a", "b"})
             self.assertEqual(by_id["a"], {"id": "a", "total": 2, "cents": 200})
             self.assertTrue(by_id["b"]["dlq"])
