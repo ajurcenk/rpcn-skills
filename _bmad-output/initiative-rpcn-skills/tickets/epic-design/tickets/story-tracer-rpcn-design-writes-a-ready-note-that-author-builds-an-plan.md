@@ -119,6 +119,7 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 - **Smoke 2** (all 38 non-compare scenarios once, `runs/20261121-114755`, $12.39): 37 PASS; `rpcn-test__lint_broken` failed once on `read_lacks` (it read `references/unit-tests.md` after a failed lint). rpcn-test is unchanged in this story; a re-run at `--runs 2` (`runs/20261121-115714`) passed 2/2, so it is a model flake to watch.
 - **Matrix-gap scenarios** (added after review): `rpcn-design__existing_note` (fixture `streams/order_sync.design.md`; `blocked`, the note `unchanged`, `exists = false` globs for any other file) and `rpcn-design__unlisted_component` (`acme_queue` input; a `draft` note with a `[blocking]` item, `[[report]] ready = false`, `acme_queue` absent from Components). Both PASS at `--runs 1` on both binaries (`runs/20261121-115955`, $0.11 and $0.28). `rpcn-design__*` is now 5 scenarios, so there are 40 pass scenarios.
 - **Not done here:** review, commit and the `run_evals.py` record (AC 3).
+- **Eval record:** `evals/results/2026-11-21-713d83701efe.json` passed with `dirty: false`, at $48.19, on the first full run (3 runs per case, the last record under the old rule). Trigger accuracy was 1.0, including rpcn-design's 7 cases, and all 40 pass scenarios passed 3/3 on 4.100.0 and 4.117.0, including the three-step `rpcn-design__chain_tracer`.
 
 ## Plan Change Log
 
