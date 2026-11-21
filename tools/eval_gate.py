@@ -34,7 +34,7 @@ Exit codes:
      folder), or a partial run. `errors` lists each suite problem, and
      `partial` and `partialReason` are kept in the output on every exit 2.
 
-Run: uv run tools/eval_gate.py <aggregate-result.json> [--min-accuracy 0.9] [--min-runs 3]
+Run: uv run tools/eval_gate.py <aggregate-result.json> [--min-accuracy 0.9] [--min-runs 2]
                                [--cases-dir evals]
 """
 
@@ -132,7 +132,7 @@ def judge_run(run: object, kind: str) -> tuple[bool, str]:
     return grader.get("passed") is True, explanation
 
 
-def gate(data: dict, min_accuracy: float, min_runs: int = 3,
+def gate(data: dict, min_accuracy: float, min_runs: int = 2,
          expected: set[str] | None = None) -> tuple[int, dict]:
     result = empty_result()
     result["partial"] = bool(data.get("partial"))
@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("result", type=Path, help="aggregate-result.json from claude plugin eval")
     parser.add_argument("--min-accuracy", type=float, default=0.9)
-    parser.add_argument("--min-runs", type=int, default=3,
+    parser.add_argument("--min-runs", type=int, default=2,
                         help="runs every trigger case must have (default 3, AD-13)")
     parser.add_argument("--cases-dir", type=Path, default=CASES_DIR,
                         help="folder whose <skill>__trigger_* and <skill>__miss_* folders are "

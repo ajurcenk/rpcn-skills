@@ -308,7 +308,7 @@ class GateTest(unittest.TestCase):
         data["cases"][2]["arms"]["with"] = data["cases"][2]["arms"]["with"][:1]
         code, out = self.run_gate(data)
         self.assertEqual(code, 2)
-        self.assertIn(f"{POSITIVES[2]} has 1 runs (need 3)", out["error"])
+        self.assertIn(f"{POSITIVES[2]} has 1 runs (need 2)", out["error"])
 
     def test_single_run_suite_with_min_runs_1(self) -> None:
         code, out = self.run_gate(make_suite(runs=1), None, None, "--min-runs", "1")

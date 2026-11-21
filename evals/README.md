@@ -61,14 +61,14 @@ are new phrasings, so read the results with that in mind:
 From the repo root (the plugin root), with a logged-in Claude Code >= 2.1.269:
 
 ```
-claude plugin eval . --ablation none --runs 3 --tag trigger --no-publish --trust-plugin --json <out>.json
+claude plugin eval . --ablation none --runs 2 --tag trigger --no-publish --trust-plugin --json <out>.json
 uv run tools/eval_gate.py <out>.json
 ```
 
 - `--ablation none` runs only the with-plugin arm, so the `tool_used: Skill`
   graders count toward the score instead of being a with-only indicator.
 - `--no-publish` keeps the HTML report local; nothing goes to claude.ai.
-- `--runs 3` is the AD-13 minimum.
+- `--runs 2` is the AD-13 minimum (decision 2026-11-21; it was 3).
 - `claude plugin eval` also writes `evals/results/<timestamp>/`. Those
   timestamped folders are gitignored (`evals/results/*/`); the eval-record
   files `evals/results/<date>-<skills-hash>.json` (AD-14) are not, because
@@ -84,7 +84,7 @@ record (R12, AD-14). CI does not run evals; it only checks that a passing
 record exists for the exact skill content.
 
 ```
-uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 3] [--with-compare]
+uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 2] [--with-compare]
                           [--concurrency 4] [--jobs 4]
 ```
 
@@ -111,8 +111,8 @@ exited 0 with no crashed comparison arm. Exit 0 passed, 1 not passed, 2 setup
 error (no record), which includes a gate exit 2 (an incomplete suite): then no
 scenario runs.
 
-A record can pass only with `--runs` 3 or more, because the gate requires 3
-runs per trigger case. `--runs 1` or `2` is a smoke run that never passes.
+A record can pass only with `--runs` 2 or more, because the gate requires 2
+runs per trigger case. `--runs 1` is a smoke run that never passes.
 
 **Run time and parallelism.** One session at a time, a full default run
 took about 58 minutes (story 2.8: 954 s for the trigger gate's 90 sessions,
@@ -136,14 +136,14 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $47 for a default run (trigger suite ~$8.20, the forty
-  pass scenarios x 3 ~$38: one pass of thirty-eight of them at `--runs 1`
+- **Cost:** about $31 for a default run at 2 runs (trigger suite ~$5.50, the forty
+  pass scenarios x 2 ~$25; it was about $47 at 3 runs: one pass of thirty-eight of them at `--runs 1`
   cost $12.39 in story 3.1, plus about $0.40 for the two added after it; the
   three-step `rpcn-design__chain_tracer` is the largest at about $1.25 a run). The record's `cost_usd` holds the measured total.
 
 ## The gate
 
-`tools/eval_gate.py <aggregate-result.json> [--min-accuracy 0.9] [--min-runs 3] [--cases-dir evals]`
+`tools/eval_gate.py <aggregate-result.json> [--min-accuracy 0.9] [--min-runs 2] [--cases-dir evals]`
 counts every run of every `<skill>__trigger_*` and `<skill>__miss_*` case, for
 any skill (the eval output has no tags, so the name decides). A run is correct
 when its trigger grader passed and its `error` does not start with `API`.
@@ -165,5 +165,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $8.20 for the full 39 cases x 3 runs.
+About $0.07 and 7 s per run, so roughly $5.50 for the full 39 cases x 2 runs ($8.20 at 3).
 These evals run locally only, never in CI (CI holds no Claude credentials).

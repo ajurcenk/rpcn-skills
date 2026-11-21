@@ -284,7 +284,7 @@ flowchart LR
     - `run_evals.py` runs the `rpcn-test-skills` unit tests first.
 
     This was decided for epic 2 on 2026-11-05.
-  - **Repetition:** each trigger case and each scenario runs at least 3 times.
+  - **Repetition:** each trigger case and each scenario runs at least 2 times (3 until the user's decision of 2026-11-21, recorded in the initiative's Notes).
   - **Env vars:** native cases use only `EVAL_`-prefixed env vars.
   - **Gate:** trigger accuracy is at least 90%, out-of-scope negatives trigger no skill, and every scenario's produced files lint clean and match `expect.toml`.
 

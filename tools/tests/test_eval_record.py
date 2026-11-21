@@ -388,18 +388,18 @@ class RunEvalsTests(unittest.TestCase):
         self.assertTrue(rec["trigger"]["ok"])
         self.assertEqual(rec["trigger"]["accuracy"], 1.0)
         self.assertEqual(rec["scenarios"],
-                         [{"name": "rpcn-test__lint_broken", "result": "PASS", "runs": 3, "passed": 3}])
+                         [{"name": "rpcn-test__lint_broken", "result": "PASS", "runs": 2, "passed": 2}])
         self.assertIsNone(rec["compare"])
         self.assertEqual(rec["plugin_version"], "0.1.0")
         self.assertEqual(rec["claude_version"], "9.9.9 (Claude Code)")
-        self.assertAlmostEqual(rec["cost_usd"], 3.75)
+        self.assertAlmostEqual(rec["cost_usd"], 3.5)  # trigger 3.0 + lint_broken 2 runs x 0.25
         for key in ("date", "git_head", "dirty"):
             self.assertIn(key, rec)
         # the documented command lines, and no comparison scenario by default
         calls = self.calls()
-        self.assertIn("plugin eval . --ablation none --runs 3 --tag trigger --no-publish "
+        self.assertIn("plugin eval . --ablation none --runs 2 --tag trigger --no-publish "
                       "--trust-plugin --concurrency 4 --json ", calls)
-        self.assertIn(f"--source local:{self.repo.resolve()} --runs 3 --jobs 4 "
+        self.assertIn(f"--source local:{self.repo.resolve()} --runs 2 --jobs 4 "
                       "--scenario rpcn-test__lint_broken", calls)
         self.assertNotIn("compare_lint", calls)
         # progress lines, and the children's own output passed through
@@ -478,7 +478,7 @@ class RunEvalsTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         calls = self.calls()
         self.assertIn("--trust-plugin --concurrency 2 --json ", calls)
-        self.assertIn("--runs 3 --jobs 8 --scenario", calls)
+        self.assertIn("--runs 2 --jobs 8 --scenario", calls)
 
     def test_concurrency_and_jobs_out_of_range_exit_2(self) -> None:
         for flag, value in (("--concurrency", "0"), ("--concurrency", "9"), ("--jobs", "0"), ("--jobs", "9")):
@@ -496,8 +496,8 @@ class RunEvalsTests(unittest.TestCase):
         rec = self.only_record()
         self.assertEqual(rec["compare"], {"rpcn-test__compare_lint": "ours"})
         self.assertEqual(len(rec["scenarios"]), 2)
-        # trigger 3.0 + lint_broken 0.75 + compare (0.75 ours + 0.1 bare + 0.5 judge)
-        self.assertAlmostEqual(rec["cost_usd"], 5.1)
+        # trigger 3.0 + lint_broken 0.5 + compare (0.5 ours + 0.1 bare + 0.5 judge), at 2 runs
+        self.assertAlmostEqual(rec["cost_usd"], 4.6)
 
     def test_gate_fail_writes_failed_record(self) -> None:
         self.agg.write_text(json.dumps(aggregate(fail_cases=3)))
@@ -518,7 +518,7 @@ class RunEvalsTests(unittest.TestCase):
         self.assertFalse(rec["passed"])
         self.assertTrue(rec["trigger"]["ok"])
         self.assertEqual(rec["scenarios"][0], {"name": "rpcn-test__lint_broken",
-                                               "result": "FAIL", "runs": 3, "passed": 0})
+                                               "result": "FAIL", "runs": 2, "passed": 0})
 
     def test_passing_record_kept_when_a_later_run_fails(self) -> None:
         self.assertEqual(self.run_evals().returncode, 0)

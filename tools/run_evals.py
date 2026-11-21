@@ -33,7 +33,7 @@ record):
 that passed. The top-level `passed` is true only when the gate is ok, every
 scenario passed, and run_scenarios.py exited 0 with top-level `passed` true and
 no crashed comparison arm. The record is written even when it fails. A record
-can pass only with --runs >= 3 (eval_gate requires 3 runs per case); fewer is
+can pass only with --runs >= 2 (eval_gate requires 2 runs per case); fewer is
 a smoke run.
 
 Exit codes:
@@ -52,7 +52,7 @@ then --jobs (default 4) scenario runs at once; the stages stay in order and
 comparison scenarios still run one at a time. All sessions share one account
 rate limit. --concurrency 1 --jobs 1 is the old sequential run (about 58 min).
 
-Run: uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 3] [--with-compare]
+Run: uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 2] [--with-compare]
                                [--concurrency 4] [--jobs 4]
 """
 
@@ -318,8 +318,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--test-project", type=Path, default=None,
                    help="the rpcn-test-skills folder (default: ../rpcn-test-skills beside this repo)")
-    p.add_argument("--runs", type=int, default=3, help="runs per trigger case and scenario (default 3); a record can pass "
-                        "only with 3 or more, fewer is a smoke run that never passes")
+    p.add_argument("--runs", type=int, default=2, help="runs per trigger case and scenario (default 2); a record can pass "
+                        "only with 2 or more, fewer is a smoke run that never passes")
     p.add_argument("--with-compare", action="store_true",
                    help="also run the comparison (benchmark) scenarios, about +$12")
     p.add_argument("--concurrency", type=int, default=DEFAULT_PARALLEL,
