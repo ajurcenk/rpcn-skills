@@ -491,7 +491,7 @@ binary splits a `--set` value on commas (`SOURCES.md`), so no value has one:
 
 - The config's `input` is replaced by `stdin` and its `output` by `stdout`:
   a `--set` whose value is an object replaces the whole value at that path,
-  on 4.100.0 and 4.115.0 (`SOURCES.md`). The input's and output's own
+  on 4.100.0 and 4.117.0 (`SOURCES.md`). The input's and output's own
   processors, and any `switch`, `fallback` or `broker` output, go with them,
   so only `pipeline.processors` run. The pipeline file is never edited
   (AD-6).
@@ -532,7 +532,7 @@ logs the error and passes the message on unchanged, flagged as failed.
 field of the wrong type, for example), the binary logs
 `level=error msg="<error>" … label=<label> path=<path>` and still exits 0. It
 logs the same line when a later `catch` handles the error (`SOURCES.md`,
-4.100.0 and 4.115.0), so a log line alone does not say the message failed.
+4.100.0 and 4.117.0), so a log line alone does not say the message failed.
 Log lines are parsed as logfmt (quoted values unescaped); `info`, `warn`
 and path-less `error` lines are ignored.
 
@@ -577,7 +577,7 @@ Runs `rpk connect test` cases. The binary is called as:
 
 `<target>` is a config holding `tests:`, or a `<name>_benthos_test.yaml`
 file, which runs its cases against `<name>.yaml` beside it (the binary's
-default suffix, confirmed on 4.100.0 and 4.115.0).
+default suffix, confirmed on 4.100.0 and 4.117.0).
 
 `data`:
 

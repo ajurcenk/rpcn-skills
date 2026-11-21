@@ -26,7 +26,7 @@ passes with a made-up value:
   the output's processors. When the request names no failure path, that
   is a question (below).
 
-Both facts are proved on 4.100.0 and 4.115.0: the `.lowercase()` and
+Both facts are proved on 4.100.0 and 4.117.0: the `.lowercase()` and
 `.string()` behaviour by `RealBinaryCommandsTest.test_run_deleted_root_and_missing_field`,
 and `errored()` by `test_run_bounded` and `test_run` (the processor error
 handling row), both in `SOURCES.md`.
