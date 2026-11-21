@@ -3,7 +3,7 @@ title: 'Refactor sweep'
 type: 'chore'
 ticket: '13'
 created: '2026-11-20'
-status: 'built'
+status: 'done'
 baseline_revision: '4b1d508ab3cc9860c4d791833f34b90e52585889'
 route: 'full'
 route_source: 'auto'
@@ -117,6 +117,7 @@ context: []
 
 The old `deferred-work.md` entries are left as they were (Never rule).
 - **After the review fixes (2026-11-20):** R's suites (146) and T's tests (343, both binaries set) pass. Nothing under `skills/` changed, so the 2.18 eval record still matches.
+- **Pushed:** `046fe05..b99f82e`. CI run 44843250999 was green. The runner change is in T `3d36d62` (local only).
 
 ## Plan Change Log
 
