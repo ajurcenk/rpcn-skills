@@ -3,7 +3,7 @@ title: 'Tracer: rpcn-design writes a ready note that Author builds and Test chec
 type: 'feature'
 ticket: '1'
 created: '2026-11-21'
-status: 'built'
+status: 'done'
 baseline_revision: 'b78adf3c9177cae1f23faeb69778450e3e5b4397'
 route: 'full'
 route_source: 'auto'
@@ -120,6 +120,7 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 - **Matrix-gap scenarios** (added after review): `rpcn-design__existing_note` (fixture `streams/order_sync.design.md`; `blocked`, the note `unchanged`, `exists = false` globs for any other file) and `rpcn-design__unlisted_component` (`acme_queue` input; a `draft` note with a `[blocking]` item, `[[report]] ready = false`, `acme_queue` absent from Components). Both PASS at `--runs 1` on both binaries (`runs/20261121-115955`, $0.11 and $0.28). `rpcn-design__*` is now 5 scenarios, so there are 40 pass scenarios.
 - **Not done here:** review, commit and the `run_evals.py` record (AC 3).
 - **Eval record:** `evals/results/2026-11-21-713d83701efe.json` passed with `dirty: false`, at $48.19, on the first full run (3 runs per case, the last record under the old rule). Trigger accuracy was 1.0, including rpcn-design's 7 cases, and all 40 pass scenarios passed 3/3 on 4.100.0 and 4.117.0, including the three-step `rpcn-design__chain_tracer`.
+- **Pushed:** `feda7d5..a6fe8a0`. CI run 44931408465 was green. The runner change is in T `9be79ed` (local only).
 
 ## Plan Change Log
 
