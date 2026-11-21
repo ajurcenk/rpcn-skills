@@ -3,7 +3,7 @@ title: 'Roll the newest tested pin from 4.115.0 to 4.117.0'
 type: 'chore'
 ticket: ''
 created: '2026-11-20'
-status: 'built'
+status: 'done'
 baseline_revision: '7c5f780bdc5e8791df50ed5546c691d54429b0db'
 route: 'oneshot'
 route_source: 'auto'
@@ -48,6 +48,7 @@ context: []
 - **Second eval run failed (2026-11-21, $46.65):** only `rpcn-author__design_note` failed, at 1/3, and `fix_own_tests` now passed 3/3. In 2 of the 3 runs, Author put the DLQ in `order_fulfilment.resources.yaml` as a shared `output_resources` entry, used by both a `switch` on `errored()` and the `fallback`. That is a valid design, but the check read only the pipeline file. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-21-5b1072170025.failed-094326.json`.
 - **Fix (user, 2026-11-21: check the pipeline and its resources):** a T runner change only. A `[[file]]` glob with `contains` or `lacks` now reads every matching file together, and `design_note` checks `pipes/order_fulfilment*.yaml`. It has a runner test and a README note. Smoke: `design_note` passed 3/3 on both binaries, and T's tests pass (341). Nothing under `skills/` changed, so the skills hash is unchanged.
 - **Eval record:** `evals/results/2026-11-21-5b1072170025.json` passed with `dirty: false`, at $46.23, on the third run. Trigger accuracy was 1.0, and all 35 scenarios passed 3/3, linted on 4.100.0 and 4.117.0. After the review, T's tests pass (341) and the two tightened scenarios passed 3/3 (`T/runs/20261121-104053`).
+- **Pushed:** `0140dc1..feda7d5`. CI run 44921675596 was green, so CI's binary cache now fetches 4.117.0. The test-project changes are local only (T `1abb8b9`, `f46a43c`, `bf3c07e`).
 
 ## Review Triage Log
 
