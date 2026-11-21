@@ -45,6 +45,8 @@ context: []
   - `skills/rpcn-author/references/design-note.md` §3 now says a component added to carry out what a section already asks is not a departure: record no row.
   - The T check `fix_own_tests` `reply_lacks` is narrowed to phrases that tell the user to apply changes with rpcn-author, and its pinned test is updated.
   - Smoke: both scenarios passed 3/3 on 4.100.0 and 4.117.0 (`T/runs/20261121-091733`), and T's tests (340) and the validator pass.
+- **Second eval run failed (2026-11-21, $46.65):** only `rpcn-author__design_note` failed, at 1/3, and `fix_own_tests` now passed 3/3. In 2 of the 3 runs, Author put the DLQ in `order_fulfilment.resources.yaml` as a shared `output_resources` entry, used by both a `switch` on `errored()` and the `fallback`. That is a valid design, but the check read only the pipeline file. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-21-5b1072170025.failed-094326.json`.
+- **Fix (user, 2026-11-21: check the pipeline and its resources):** a T runner change only. A `[[file]]` glob with `contains` or `lacks` now reads every matching file together, and `design_note` checks `pipes/order_fulfilment*.yaml`. It has a runner test and a README note. Smoke: `design_note` passed 3/3 on both binaries, and T's tests pass (341). Nothing under `skills/` changed, so the skills hash is unchanged.
 
 ## Review Triage Log
 
