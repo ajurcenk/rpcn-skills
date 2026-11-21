@@ -38,3 +38,7 @@ Developers can trust that the skills match the current RPCN release and know rea
 - parent — `_bmad-output/initiative-rpcn-skills/initiative-rpcn-skills.md`, section Requirements
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`
 - architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-5, AD-11, AD-12, AD-14
+
+## Notes
+
+- AD-11's deprecated-component scan must not flag the plain phrase "Kafka Connect" in two trigger negatives, or must exempt them: `evals/rpcn-test__miss_kafka_connect/prompt.md` (deferred from story 1.7) and `evals/rpcn-author__miss_kafka_connect/prompt.md` (deferred from story 2.4). Both are in `_bmad-output/initiative-rpcn-skills/deferred-work.md`; the second was handed here by epic 2's refactor sweep (2026-11-20).
