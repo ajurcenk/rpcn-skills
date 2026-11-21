@@ -38,6 +38,13 @@ context: []
 - **Kept as examples:** `rpcn_version: 4.115.0` in the header examples of the shared formats, and the fixture pins in `tools/tests/test_eval_record.py` and `test_rpcn_check.py`. These are sample values, not tested pins.
 - **CI:** the binary cache key hashes `tools/rpcn_versions.txt`, so it follows the change with no edit.
 - **Checks:** R's suites (146), the validator, `sync_shared --check`, and T's tests with 4.100.0 and 4.117.0 (343) pass.
+- **First eval run failed (2026-11-20, $46.91):** trigger accuracy 1.0, and 35 of 37 scenarios passed 3/3, but `rpcn-author__design_note` and `rpcn-test__fix_own_tests` were 2/3. Neither failure came from 4.117.0. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-20-bff3c8f67d38.failed-201120.json`.
+  - `design_note` run 2: Author wrapped the HTTP output in `reject_errored`, so a failed mapping reaches the DLQ, and recorded that as a Deviations row. The note's own Error handling asks for the DLQ, so it was not a departure.
+  - `fix_own_tests` run 2: the reply correctly said "nothing needs applying with rpcn-author", but the check's `"with rpcn-author"` string matched it (a false alarm).
+- **Fixes (user, 2026-11-21: fix both, then re-run):**
+  - `skills/rpcn-author/references/design-note.md` §3 now says a component added to carry out what a section already asks is not a departure: record no row.
+  - The T check `fix_own_tests` `reply_lacks` is narrowed to phrases that tell the user to apply changes with rpcn-author, and its pinned test is updated.
+  - Smoke: both scenarios passed 3/3 on 4.100.0 and 4.117.0 (`T/runs/20261121-091733`), and T's tests (340) and the validator pass.
 
 ## Review Triage Log
 

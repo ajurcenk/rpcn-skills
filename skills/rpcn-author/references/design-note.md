@@ -50,7 +50,10 @@ The note decides the design; the request may add to it or override it.
 A departure is a place where the pipeline deliberately does something a
 section says otherwise, because the request or the binary forces it: the
 request overrides a choice (such as no DLQ), or the binary has no component
-or field for it. Something the note doesn't mention is not a departure.
+or field for it. Something the note doesn't mention is not a departure,
+and neither is a component added to carry out what a section already asks
+(such as a `reject_errored` or `catch` that sends failed messages to the
+note's DLQ): record no row for it.
 
 One choice is one departure, so one row, under the section that makes the
 choice: dropping the DLQ is one `Error handling` row, even though the DLQ
