@@ -2649,6 +2649,130 @@ class RealBinaryCommandsTest(unittest.TestCase):
             self.assertEqual(sorted(out["data"]["outputs"]),
                              ['{"email":"a@x.com","id":"o1"}', '{"email":"null","id":"o4"}'])
 
+    # Pattern facts rpcn-design's references/patterns.md rests on (SOURCES.md, story 3.2).
+    # Each config reads stdin and writes stdout, so no broker is needed. A wrapper
+    # output (fallback, switch, broker) around stdout sends the logs to stdout too,
+    # so these configs set `logger.level: none` (or log to a file) to keep the
+    # outputs clean.
+
+    def _run_pattern(self, b: str, name: str, config: str, lines: list[str]) -> dict:
+        (self.tmp / f"{name}.yaml").write_text(config)
+        (self.tmp / f"{name}.jsonl").write_text("".join(line + "\n" for line in lines))
+        code, out = self.check(b, "run", f"{name}.yaml", "--input", f"{name}.jsonl", cwd=self.tmp, timeout=60)
+        self.assertEqual(code, 0, out)
+        return out
+
+    def test_pattern_fallback_sends_a_failed_write_on(self) -> None:
+        """A `fallback` output sends a message to its next output when an earlier
+        one fails, and sets `fallback_error` metadata to the failure's error."""
+        config = (
+            "logger:\n  level: none\n"
+            "input:\n  stdin: {}\n"
+            "output:\n  fallback:\n"
+            "    - reject: 'primary down for ${! json(\"id\") }'\n"
+            "    - stdout: {}\n"
+            "      processors:\n"
+            "        - mapping: 'root = this.merge({\"err\": @fallback_error})'\n"
+        )
+        for b in self.each():
+            out = self._run_pattern(b, "fallback", config, ['{"id":"a"}', '{"id":"b"}'])
+            self.assertEqual(sorted(out["data"]["outputs"]),
+                             ['{"err":"primary down for a","id":"a"}', '{"err":"primary down for b","id":"b"}'])
+
+    def test_pattern_switch_on_errored_routes_processing_failures(self) -> None:
+        """A `switch` output whose case `check` is `errored()` routes a message a
+        processor failed on, with `error()` still readable; other messages take
+        the next case."""
+        config = (
+            "logger:\n  level: none\n"
+            "input:\n  stdin: {}\n"
+            "pipeline:\n  processors:\n"
+            "    - mapping: |\n        root = this\n        root.cents = this.total * 100\n"
+            "output:\n  switch:\n    cases:\n"
+            "      - check: errored()\n"
+            "        output:\n          stdout: {}\n          processors:\n"
+            "            - mapping: 'root = this.merge({\"dlq\": true, \"why\": error()})'\n"
+            "      - output:\n          stdout: {}\n"
+        )
+        for b in self.each():
+            out = self._run_pattern(b, "switch", config, ['{"id":"a","total":2}', '{"id":"b","total":"x"}'])
+            by_id = {json.loads(line)["id"]: json.loads(line) for line in out["data"]["outputs"]}
+            self.assertEqual(set(by_id), {"a", "b"})
+            self.assertEqual(by_id["a"], {"id": "a", "total": 2, "cents": 200})
+            self.assertTrue(by_id["b"]["dlq"])
+            self.assertIn("cannot multiply types string", by_id["b"]["why"])
+            self.assertNotIn("cents", by_id["b"])
+
+    def test_pattern_retry_then_fallback(self) -> None:
+        """A `retry` output tries its output again up to `max_retries` times
+        (1 + max_retries attempts), then fails, so a surrounding `fallback`
+        takes the message, with `fallback_error` set to the retry's own error,
+        not the inner output's."""
+        log = self.tmp / "retry.log"
+        config = (
+            "logger:\n  level: warn\n  format: logfmt\n"
+            f"  file:\n    path: {log}\n    rotate: false\n"
+            "input:\n  stdin: {}\n"
+            "output:\n  fallback:\n"
+            "    - retry:\n        max_retries: 2\n"
+            "        backoff:\n          initial_interval: 10ms\n          max_interval: 20ms\n"
+            "        output:\n          reject: 'api down'\n"
+            "    - stdout: {}\n"
+            "      processors:\n"
+            "        - mapping: 'root = this.merge({\"dlq\": true, \"err\": @fallback_error})'\n"
+        )
+        for b in self.each():
+            log.unlink(missing_ok=True)
+            out = self._run_pattern(b, "retry", config, ['{"id":"a"}'])
+            (line,) = out["data"]["outputs"]
+            got = json.loads(line)
+            self.assertEqual((got["id"], got["dlq"]), ("a", True))
+            self.assertTrue(got["err"])
+            # the kept error is the retry's own ("message failed to reach a target
+            # destination" on 4.100.0 and 4.117.0), not the inner output's
+            self.assertNotIn("api down", got["err"])
+            attempts = [entry for entry in log.read_text().splitlines() if "Failed to send message: api down" in entry]
+            self.assertEqual(len(attempts), 3, log.read_text())
+
+    def test_pattern_batching_count(self) -> None:
+        """An output's `batching.count` delivers messages in groups of that size
+        (here `broker`'s, since `stdout` has no `batching`; an `archive` batch
+        processor shows each group)."""
+        config = (
+            "logger:\n  level: none\n"
+            "input:\n  stdin: {}\n"
+            "output:\n  broker:\n    outputs:\n      - stdout: {}\n"
+            "    batching:\n      count: 2\n      processors:\n"
+            "        - archive:\n            format: json_array\n"
+        )
+        lines = ['{"n":1}', '{"n":2}', '{"n":3}', '{"n":4}']
+        for b in self.each():
+            out = self._run_pattern(b, "batching", config, lines)
+            self.assertEqual(sorted(out["data"]["outputs"]), ['[{"n":1},{"n":2}]', '[{"n":3},{"n":4}]'])
+            # `format: lines` joins each group into one payload, one message per line;
+            # a mapping after it turns the newline into `|`, so one stdout line is one payload.
+            lines_config = config.replace(
+                "format: json_array\n",
+                "format: lines\n        - mapping: 'root = content().string().replace_all(\"\\n\", \"|\")'\n")
+            self.assertIn("format: lines", lines_config)
+            out = self._run_pattern(b, "batching_lines", lines_config, lines)
+            self.assertEqual(sorted(out["data"]["outputs"]), ['{"n":1}|{"n":2}', '{"n":3}|{"n":4}'])
+
+    def test_pattern_dedupe_drops_a_seen_key(self) -> None:
+        """A `dedupe` processor with a local (`memory`) cache drops a message whose
+        key it has already seen, and keeps the first."""
+        config = (
+            "input:\n  stdin: {}\n"
+            "pipeline:\n  threads: 1\n  processors:\n"
+            "    - dedupe:\n        cache: seen\n        key: '${! json(\"event_id\") }'\n"
+            "output:\n  stdout: {}\n"
+            "cache_resources:\n  - label: seen\n    memory: {}\n"
+        )
+        lines = ['{"event_id":"e1","n":1}', '{"event_id":"e2","n":2}', '{"event_id":"e1","n":3}']
+        for b in self.each():
+            out = self._run_pattern(b, "dedupe", config, lines)
+            self.assertEqual(sorted(out["data"]["outputs"]), lines[:2])
+
     def test_test(self) -> None:
         for b in self.each():
             code, out = self.check(b, "test", "stdin_pipeline_benthos_test.yaml")

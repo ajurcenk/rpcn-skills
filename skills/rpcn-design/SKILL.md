@@ -54,7 +54,9 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 
 ## Step 3: Pick components
 
-For each part of the flow (input, processors, output, the DLQ, resources):
+First read `references/patterns.md`: each pattern the request calls for
+adds parts. For each part of the flow (input, processors, output, the DLQ,
+resources):
 
 ```bash
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py list <category>

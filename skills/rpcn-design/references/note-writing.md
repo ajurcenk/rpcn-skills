@@ -5,7 +5,8 @@ against (AD-7). Its format is `design-format.md` (in this folder): exactly
 eleven `##` sections, with those headings, in that order. Write it in one
 Write call, from the request and the Step 3 and 4 results only. State no
 component, field or behaviour that the request, `list` or `fields` did not
-give you.
+give you. A behaviour may also come from a `patterns.md` entry's Basis (its
+`SOURCES.md` row).
 
 ## Header and title
 
@@ -47,12 +48,14 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <file>
    `rate_limit`, `buffer`, `metrics`, `tracer`). Every component that
    Inputs, Outputs or Error handling names has a row. A role is one short
    phrase, with no `|`.
-5. **Error handling:** the minimal pattern below.
+5. **Error handling:** as below, with `patterns.md` patterns 1 to 3.
 6. **Delivery and ordering:** what the request says about the delivery
-   guarantee and ordering, else `None.`
+   guarantee and ordering, with `patterns.md` pattern 6, else `None.`
 7. **Idempotency:** what the request says about duplicates and dedupe
-   keys, else `None.`
-8. **Batching:** what the request says about batching, else `None.`
+   keys, with `patterns.md` pattern 5, else `None.`
+8. **Batching:** what the request says about batching, with `patterns.md`
+   pattern 4, else `None.` A period with no size is written as intent,
+   naming no field.
 9. **Throughput expectations:** the rates, message sizes and latency the
    request gives, else `None.`
 10. **Open decisions:** one bullet per gap, as below, else `None.`
@@ -64,7 +67,17 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <file>
     |---|---|---|---|---|
     ```
 
-## Error handling: the minimal pattern
+## Patterns
+
+`patterns.md` (in this folder), read before Step 3, gives each pattern's
+Components rows, picked and checked in Steps 3 and 4. For each pattern the
+request calls for, and only those, write what its entry's **Note** says in
+its section and add its **Components** rows. A pattern the request doesn't
+call for stays out: no `retry` without a retry asked for, no `switch`
+without processing failures to route, no `dedupe` without repeats to drop,
+no batching without a batch size.
+
+## Error handling
 
 Say, in plain sentences, what happens to a message that fails:
 
@@ -72,18 +85,14 @@ Say, in plain sentences, what happens to a message that fails:
   path, such as "the Redpanda topic `orders.dlq`". Use the one the
   request names. If it names none, pick a topic on the input's system
   when it has topics (`<input topic>.dlq`), else a file
-  `<name>.dlq.jsonl`, and write that pick as an open decision.
-- **The retries:** how many times the sink that can fail is retried
-  before the message goes to the DLQ. Use the request's count, else pick
-  3 and write the pick as an open decision. Name the retry field only
-  when Step 4's `fields` output for that component lists it (such as
-  `max_retries` or `retries`).
+  `<name>.dlq.jsonl`, and write that pick as a `[non-blocking]` open
+  decision (`patterns.md` pattern 1). The note stays ready.
+- **The retries:** only when the request asks for them, as `patterns.md`
+  pattern 3 says.
 - **Where each kind of failure goes,** as intent, in the request's
   words: such as "orders that fail processing or can't be delivered go
-  to `orders.dlq`". Name a component only when Components lists it (such
-  as a wrapper output that `list outputs` lists and `fields` passed, as
-  in `design-format.md`'s Example). Say nothing about how Redpanda
-  Connect routes the message: building that is rpcn-author's job.
+  to `orders.dlq`". Failed writes are pattern 1 and processing failures
+  pattern 2; name a component only when Components lists it.
 - **A drop:** only when the request asks for one. Then the DLQ is
   `None.` for that path, and the section says the message is dropped.
 
