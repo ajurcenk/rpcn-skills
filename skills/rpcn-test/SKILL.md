@@ -14,9 +14,9 @@ variables, `cat` or heredocs. Use Read and Write for files. Never edit the
 pipeline or a `.blobl`: propose fixes as diffs.
 
 **References:** read all a step needs in one turn (Step 3's check
-references together, after lint); never list `references/`. Lint failed:
-skip `dry-run.md`, `unit-tests.md`: `Not run: lint failed.` No design note:
-skip `design-check.md`: `Not run: no design note.`
+references together, after lint), each with Read: never `ls` or test for a
+reference. Lint failed: skip `dry-run.md`, `unit-tests.md`: `Not run: lint
+failed.` No design note: skip `design-check.md`: `Not run: no design note.`
 
 **Headless** if the prompt says unattended, headless or non-interactive,
 or a script reports `data.headless: true`: never ask; end with the status
