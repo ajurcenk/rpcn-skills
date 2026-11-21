@@ -3,14 +3,14 @@ title: 'Roll the newest tested pin from 4.115.0 to 4.117.0'
 type: 'chore'
 ticket: ''
 created: '2026-11-20'
-status: 'in-progress'
+status: 'built'
 baseline_revision: '7c5f780bdc5e8791df50ed5546c691d54429b0db'
 route: 'oneshot'
 route_source: 'auto'
 risk: 'medium'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'quick'
+review_source: 'pinned'
+lenses_ran: ['quick']
 review_loop_iteration: 0
 context: []
 ---
@@ -33,12 +33,12 @@ context: []
 ## Implementation Notes
 
 - **Pin:** `tools/rpcn_versions.txt` now pins `4.117.0`, with the `4.100.0` floor kept. `fetch_rpcn.py` fetched it, and its `--version` is 4.117.0. It embeds benthos `v4.84.0`, the same as 4.115.0.
-- **Facts re-proved:** all 187 `rpcn_check` tests pass on 4.100.0 and 4.117.0, the real-binary ones included. No fact changed. The six SOURCES.md rows proved by those tests now cite connect `v4.117.0` (benthos `v4.84.0`). The same wording changed in `tools/shared/rpcn_check/SCHEMA.md` (3 places) and in `skills/rpcn-author/references/questions.md` (1 line, the only skills change).
-- **Not re-proved, kept as written:** the `lint-errors.md` row (adapted from `redpanda-data/skills`) says it was "checked by hand against `rpcn_check lint` output on 4.100.0 and 4.115.0. No CI test yet". This roll did not redo that hand check, so the row still says 4.115.0.
+- **Facts re-proved:** all 187 `rpcn_check` tests pass on 4.100.0 and 4.117.0, the real-binary ones included. No fact changed. The six SOURCES.md rows proved by those tests now cite connect `v4.117.0` (benthos `v4.84.0`). The same wording changed in `tools/shared/rpcn_check/SCHEMA.md` (3 places) and in `skills/rpcn-author/references/questions.md` (1 line). The second skills change, `design-note.md` §3, came from the first eval run (below).
+- **The hand-checked `lint-errors.md` row** (adapted from `redpanda-data/skills`) was re-checked at review (2026-11-21). `lint --deprecated` output on 4.117.0 is identical to 4.115.0's on the multi-error, deprecated, bad-YAML and env-var fixtures, and the row now says so.
 - **Kept as examples:** `rpcn_version: 4.115.0` in the header examples of the shared formats, and the fixture pins in `tools/tests/test_eval_record.py` and `test_rpcn_check.py`. These are sample values, not tested pins.
 - **CI:** the binary cache key hashes `tools/rpcn_versions.txt`, so it follows the change with no edit.
 - **Checks:** R's suites (146), the validator, `sync_shared --check`, and T's tests with 4.100.0 and 4.117.0 (343) pass.
-- **First eval run failed (2026-11-20, $46.91):** trigger accuracy 1.0, and 35 of 37 scenarios passed 3/3, but `rpcn-author__design_note` and `rpcn-test__fix_own_tests` were 2/3. Neither failure came from 4.117.0. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-20-bff3c8f67d38.failed-201120.json`.
+- **First eval run failed (2026-11-20, $46.91):** trigger accuracy 1.0, and 33 of 35 scenarios passed 3/3, but `rpcn-author__design_note` and `rpcn-test__fix_own_tests` were 2/3. Neither failure came from 4.117.0. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-20-bff3c8f67d38.failed-201120.json`.
   - `design_note` run 2: Author wrapped the HTTP output in `reject_errored`, so a failed mapping reaches the DLQ, and recorded that as a Deviations row. The note's own Error handling asks for the DLQ, so it was not a departure.
   - `fix_own_tests` run 2: the reply correctly said "nothing needs applying with rpcn-author", but the check's `"with rpcn-author"` string matched it (a false alarm).
 - **Fixes (user, 2026-11-21: fix both, then re-run):**
@@ -47,8 +47,20 @@ context: []
   - Smoke: both scenarios passed 3/3 on 4.100.0 and 4.117.0 (`T/runs/20261121-091733`), and T's tests (340) and the validator pass.
 - **Second eval run failed (2026-11-21, $46.65):** only `rpcn-author__design_note` failed, at 1/3, and `fix_own_tests` now passed 3/3. In 2 of the 3 runs, Author put the DLQ in `order_fulfilment.resources.yaml` as a shared `output_resources` entry, used by both a `switch` on `errored()` and the `fallback`. That is a valid design, but the check read only the pipeline file. The failed record is kept at `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/2026-11-21-5b1072170025.failed-094326.json`.
 - **Fix (user, 2026-11-21: check the pipeline and its resources):** a T runner change only. A `[[file]]` glob with `contains` or `lacks` now reads every matching file together, and `design_note` checks `pipes/order_fulfilment*.yaml`. It has a runner test and a README note. Smoke: `design_note` passed 3/3 on both binaries, and T's tests pass (341). Nothing under `skills/` changed, so the skills hash is unchanged.
+- **Eval record:** `evals/results/2026-11-21-5b1072170025.json` passed with `dirty: false`, at $46.23, on the third run. Trigger accuracy was 1.0, and all 35 scenarios passed 3/3, linted on 4.100.0 and 4.117.0. After the review, T's tests pass (341) and the two tightened scenarios passed 3/3 (`T/runs/20261121-104053`).
 
 ## Review Triage Log
+
+Quick pass (after the third eval run): 0 high, 0 medium, 6 low, 0 false, 0 maybe-false. All six route to patch. None changes `skills/`, so the record stands.
+
+| # | Finding | Verdict | Route | Evidence / action |
+|---|---|---|---|---|
+| 1 | The `lint-errors.md` SOURCES row was not proved on 4.117.0 | low | patch | The hand check was redone: output identical on four fixtures. The row is updated. |
+| 2 | The notes said `questions.md` was the only skills change | low | patch | `design-note.md` §3 changed too. Note fixed. |
+| 3 | "35 of 37" scenarios | low | patch | The records hold 35. Now "33 of 35". |
+| 4 | T README example still pins 4.115.0 | low | patch | It is a run command, not a sample value. Now 4.117.0. |
+| 5 | `fix_own_tests`' narrowed check misses other wrong hand-offs | low | patch | `use rpcn-author` restored (it never matched the false alarm), plus `have rpcn-author apply`. Smoked 3/3. |
+| 6 | The `design_note` glob also matches other `order_fulfilment*.yaml` files, such as `_benthos_test.yaml` | low | patch | Now `pipes/order_fulfilment.*yaml`, which matches only the pipeline and `.resources.yaml`. Smoked 3/3. |
 
 ## Verification
 
