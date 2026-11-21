@@ -1,0 +1,111 @@
+# Epic 3 (Design skill): planned stories in build order. Table order is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: rpcn-design writes a ready note that Author builds and Test checks"
+description = "Scaffolds rpcn-design (SKILL.md, references, shared format copies through shared.txt, scripts, trigger cases, an npx install), and adds multi-step chains to the scenario runner (a scenario runs several skill sessions in one folder, in order, with wall time summed). From a plain headless request, Design writes a ready <name>.design.md in design@1 whose components rpcn_check lists and fields report. Author builds it into a pipeline that lints clean, and Test's Design check reports no mismatch. Patterns are minimal here (error handling and the DLQ); the full set is story 2. Delivers R7's thin path; story 6 delivers it for every pattern family."
+verify = "A chained headless scenario (Design, then Author, then Test) in a subfolder with a non-default name passes on 4.100.0 and 4.117.0: a ready note, a pipeline that lints clean, Design check with 0 mismatch. The trigger gate passes with rpcn-design's positive and near-miss cases, the runner's chain tests pass, and the validator is clean."
+covers = ["R1", "R2", "R7", "R9"]
+after = ["2.6", "2.10"]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 2
+type = "story"
+title = "Design recommends each pattern from a sourced fact"
+description = "A patterns reference for DLQ, retries, batching, idempotency and ordering, distilled from the docs and the reference skill sets (each adapted piece with a SOURCES.md row and licence), each pattern naming the behaviour fact it rests on, proved on both binaries. Design names every pattern relevant to the request in the note."
+verify = "Every pattern in the reference cites a SOURCES.md row proved by a real-binary test on 4.100.0 and 4.117.0; eval-case notes name each pattern relevant to their request (a scenario per pattern family)."
+covers = ["R1", "R3"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Design asks what only the user can decide"
+description = "Interactive runs ask at most two short rounds, each question with its pick: always the failure target, the delivery guarantee, ordering and the idempotency key; everything else gets a default. An unanswered choice is [blocking] only when it changes components (failure target, delivery), else [non-blocking] with the pick written in. Shares one eval record with story 4: it only smoke-runs, and 3 and 4 are pushed together after 4's record (epic decision 2026-11-21)."
+verify = "Interactive scenarios: one that asks the four questions, each with its pick, and writes no note; one whose prompt already carries the answers (as rpcn-author__ask_existing does) that writes a ready note; one that leaves the failure target open and writes a not-ready note with a [blocking] decision. The first reply holds the whole first round."
+covers = ["R4"]
+after = [2]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Headless Design writes a draft note with its open decisions"
+description = "A headless run never asks: it writes a draft note listing each open decision and ends with the AD-8 status block. In a chain (story 1's runner support), rpcn-author treats the draft as not ready, as it already does. Its eval record also covers story 3, and 3 and 4 are pushed together."
+verify = "A headless scenario on an ambiguous request: status draft, each open decision listed, status block complete with them in open_questions; rpcn-author then builds from the request alone and says the note is not ready."
+covers = ["R5"]
+after = [3]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 5
+type = "story"
+title = "A Design re-run keeps Author's Deviations"
+description = "Re-running Design over an existing note keeps every Deviations row, marks the rows its rewrite absorbs resolved: yes, and keeps the note's other hand-offs valid (design-format, AD-7)."
+verify = "A scenario on a note with two unresolved rows, one the new request absorbs: both rows kept, the absorbed one resolved: yes, the other still no; the note is ready."
+covers = ["R6"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Every pattern family survives Design, Author and Test"
+description = "Using story 1's chains and story 2's pattern list, a chained scenario per pattern family (DLQ and retries, batching, idempotency, ordering): Design names the pattern, Author's pipeline contains it and lints clean, and Test's Design check reports no mismatch. Delivers R7 for each eval case (Done when); story 1 delivered the thin path. Shares an eval record: it only smoke-runs, and 9's --with-compare run is the record for 6, 8 and 9, pushed together."
+verify = "Each pattern-family chain passes on both binaries, with its pattern in the note and the pipeline and Design check `<n> ok, 0 deviation-recorded, 0 mismatch`."
+covers = ["R7"]
+after = [5, "2.10"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "rpcn-design fits beside rpcn-author and rpcn-test"
+description = "Story 1 delivered the scaffold and rpcn-design's own trigger cases. This story completes epic 1's conventions for it (size, references at their step, a Next line for each situation, headless status), and makes the siblings name it (AD-9): rpcn-author's and rpcn-test's descriptions and Next lines, and their trigger near-miss cases (evals/rpcn-*__miss_*) for 'design a pipeline' against 'write a pipeline'."
+verify = "Validator shows no warnings for all three skills; the trigger gate passes with design/author/test near-miss negatives silent for the wrong skill."
+covers = ["R9"]
+after = [6]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 8
+type = "story"
+title = "A newcomer reaches a tested pipeline in under 10 minutes"
+description = "One end-to-end eval scenario on story 1's chains: from a plain request, Design, then Author, then Test, headless, reach a passing test report within 10 minutes of wall time summed across the chain's steps, on both binaries. Only smoke-runs: 9's --with-compare run is its record."
+verify = "The end-to-end scenario passes 3/3 on 4.100.0 and 4.117.0 with every run under 10 minutes of wall time, recorded in the eval record."
+covers = ["R8"]
+after = [7]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "Benchmark Design against the other skill sets"
+description = "One Design comparison scenario runs in the four arms with run_evals --with-compare. A new arm-neutral compare check scores a design note: the patterns it names against story 2's expected set for the request, and its components against the binary. A loss is recorded with the judge's evidence and accepted unless the user asks for a story (epic decision 2026-11-20). Its --with-compare run is also the eval record for 6 and 8; 6, 8 and 9 are pushed together after it."
+verify = "The eval record's compare names a winner for the Design comparison; each arm's score, judge rank and cost are in the plan."
+covers = ["R10"]
+after = [8]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 10
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from plans and review findings the epic deferred."
+verify = "All epic checks still pass after the cleanup."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+hitl = false
+risk = "low"

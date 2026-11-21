@@ -66,3 +66,8 @@ A developer new to RPCN goes from a described pipeline to a linted, tested one i
   - **The 10-minute goal:** one end-to-end eval scenario (R8).
   - **Benchmark:** one comparison at the epic's end (R10).
   - **Order:** the pin roll to 4.117.0 comes before the first build. Backlog story 6 (learning from the reference sets) comes after this epic.
+- Decision (2026-11-21, user): The epic is sliced into 10 stories in one lane, since every story edits `skills/rpcn-design`.
+  - **Tracer bullet:** story 1. Design writes a ready note, Author builds it, and Test's Design check passes on it. It also adds multi-step chains to the scenario runner, which stories 4, 6 and 8 rely on.
+  - **Least certain:** story 2, sourced patterns, right after the tracer. Every pattern needs a fact the binary can show, and stories 3, 6 and 9 rely on its pattern list.
+  - **Eval cost:** stories share records, as epic 2 did. 3 and 4 share one; 9's `--with-compare` run is the record for 6, 8 and 9. That is about 6 records instead of 9, roughly $300–350. Grouped stories are pushed together.
+  - **Shared requirements:** R7 is split between story 1 (the thin path) and story 6 (every pattern family). R9 is split between story 1 (the scaffold and rpcn-design's own triggers) and story 7 (the sibling edits).
