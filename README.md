@@ -8,6 +8,7 @@ Skills in this release:
 
 | Skill | What it does |
 |---|---|
+| `rpcn-design` | Writes a design note for a pipeline from a plain request: its components (checked against your binary), error handling with a DLQ and retries, and open decisions, for `rpcn-author` to build from |
 | `rpcn-author` | Writes a new pipeline from a plain request, using only the components and fields your binary reports, and lints it until clean |
 | `rpcn-test` | Lints a pipeline, explains each error with a proposed fix and writes a test report; also finds your Redpanda Connect binary and reports its path and version |
 
@@ -19,7 +20,7 @@ With `npx skills`, for Claude Code or any agent that supports [Agent Skills](htt
 npx skills add ajurcenk/rpcn-skills
 ```
 
-Then ask your agent to "write me a Redpanda Connect pipeline" or "lint my pipeline".
+Then ask your agent to "design a Redpanda Connect pipeline that reads orders from Redpanda and posts them to my API", "write me a Redpanda Connect pipeline" or "lint my pipeline".
 
 ## Requirements
 
