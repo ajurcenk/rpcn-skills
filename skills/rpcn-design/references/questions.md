@@ -20,7 +20,9 @@ the request doesn't already answer, with the pick you would use:
    identifies one? Pick: no dedupe.
 
 The request answers an ask when it says what it needs: a named DLQ, topic,
-table or file answers the failure target; a DLQ or retries also answer the
+table or file answers the failure target, and so does a DLQ asked for
+without a name ("a dead-letter topic": its name is the pattern 1 default,
+a `[non-blocking]` pick); a DLQ or retries also answer the
 delivery guarantee (at-least-once); "drop" or "log and drop" answers both
 (at-most-once, no DLQ). A request that says a choice isn't decided yet
 ("we haven't decided where failed messages go") has left it open: don't
@@ -71,16 +73,20 @@ and 4) before Step 5 writes.
   note stays ready. A request that already says to go ahead with your
   picks is that answer for every open ask: ask nothing, and write.
 
-## A choice left open (interactive)
+## A choice left open
 
-The user skips an ask, says it isn't decided, or the request says so:
+In both modes. Interactive: the user skips an ask, says it isn't
+decided, or the request says so. Headless: nothing in the request settles
+the ask (by the inferences in "The four asks"):
 
 - **The failure target or the delivery guarantee** changes components (a
   DLQ output, a `fallback`). Write it as `[blocking] <the question>.` in
-  Open decisions, naming no destination, and the note is `draft`. Add no
-  component for it: no DLQ output and no `fallback` row for an open
-  failure target. Its section
-  says the choice is open (see Open decisions).
+  Open decisions, and the note is `draft`. Interactive, name no
+  destination; headless, the question may suggest the pattern 1 default
+  (`[blocking] Where do failed messages go? (Suggested: <the DLQ>.)`).
+  Add no component for it: no DLQ output and no `fallback` row for an
+  open failure target. Its section says the choice is open (see Open
+  decisions).
 - **Ordering or the idempotency key** changes one setting or one
   processor, so the pick is safe to build on: write it as `[non-blocking]
   <the question>? Picked: <the pick>.` in this file's words (`Picked: no
@@ -88,5 +94,10 @@ The user skips an ask, says it isn't decided, or the request says so:
 
 ## Headless
 
-Never ask. This file's rounds don't apply: pick as `note-writing.md` Open
-decisions says, write the note, and end with the status block.
+Never ask: the rounds and "After the answers" don't apply. Settle each of
+the four asks from the request alone, by the inferences in "The four
+asks", then apply "A choice left open" to each one nothing settles: an
+open failure target or delivery guarantee is `[blocking]` and the note is
+`draft`; ordering or the idempotency key gets its pick as
+`[non-blocking]`. Every other choice gets its default. Write the note,
+and end with the status block (a `draft` note still ends `complete`).

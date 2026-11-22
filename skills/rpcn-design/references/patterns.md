@@ -26,14 +26,19 @@ adds up with `retry`). Building the chain is rpcn-author's job.
 ## 1. DLQ for failed writes
 
 - **When:** the sink can fail to take a message (always, unless the
-  request says failures are dropped or only logged). Use the destination
-  the request names (a DLQ, a dead-letter topic, a file). When it names
-  none, keep the default: a topic on the input's system when it has topics
-  (`<input topic>.dlq`), else a file `<name>.dlq.jsonl`, written in Open
-  decisions as `[non-blocking] Where do failed messages go? Picked: <the
-  DLQ> — the request named none.` The note stays ready. That holds
-  headless, or for a pick the user accepted; an interactive failure target
-  left open is `questions.md`'s `[blocking]` case (no DLQ, `draft`).
+  request says failures are dropped or only logged: then no `fallback` at
+  all, not even to a `drop`, as `note-writing.md` says). Use the destination
+  the request names (a DLQ, a dead-letter topic, a file). The default DLQ
+  is a topic on the input's system when it has topics (`<input
+  topic>.dlq`), else a file `<name>.dlq.jsonl`. When nothing settles the
+  failure target (`questions.md`), in either mode, write `[blocking]
+  Where do failed messages go? (Suggested: <the default DLQ>.)` in Open
+  decisions (interactive, with no suggestion), add no `fallback` or DLQ
+  row, and the note is `draft`. Two cases keep the default DLQ instead,
+  written as `[non-blocking] Where do failed messages go? Picked: <the
+  DLQ> — the request named none.`, with the note ready: a request that
+  asks for a DLQ but names none ("failed messages go to a dead-letter
+  topic"), and an interactive pick the user accepted.
 - **Note (Error handling):** the DLQ destination by name, and that a
   message the sink fails to take goes there. When the request wants the
   error kept, say the DLQ copy carries it as `fallback_error` metadata.

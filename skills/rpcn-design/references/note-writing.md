@@ -83,12 +83,13 @@ Say, in plain sentences, what happens to a message that fails:
 
 - **The DLQ destination**, by name: the system and the topic, table or
   path, such as "the Redpanda topic `orders.dlq`". Use the one the
-  request names. If it names none, pick a topic on the input's system
-  when it has topics (`<input topic>.dlq`), else a file
-  `<name>.dlq.jsonl`, and write that pick as a `[non-blocking]` open
-  decision (`patterns.md` pattern 1). The note stays ready. Interactive,
-  the failure target is asked first (`questions.md`); one the user left
-  open is `[blocking]`, with no DLQ named.
+  request names. When nothing settles the failure target
+  (`questions.md`; interactive asks it first), it is `[blocking]` in
+  both modes, as `patterns.md` pattern 1 says: no DLQ or `fallback` is
+  added, the section says the failure target is open, and the note is
+  `draft`. A DLQ asked for without a name, or an interactive pick the
+  user accepted, keeps the default DLQ instead, written as a
+  `[non-blocking]` open decision, and the note stays ready.
 - **The retries:** only when the request asks for them, as `patterns.md`
   pattern 3 says.
 - **Where each kind of failure goes,** as intent, in the request's
@@ -99,7 +100,10 @@ Say, in plain sentences, what happens to a message that fails:
   `None.` for that path, and the section says the message is dropped.
 
 When the request says failures go nowhere (log and drop), write that, and
-no DLQ.
+no DLQ: pattern 1 doesn't apply, so add no `fallback` (not even one to a
+`drop` or a `log`). The drop is intent in Error handling; a component for
+it is added only when Step 4's `fields` shows one that drops on a failed
+write.
 
 ## Open decisions
 
@@ -111,8 +115,8 @@ choice still open that changes the design, pick the answer and write it in:
   the status block's `open_questions` as `Assumed: <pick> (<question>)`.
 - `[blocking] <the question>.` only for:
   - a part of the flow that no listed component fits (Step 4);
-  - interactive only: a failure target or delivery guarantee the user
-    left open (`questions.md`, "A choice left open"). Then no DLQ or
+  - a failure target or delivery guarantee nothing settles, in either
+    mode (`questions.md`, "A choice left open"). Then no DLQ or
     `fallback` is added for it.
 
   The note is then `draft`.
