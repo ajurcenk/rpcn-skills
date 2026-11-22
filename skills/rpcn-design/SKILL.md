@@ -16,10 +16,9 @@ says). Never write pipeline YAML or any other file.
 Run one `uv run …/rpcn_check.py` command per Bash call: no `cd`, `&&`, `;`,
 variables, `cat` or heredocs. Use Read and Write for files.
 
-**Never ask.** Every gap gets a pick, written as a `[non-blocking]` open
-decision (`references/note-writing.md`). **Headless** when the prompt says
-unattended, headless or non-interactive, or a script reports
-`data.headless: true`: also end with the status block.
+**Headless** when the prompt says unattended, headless or
+non-interactive, or a script reports `data.headless: true`: never ask,
+and end with the status block. Else ask first (Step 5).
 
 ## Step 1: Check the binary
 
@@ -81,7 +80,8 @@ doesn't list.
 
 ## Step 5: Write the note
 
-Write `<note>` as `references/note-writing.md` says: the header, the title,
+First read `references/questions.md`; ask as it says. Then write
+`<note>` as `references/note-writing.md` says: the header, the title,
 then the eleven sections in order. `status: ready` only when Open
 decisions holds no `[blocking]` item and every Components row passed
 Step 4; else `draft`.

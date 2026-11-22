@@ -31,7 +31,9 @@ adds up with `retry`). Building the chain is rpcn-author's job.
   none, keep the default: a topic on the input's system when it has topics
   (`<input topic>.dlq`), else a file `<name>.dlq.jsonl`, written in Open
   decisions as `[non-blocking] Where do failed messages go? Picked: <the
-  DLQ> — the request named none.` The note stays ready.
+  DLQ> — the request named none.` The note stays ready. That holds
+  headless, or for a pick the user accepted; an interactive failure target
+  left open is `questions.md`'s `[blocking]` case (no DLQ, `draft`).
 - **Note (Error handling):** the DLQ destination by name, and that a
   message the sink fails to take goes there. When the request wants the
   error kept, say the DLQ copy carries it as `fallback_error` metadata.

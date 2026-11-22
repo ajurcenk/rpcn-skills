@@ -86,7 +86,9 @@ Say, in plain sentences, what happens to a message that fails:
   request names. If it names none, pick a topic on the input's system
   when it has topics (`<input topic>.dlq`), else a file
   `<name>.dlq.jsonl`, and write that pick as a `[non-blocking]` open
-  decision (`patterns.md` pattern 1). The note stays ready.
+  decision (`patterns.md` pattern 1). The note stays ready. Interactive,
+  the failure target is asked first (`questions.md`); one the user left
+  open is `[blocking]`, with no DLQ named.
 - **The retries:** only when the request asks for them, as `patterns.md`
   pattern 3 says.
 - **Where each kind of failure goes,** as intent, in the request's
@@ -101,14 +103,19 @@ no DLQ.
 
 ## Open decisions
 
-Never ask. For every choice the request leaves open that changes the
-design, pick the answer and write it in:
+Headless never asks; interactive asks first (`questions.md`). For every
+choice still open that changes the design, pick the answer and write it in:
 
 - `[non-blocking] <the question>? Picked: <the pick>.` Use a pick in its
-  section as if the request had said it. Each pick also goes in the
-  status block's `open_questions` as `Assumed: <pick> (<question>)`.
-- `[blocking] <the question>.` only for a part of the flow that no listed
-  component fits (Step 4). The note is then `draft`.
+  section as if the request had said it. Headless: each pick also goes in
+  the status block's `open_questions` as `Assumed: <pick> (<question>)`.
+- `[blocking] <the question>.` only for:
+  - a part of the flow that no listed component fits (Step 4);
+  - interactive only: a failure target or delivery guarantee the user
+    left open (`questions.md`, "A choice left open"). Then no DLQ or
+    `fallback` is added for it.
+
+  The note is then `draft`.
 
 A detail the request leaves out that changes nothing in the pipeline (a
 rate, a message size) is not an open decision: leave it out of its

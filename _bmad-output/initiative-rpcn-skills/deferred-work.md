@@ -86,3 +86,6 @@
     Done in story 2.13: #8, #9, #11, #19.
     Moved to the backlog (`_bmad-output/backlog/`): story 2 (#1, 2, 4, 5, 6, 7, 10, 13, 14, 15, 16), story 3 (#12), story 4 (#21), and story 5 (2.15's catch-in-processors scoring gap).
     Numbering is the epic-author-and-test entries in file order, as in the 2.13 plan.
+- source_plan: `_bmad-output/initiative-rpcn-skills/tickets/epic-design/tickets/story-design-asks-what-only-the-user-can-decide-plan.md`
+  summary: Cover an interactive Design run where the user answers round 1 ("go ahead", or skipping an ask) with a real second turn, which needs multi-turn sessions (`--resume`) in T's scenario runner.
+  evidence: Story 3.3's "go ahead" and "ordering/key left open" rows are checked only with the answer carried in the first prompt; `claude -p` ends at the first reply and `[[step]]` sessions share no conversation.
