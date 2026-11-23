@@ -3,7 +3,7 @@ title: 'Headless Design writes a draft note with its open decisions'
 type: 'feature'
 ticket: '4'
 created: '2026-11-21'
-status: 'built'
+status: 'done'
 baseline_revision: 'ab87f48a426017fbdc00b0b55fd685d1250819a9'
 route: 'full'
 route_source: 'auto'
@@ -123,6 +123,9 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 - **Not done here:** the shared 3.3 + 3.4 eval record, and the push.
 
 - **Flake fix before the record (2026-11-23, user: "fix the flake first, then run the record"):** `patterns.md` pattern 1's Note now says nothing about what the DLQ copy carries unless the request asks to keep the error. Only then does it name `fallback_error`. `rpcn-design__chain_tracer`'s note check also lacks `fallback_error`. Smoke (`--runs 3`, both pins): `chain_tracer` 3/3, `pattern_dlq_retry` 3/3. The deferred-work entry is resolved by this change.
+
+- **Eval record (shared with story 3.3):** `evals/results/2026-11-23-b2b494cf8596.json` passed with `dirty: false` on the first run, at $48.54. Trigger accuracy was 1.0, and all 52 pass scenarios passed 2/2, linted on 4.100.0 and 4.117.0 with sessions on 4.117.0. The cost was higher than the $41 estimate.
+- **Pushed:** `de69406..b50f2a4`, together with story 3.3. CI run 45218559167 was green. The T commits (`e893693`, `aad485b`, `0d5bf95`) stay local.
 
 ## Plan Change Log
 

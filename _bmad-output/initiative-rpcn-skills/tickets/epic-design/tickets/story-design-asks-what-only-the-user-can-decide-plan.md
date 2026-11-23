@@ -3,7 +3,7 @@ title: 'Design asks what only the user can decide'
 type: 'feature'
 ticket: '3'
 created: '2026-11-21'
-status: 'built'
+status: 'done'
 baseline_revision: '8969862377c891704820fe75afcfb8ec56269369'
 route: 'full'
 route_source: 'auto'
@@ -106,6 +106,9 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 - **Review fixes (2026-11-21, quick pass):** `questions.md` applies the "answers an ask" inferences to answers given in a round, and its open-failure-target `[blocking]` names no destination. `patterns.md` pattern 1 qualifies the default pick (headless, or a pick the user accepted). `ask_failure_open` lacks `the request named none` and `logins.dlq`. `ShippedDesignAskScenarioTests.load` rejects "unattended", "headless" and "non-interactive". `SKILL.md`: 4,770 characters.
 - **Verification after the fixes:** validator no warnings; `sync_shared --check` clean; `tools/tests skills` 146 passed; `rpcn_check` tests on 4.100.0 and 4.117.0 192 passed; T 371 passed, 3 skipped. Smoke (`T/runs/20261121-194215`, all 15 `rpcn-design__*` at `--runs 1`, sessions on 4.117.0, checks on both pins): 15/15 PASS, $6.71.
 - **Not done here:** the eval record (story 4's, shared), and the push (3 and 4 together).
+
+- **Eval record (shared with story 3.4):** `evals/results/2026-11-23-b2b494cf8596.json` passed with `dirty: false` on the first run, at $48.54. Trigger accuracy was 1.0, and all 52 pass scenarios passed 2/2, linted on 4.100.0 and 4.117.0 with sessions on 4.117.0. The cost was higher than the $41 estimate.
+- **Pushed:** `de69406..b50f2a4`, together with story 3.4. CI run 45218559167 was green. The T commits (`e893693`, `aad485b`, `0d5bf95`) stay local.
 
 ## Plan Change Log
 
