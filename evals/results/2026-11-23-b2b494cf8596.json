@@ -1,0 +1,342 @@
+{
+  "schema": 1,
+  "skills_hash": "b2b494cf8596286335b6f82ade811ca442a1f6a076a135e980a1999c0f85f178",
+  "date": "2026-11-23",
+  "git_head": "888ef8b858957a8c7804dd6a62c0be76f020ccc1",
+  "dirty": false,
+  "plugin_version": "0.1.0",
+  "claude_version": "2.1.330 (Claude Code)",
+  "trigger": {
+    "ok": true,
+    "accuracy": 1.0,
+    "runs_total": 78,
+    "runs_correct": 78,
+    "positives": {
+      "runs": 50,
+      "correct": 50
+    },
+    "negatives": {
+      "runs": 28,
+      "correct": 28
+    },
+    "failed_runs": [],
+    "partial": false
+  },
+  "scenarios": [
+    {
+      "name": "rpcn-author__apply_report",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__ask_existing",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__ask_first",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__assume_headless",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__design_deviation",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__design_draft",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__design_not_ready",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__design_note",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__draft_report",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__existing_file",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__implied_required",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__npx_miss",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__npx_trigger",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__stale_report",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__write_blobl",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-author__write_resources_yml",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__ask_answered",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__ask_failure_open",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__ask_first",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__ask_go_ahead",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__ask_key_open",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__chain_headless_draft",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__chain_tracer",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__existing_note",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__headless_drop",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__npx_miss",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__npx_trigger",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__pattern_batching",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__pattern_default_dlq",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__pattern_dlq_retry",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__pattern_idempotency",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__pattern_ordering",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-design__unlisted_component",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__design_deviation_recorded",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__design_deviation_resolved",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__design_mismatch",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__design_ok",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__dry_run_error",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__dry_run_needs_service",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__dry_run_pass",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__fix_own_tests",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__lint_broken",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__lint_subfolder",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__lint_subfolder_valid",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__npx_miss",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__npx_trigger",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__samples_bug",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__samples_pass",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__samples_written",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__unit_bug",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__unit_existing",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    },
+    {
+      "name": "rpcn-test__unit_pass",
+      "result": "PASS",
+      "runs": 2,
+      "passed": 2
+    }
+  ],
+  "compare": null,
+  "passed": true,
+  "cost_usd": 48.5425
+}
