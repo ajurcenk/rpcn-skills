@@ -3,7 +3,7 @@ title: "A Design re-run keeps Author's Deviations"
 type: 'feature'
 ticket: '5'
 created: '2026-11-23'
-status: 'built'
+status: 'done'
 baseline_revision: '311fdb0b41caf1bd3795672fde35b6b90ca6acbe'
 route: 'full'
 route_source: 'auto'
@@ -104,6 +104,9 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 
 - **Final verification (2026-11-23, after the review patches):** validator no warnings; `sync_shared --check` clean; `tools/tests skills` 146 passed; `rpcn_check` tests on both pins 192 passed; T 378 passed, 3 skipped. Smoke (all 21 `rpcn-design__*` once): 20/21. `rerun_none` failed: the session edited the note with Edit and never invoked rpcn-design, because the request "Update the design note …: peak traffic is now 400" matched no trigger in the description.
 - **Trigger fix (outside the Code Map):** the description now names "update my design note" and "an existing note updated". It was shortened elsewhere to fit, keeping every trigger phrase: 874 characters, `SKILL.md` 4,795, no validator warnings. New positive trigger case `evals/rpcn-design__trigger_update_note`. Smoke: `rerun_none` 2/2, `rerun_deviations` 1/1, `npx_trigger` 1/1.
+
+- **Eval record:** `evals/results/2026-11-23-a64ae9f6227e.json` passed with `dirty: false` on the first run, at $46.50. Trigger accuracy was 1.0, including the new update-note case. All 56 pass scenarios passed 2/2, linted on 4.100.0 and 4.117.0 with sessions on 4.117.0.
+- **Pushed:** `b50f2a4..72cf82a`. CI run 45234490562 was green. The T commit (`125c0d0`) stays local.
 
 ## Plan Change Log
 
