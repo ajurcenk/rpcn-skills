@@ -69,7 +69,8 @@ adds up with `retry`). Building the chain is rpcn-author's job.
 
 - **When:** the request asks for failed writes to be retried (with a count
   or without: then pick 3 and write the pick as a `[non-blocking]` open
-  decision). Not otherwise.
+  decision). Not otherwise: then say only that none were asked for, never
+  that a write is not retried (a sink's own retry field keeps its default).
 - **Note (Error handling):** how many times the sink is retried before the
   message goes on to the DLQ (pattern 1). Name `max_retries: <N>` when
   `fields outputs retry` lists it; otherwise write "retried <N> times".
@@ -110,14 +111,24 @@ adds up with `retry`). Building the chain is rpcn-author's job.
   be dropped, by a key.
 - **Note (Idempotency):** the key (such as `event_id`), that the first
   message with a key goes on and a later one with the same key is dropped,
-  and the cache that holds the keys seen.
+  and the cache that holds the keys seen. For a `memory` cache, say how
+  long it keeps a key: the request's window, else a `[non-blocking]` pick
+  of the `default_ttl` default that `fields caches memory` reports. Say,
+  as intent, that a message missing the key goes to the failure target.
+  Add no component for it: pattern 2 applies only by its own When.
+- **Note (Delivery and ordering):** a message every output fails after
+  `dedupe` recorded its key is dropped as a repeat when it is replayed.
 - **Components:** `processor | dedupe | Drop repeats of <key>`, and
-  `cache | memory | Keys dedupe has seen`. When the request names another
-  cache (such as `redis`) and `list caches` lists it, use it instead, and
-  write the request's wish as intent, with no claim about how that cache
-  behaves.
+  `cache | memory | Keys dedupe has seen, kept <window>`. When the
+  request names another cache (such as `redis`) and `list caches` lists
+  it, use it instead, and write the request's wish (any window too) as
+  intent only, with no claim about how that cache behaves.
 - **Basis:** SOURCES: `dedupe`. A `dedupe` processor with a `memory` cache
   drops a message whose key it has already seen. Only `memory` is proved.
+  The window's basis is fields: `default_ttl`, the default and description
+  `fields caches memory` reports.
+  SOURCES: `dedupe` before a failed write: a replayed nacked message is
+  dropped as a repeat.
 
 When the request says the sink already handles repeats (such as an API that
 deduplicates on `id`), say that, and add no `dedupe`.

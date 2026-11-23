@@ -2782,6 +2782,35 @@ class RealBinaryCommandsTest(unittest.TestCase):
             out = self._run_pattern(b, "dedupe", config, lines)
             self.assertEqual(sorted(out["data"]["outputs"]), lines[:2])
 
+    def test_pattern_dedupe_before_a_failed_write_loses_it(self) -> None:
+        """`stdin` replays a nacked message (`auto_replay_nacks` defaults to true).
+        Without `dedupe`, a message every output rejects is replayed until the run
+        times out; with `dedupe` before the output, the replayed copy is dropped as
+        a repeat, so the run ends and that message reached no output (lost)."""
+        output = (
+            "output:\n  switch:\n    cases:\n"
+            "      - check: this.event_id == \"e1\"\n        output:\n          reject: \"sink down\"\n"
+            "      - output:\n          stdout: {}\n"
+            "logger:\n  level: none\n"
+        )
+        dedupe = (
+            "input:\n  stdin: {}\n"
+            "pipeline:\n  threads: 1\n  processors:\n"
+            "    - dedupe:\n        cache: seen\n        key: '${! json(\"event_id\") }'\n"
+            + output + "cache_resources:\n  - label: seen\n    memory: {}\n"
+        )
+        plain = "input:\n  stdin: {}\npipeline:\n  threads: 1\n  processors: []\n" + output
+        lines = ['{"event_id":"e1"}', '{"event_id":"e2"}']
+        (self.tmp / "replay.yaml").write_text(plain)
+        (self.tmp / "replay.jsonl").write_text("".join(line + "\n" for line in lines))
+        for b in self.each():
+            out = self._run_pattern(b, "dedupe_replay", dedupe, lines)
+            self.assertEqual(out["data"]["outputs"], [lines[1]])
+            code, out = self.check(b, "run", "replay.yaml", "--input", "replay.jsonl", "--timeout", "8",
+                                   cwd=self.tmp, timeout=60)
+            self.assertEqual(code, 2, out)
+            self.assertIn("timed out", out["errors"][0]["message"])
+
     def test_test(self) -> None:
         for b in self.each():
             code, out = self.check(b, "test", "stdin_pipeline_benthos_test.yaml")
