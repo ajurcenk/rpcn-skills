@@ -97,12 +97,18 @@ why (for example `Not run: no design note.`).
      `run timed out after <s>s`, after any rows for errors before it.
 
    A message fails only when it reaches the output still errored: an
-   error that a later `catch` handles (DLQ routing) is not a failure. The
+   error that a later `catch` handles (DLQ routing) is not a failure, nor
+   is one routed to the failure path when the top-level output is a
+   `switch` whose first case's `check` is `errored()` and at least one
+   message reaches Outputs: those rows go under **Routed to the failure
+   path:**, a table with the Errors columns, after Outputs. The
    section holds `Not run: lint failed.` when lint has errors, and
    `Not run: needs <component>` when a processor or resource calls an
    outside service (such as `http_client`, a `redis` cache or `sql`). A
    failed dry run makes the verdict `fail`; a dry run that did not run does
-   not.
+   not. The Summary line is `Dry run: passed` or
+   `Dry run: failed (<n> errors)`, either followed by `, <r> routed` when
+   <r> messages were routed, or `Dry run: not run` for any `Not run`.
 5. **Unit tests**: the test cases file `<name>_benthos_test.yaml` beside the
    pipeline, run with `rpk connect test` through `rpcn_check.py test
    [--resources <res>] <name>.yaml`: `--resources` with the same resources

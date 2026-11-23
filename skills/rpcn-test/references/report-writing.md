@@ -28,7 +28,8 @@ Follow `test-report-format.md` and `handoff-header.md` (both in this folder).
 - Bloblang samples: as `samples.md` says.
 - Dry run: as `dry-run.md` says.
 - Unit tests: as `unit-tests.md` says.
-- Design check: as `design-check.md` says.
+- Design check: as `design-check.md` says; with no design note,
+  `Not run: no design note.` without reading it.
 - Proposed changes: one numbered item per cause, each a title, a
   `Cause:` line and a `diff` block (`fix-check.md`): lint fixes against the
   pipeline, sample fixes against the `.blobl`, dry-run and unit-test fixes

@@ -138,8 +138,8 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $56 for a default run at 2 runs (trigger suite ~$5.90, the
-  sixty pass scenarios x 2 ~$50.60; it was about $47 at 3 runs with forty: one
+- **Cost:** about $59 for a default run at 2 runs (trigger suite ~$5.90, the
+  sixty-one pass scenarios x 2 ~$53.10; it was about $47 at 3 runs with forty: one
   pass of thirty-eight of them at `--runs 1` cost $12.39 in story 3.1, plus about
   $0.40 for the two added after it, story 3.2's five `rpcn-design__pattern_*`
   scenarios cost about $0.42 a run each, and story 3.3's five
@@ -151,7 +151,8 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   about $0.15 and `rpcn-design__rerun_ask` about $0.13; the three-step
   `rpcn-design__chain_tracer` about $1.25 a run, and story 3.6's four
   three-step `rpcn-design__chain_<family>` chains are the largest at about
-  $1.60 a run each). The record's `cost_usd` holds the measured total.
+  $1.60 a run each, with story 3.8's three-step `rpcn-design__newcomer_e2e`
+  about $1.25 a run). The record's `cost_usd` holds the measured total.
 
 ## The gate
 

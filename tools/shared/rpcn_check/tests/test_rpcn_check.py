@@ -2712,6 +2712,57 @@ class RealBinaryCommandsTest(unittest.TestCase):
             self.assertIn("cannot multiply types string", by_id["b"]["why"])
             self.assertNotIn("cents", by_id["b"])
 
+    def test_pattern_dlq_metadata_with_mutation_not_mapping(self) -> None:
+        """A message a `mapping` failed on (`root = this` on a payload that is
+        not JSON) keeps its payload, and a `mutation` with
+        `meta error = error()` sets `error` to the error text; a `mapping`
+        with `root = this` in its place fails again, and `error` is lost."""
+        def config(step: str) -> str:
+            return (
+                "logger:\n  level: none\n"
+                "input:\n  stdin: {}\n"
+                "pipeline:\n  processors:\n"
+                "    - mapping: 'root = this'\n"
+                + step +
+                "    - mapping: 'root = \"%s|%s\".format(content().string(), @error.or(\"none\"))'\n"
+                "output:\n  stdout: {}\n")
+        mutation = config("    - mutation: 'meta error = error()'\n")
+        mapping = config("    - mapping: |\n        root = this\n        meta error = error()\n")
+        lines = ['{"id":"a"}', "not json"]
+        for b in self.each():
+            out = sorted(self._run_pattern(b, "dlq_mutation", mutation, lines)["data"]["outputs"])
+            self.assertEqual(out[1], '{"id":"a"}|none')
+            self.assertTrue(out[0].startswith("not json|failed assignment"), out[0])
+            self.assertIn("parse as json", out[0])
+            out = self._run_pattern(b, "dlq_mapping", mapping, lines)
+            self.assertEqual(sorted(out["data"]["outputs"]), ['not json|none', '{"id":"a"}|none'])
+
+    def test_pattern_non_json_deleted_by_match_failed_by_parse_json(self) -> None:
+        """On a payload that is not JSON, a `match` whose arm tests
+        `this.<field>` and gives `deleted()` deletes it with no error, while
+        `root = content().parse_json()` fails the mapping: the payload is
+        unchanged and errored, so a failure path (`errored()`) takes it. On a
+        JSON payload, `root.email = this.email.lowercase()` after it sets the
+        field to the lowercased string."""
+        head = "logger:\n  level: none\ninput:\n  stdin: {}\npipeline:\n  processors:\n"
+        match = head + (
+            "    - mapping: |\n        root = match {\n"
+            "          this.email == null => deleted(),\n"
+            "          _ => this.assign({\"email\": this.email.lowercase()}),\n        }\n"
+            "output:\n  stdout: {}\n")
+        parse = head + (
+            "    - mapping: |\n        root = content().parse_json()\n"
+            "        root.email = this.email.lowercase()\n"
+            "    - mapping: 'root = \"%s|%v\".format(content().string(), errored())'\n"
+            "output:\n  stdout: {}\n")
+        lines = ['{"id":"a","email":"A@X.COM"}', "not json"]
+        for b in self.each():
+            out = self._run_pattern(b, "nonjson_match", match, lines)
+            self.assertEqual(out["data"]["outputs"], ['{"email":"a@x.com","id":"a"}'])
+            out = self._run_pattern(b, "nonjson_parse", parse, lines)
+            self.assertEqual(sorted(out["data"]["outputs"]),
+                             ['not json|true', '{"email":"a@x.com","id":"a"}|false'])
+
     def test_pattern_retry_then_fallback(self) -> None:
         """A `retry` output tries its output again up to `max_retries` times
         (1 + max_retries attempts), then fails, so a surrounding `fallback`

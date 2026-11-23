@@ -25,11 +25,21 @@ passes with a made-up value:
   topic). A message whose error is not handled is still `errored()` in
   the output's processors. When the request names no failure path, that
   is a question (below).
+- A payload that may not parse fails, never deletes: start the mapping
+  with `root = content().parse_json()` (it fails on non-JSON), then set
+  each changed field by assignment, such as
+  `root.email = this.email.lowercase()`. A `match` arm testing
+  `this.email` that gives `deleted()` silently deletes a non-JSON payload.
+- On the failure path, set the error metadata with a `mutation`
+  (`meta error = error()`), never a `mapping` with `root = this`: on a
+  non-JSON payload that mapping fails and the metadata is lost.
 
-Both facts are proved on 4.100.0 and 4.117.0: the `.lowercase()` and
+These facts are proved on 4.100.0 and 4.117.0: the `.lowercase()` and
 `.string()` behaviour by `RealBinaryCommandsTest.test_run_deleted_root_and_missing_field`,
 and `errored()` by `test_run_bounded` and `test_run` (the processor error
-handling row), both in `SOURCES.md`.
+handling row), the non-JSON payload by `test_pattern_non_json_deleted_by_match_failed_by_parse_json`
+and the failure-path metadata by `test_pattern_dlq_metadata_with_mutation_not_mapping`,
+all in `SOURCES.md`.
 
 ## One round of questions
 

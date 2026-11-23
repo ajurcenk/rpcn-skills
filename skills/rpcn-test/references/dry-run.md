@@ -74,6 +74,15 @@ as lint, and `--env-file` when lint had one.
   failing message as it reached the output. If `data.exit` is also
   non-zero, add a row with an empty `path` and `input` for each `errors[]`
   entry that is not one of the runtime errors.
+- **Routed by design:** only when the top-level `output` is a `switch`
+  whose first case's `check` is `errored()`, and `data.outputs` holds at
+  least one message, the real run sends those runtime errors to that
+  case's failure path (SOURCES: `switch` on `errored()`). They are not
+  failures: list them under **Routed to the failure path:**, a table like
+  Errors, with no Errors rows for them. Every other `errors[]` row still
+  fails; with none, `Result: passed`. Any other output, or no message in
+  `data.outputs`, fails as above. Judge it from the pipeline YAML alone:
+  it needs no design note and no other reference.
 - **Exit 1, `errors[0].message` contains `required environment variables
   were not set: [A B …]`:** the run needs values for the variables the
   pipeline interpolates. Write `<name>.dry-run.env` in the temp folder: the
@@ -98,7 +107,8 @@ As `test-report-format.md` says: `Result: passed` or `Result: failed`, the
 exactly as written, **Outputs:** with `data.outputs` (or `None.`), and
 **Errors** only when failed. Copy paths, messages and inputs verbatim from
 `rpcn_check`. The Summary line is `Dry run: passed`, or
-`Dry run: failed (<n> errors)` with the number of Errors rows. A failed
+`Dry run: failed (<n> errors)` with the number of Errors rows, either one
+followed by `, <r> routed` when messages were routed. A failed
 dry run makes the verdict `fail`.
 
 ## 5. Propose the fix
