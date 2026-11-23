@@ -122,6 +122,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 - **Final verification (2026-11-21, after the review patches):** validator no warnings; `sync_shared --check` clean; `tools/tests skills` 146 passed; `rpcn_check` tests on both pins 192 passed; T 374 passed, 3 skipped; `SKILL.md` 4,770 characters. Smoke (`T/runs/20261121-205428`, all 17 `rpcn-design__*` scenarios once): 16/17 PASS. `chain_tracer` failed in step 3: Design said the DLQ copy carries `fallback_error`, Author didn't write that metadata, and Test reported a mismatch. This dates from story 3.2 and is deferred. A re-run passed 2/2 (`T/runs/20261121-210958`).
 - **Not done here:** the shared 3.3 + 3.4 eval record, and the push.
 
+- **Flake fix before the record (2026-11-23, user: "fix the flake first, then run the record"):** `patterns.md` pattern 1's Note now says nothing about what the DLQ copy carries unless the request asks to keep the error. Only then does it name `fallback_error`. `rpcn-design__chain_tracer`'s note check also lacks `fallback_error`. Smoke (`--runs 3`, both pins): `chain_tracer` 3/3, `pattern_dlq_retry` 3/3. The deferred-work entry is resolved by this change.
+
 ## Plan Change Log
 
 - 2026-11-21: the chain checks the note with `[[file]]` (still `status: draft`, `[blocking]`, the Deviations header, `lacks` `| fallback |` and `| 20` for a dated Deviations row) instead of `unchanged`: the runner's `unchanged` compares against `fixtures/`, and the chain's note is written by step 1.

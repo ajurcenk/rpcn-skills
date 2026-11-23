@@ -40,10 +40,11 @@ adds up with `retry`). Building the chain is rpcn-author's job.
   asks for a DLQ but names none ("failed messages go to a dead-letter
   topic"), and an interactive pick the user accepted.
 - **Note (Error handling):** the DLQ destination by name, and that a
-  message the sink fails to take goes there. When the request wants the
-  error kept, say the DLQ copy carries it as `fallback_error` metadata.
-  With a `retry` around the sink (pattern 3), the kept error is the
-  `retry`'s own error, not the sink's.
+  message the sink fails to take goes there. Say nothing about what the
+  DLQ copy carries (no `fallback_error`, no metadata) unless the request
+  asks to keep the error or the reason. Only then, say the DLQ copy
+  carries it as `fallback_error` metadata. With a `retry` around the sink
+  (pattern 3), the kept error is the `retry`'s own error, not the sink's.
 - **Components:** `output | fallback | Try <sink>, then the DLQ`, then a
   row for the sink and one for the DLQ output.
 - **Basis:** SOURCES: `fallback` output. When an earlier output fails, the
