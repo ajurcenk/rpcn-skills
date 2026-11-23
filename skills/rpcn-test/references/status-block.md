@@ -1,6 +1,13 @@
 # Status block
 
-Fill the headless status block this way:
+In headless mode, end the reply with exactly one fenced `json` block, then
+nothing:
+
+```json
+{"status": "<complete|blocked>", "skill": "rpcn-test", "reason": null, "artifacts": [], "checks": {"lint": "<pass|fail|skipped>", "tests": "<pass|fail|skipped>"}, "open_questions": []}
+```
+
+Fill it this way:
 
 - `status`: `blocked` (with `reason` the first error) only after an exit 2
   in Steps 1–4 (but the design note's `hash --check`, `blobl`, `run` and

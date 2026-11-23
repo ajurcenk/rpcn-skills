@@ -26,10 +26,10 @@ and end with the status block. Else ask first (Step 5).
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py binary
 ```
 
-If `${CLAUDE_SKILL_DIR}` is not expanded, use this SKILL.md's folder's
-absolute path, here and below.
+Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path, here
+and below.
 
-Each call prints a JSON object (`ok`, `binary`, `errors`, `data`). Keep
+Calls print JSON (`ok`, `binary`, `errors`, `data`). Keep
 `binary.version` and `data.plugin_version` for the header. **Exit 2** in
 any step (but Step 2's and Step 6's checks) means stop: write nothing, show each
 `errors[].message` (headless: `blocked`).
@@ -39,7 +39,7 @@ any step (but Step 2's and Step 6's checks) means stop: write nothing, show each
 `<name>` comes from the file the user names (`<name>.yaml`, `.yml` or
 `.design.md`) or path with no extension (`flows/order_relay`), else a
 short snake_case name for the flow. `<dir>/` is that path's folder as
-given (`flows/`), or nothing for the project root.
+given (`flows/`), or nothing (project root).
 `<note>` is `<dir>/<name>.design.md`.
 
 ```bash
@@ -107,6 +107,7 @@ Reply with the note's path and status, its components, and each pick.
   `<note>`"), then test it with rpcn-test.
 - Note draft: answer each `[blocking]` item in an update.
 - Note exists: ask to update it.
+- Note can't be read: fix it by hand, re-run.
 - Binary missing or old: fix it, re-run.
 
 ## Status block (headless only)

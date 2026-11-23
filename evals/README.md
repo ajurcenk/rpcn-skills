@@ -11,10 +11,10 @@ Skill tool was called for. Nothing else is graded.
 |---|---|---|---|
 | 12 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
 | 5 out-of-repo negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
-| 2 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
+| 3 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report,design_note}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
 | 9 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
 | 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
-| 1 sibling negative | `rpcn-author__miss_lint_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
+| 2 sibling negatives | `rpcn-author__miss_{lint_pipeline,design_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
 | 5 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
 | 1 out-of-repo negative | `rpcn-design__miss_kafka_streams/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 2 sibling negatives | `rpcn-design__miss_{write_yaml,lint_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-design` is never called |
@@ -27,8 +27,10 @@ There are two kinds of near-miss negative (decision 2026-11-06):
   (`input_match: '"skill"\s*:\s*"(?:[\w-]+:)?rpcn-[\w-]+"'`): a sibling
   skill picking one up is as wrong as the case's own skill doing so.
 - **Sibling** near-misses are a request that belongs to the sibling: a write
-  request or a request to apply a test report's proposed changes for
-  `rpcn-test`, a lint request for `rpcn-author`, and a request for the
+  request, a request to apply a test report's proposed changes or a design
+  note request (`rpcn-design`'s) for `rpcn-test`, a lint request or a request
+  to design a pipeline before it is written (`rpcn-design`'s) for
+  `rpcn-author`, and a request for the
   pipeline YAML (`rpcn-author`'s) or a lint (`rpcn-test`'s) for `rpcn-design`. They assert only
   that their own skill stayed silent (`input_match` on that skill's name). The
   sibling firing is the right answer, and the sibling's own positives cover it.
@@ -136,7 +138,7 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $56 for a default run at 2 runs (trigger suite ~$5.50, the
+- **Cost:** about $56 for a default run at 2 runs (trigger suite ~$5.90, the
   sixty pass scenarios x 2 ~$50.60; it was about $47 at 3 runs with forty: one
   pass of thirty-eight of them at `--runs 1` cost $12.39 in story 3.1, plus about
   $0.40 for the two added after it, story 3.2's five `rpcn-design__pattern_*`
@@ -175,5 +177,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $5.50 for the full 39 cases x 2 runs ($8.20 at 3).
+About $0.07 and 7 s per run, so roughly $5.90 for the full 42 cases x 2 runs ($8.80 at 3).
 These evals run locally only, never in CI (CI holds no Claude credentials).

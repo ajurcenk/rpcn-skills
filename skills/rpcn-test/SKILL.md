@@ -1,6 +1,6 @@
 ---
 name: rpcn-test
-description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, runs its Bloblang mappings against samples, dry-runs it, writes and runs rpk connect tests, checks it against its design note, explains each failure with a proposed fix, and writes a <name>.test-report.md. Also reports the rpk connect (or redpanda-connect) version against the 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Bloblang mapping against its samples", "dry-run my pipeline", "write rpk connect unit tests", "check my pipeline against its design note", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", or pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it. Not for writing pipelines or applying a report''s changes (use rpcn-author), designing or deploying them.'
+description: 'Checks Redpanda Connect pipelines and the binary they run on. Lints a pipeline YAML, runs its Bloblang mappings against samples, dry-runs it, writes and runs rpk connect tests, checks it against its design note, explains each failure with a proposed fix, and writes a <name>.test-report.md. Also reports the rpk connect (or redpanda-connect) version against the 4.100.0 floor. Use when the user says "lint my pipeline", "check this Redpanda Connect config", "why does my pipeline fail lint", "test my pipeline", "check my Bloblang mapping against its samples", "dry-run my pipeline", "write rpk connect unit tests", "check my pipeline against its design note", "check my Redpanda Connect binary", "which rpk connect version do I have", "is Redpanda Connect installed" or "rpcn-test", or pastes a Redpanda Connect config (YAML with input, pipeline or output) and asks what is wrong with it. Not for writing pipelines or applying a report''s changes (use rpcn-author), designing them (use rpcn-design) or deploying them.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -99,13 +99,10 @@ Write `<dir>/<name>.test-report.md`, check it and reply as
 - Failed checks: apply the changes with rpcn-author, re-run rpcn-test.
 - Only rpcn-test's own files, or the binary, fixed: re-run rpcn-test.
 - No pipeline yet: use rpcn-author.
+- A Design check `mismatch` the design should absorb: update the note
+  with rpcn-design, then re-run rpcn-test.
 
 ## Status block (headless only)
 
-End with exactly one fenced `json` block, then nothing:
-
-```json
-{"status": "<complete|blocked>", "skill": "rpcn-test", "reason": null, "artifacts": [], "checks": {"lint": "<pass|fail|skipped>", "tests": "<pass|fail|skipped>"}, "open_questions": []}
-```
-
-Fill it as `references/status-block.md` says.
+End with exactly one fenced `json` block, then nothing, written and
+filled as `references/status-block.md` says.

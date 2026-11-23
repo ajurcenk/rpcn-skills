@@ -97,6 +97,8 @@ Each `mismatch` gets one Proposed changes item:
 - one line, with the words `Deviations row`, saying that keeping the
   departure instead means having rpcn-author record a Deviations row for it
   in the note
+- one line: if the design should change, update the note with
+  rpcn-design, then re-run rpcn-test
 - a `diff` block against the pipeline (or `<res>`) that makes it do what
   the section says
 
