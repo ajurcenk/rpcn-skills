@@ -1,7 +1,12 @@
 # Before writing: what only the user can decide
 
 Read this before Step 5 writes the note, in every run. An existing note
-still stops at Step 2, with no question.
+that the request doesn't ask to change stops at Step 2: headless with no
+question; interactive with one question, whether to update `<note>` (by
+its path), and nothing written. That question is not one of the two
+rounds below. A yes to it is a request to change the note: a re-run
+(`rerun.md`) with the original request as the change, which asks only
+what the change leaves open.
 
 ## The four asks
 

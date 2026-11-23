@@ -1,6 +1,6 @@
 ---
 name: rpcn-design
-description: 'Designs Redpanda Connect pipelines before any YAML is written. From a plain request, writes a <name>.design.md design note (inputs, outputs, the components the installed binary reports, error handling with its DLQ and retries, delivery and ordering, idempotency, batching, throughput, open decisions) that rpcn-author builds from and rpcn-test checks against. Use when the user says "design a Redpanda Connect pipeline", "design a pipeline that reads from … and writes to …", "write a design note for my pipeline", "plan my Redpanda Connect pipeline", "how should this data flow handle failures", "where should failed messages go" or "rpcn-design", and when the user wants a pipeline''s components, error handling or DLQ decided before it is built. Not for writing the pipeline YAML (use rpcn-author), or linting and testing it (use rpcn-test), or deploying it.'
+description: 'Designs Redpanda Connect pipelines before any YAML is written. From a plain request, writes a <name>.design.md design note (inputs, outputs, components the installed binary reports, error handling, DLQ, retries, ordering, idempotency, batching, open decisions) that rpcn-author builds from and rpcn-test checks against. Use when the user says "design a Redpanda Connect pipeline", "design a pipeline that reads from … and writes to …", "write a design note for my pipeline", "plan my Redpanda Connect pipeline", "how should this data flow handle failures", "where should failed messages go", "update my design note" or "rpcn-design", and when the user wants a pipeline''s components, error handling or DLQ decided before it is built, or an existing note updated. Not for writing the pipeline YAML (use rpcn-author), or linting and testing it (use rpcn-test), or deploying it.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -47,9 +47,10 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
 - Exit 2 with a not-found error: no note yet, go on.
-- Anything else: a note exists. Never write over it: stop, write nothing,
-  and say that re-running over an existing note is not supported yet
-  (headless: `blocked`, `reason` names the note).
+- Other exit 2: stop as Step 1 says.
+- Else a note exists. A request to change it (update, revise, re-run,
+  a stated change) follows `references/rerun.md`. Else write nothing:
+  headless `blocked`; interactive asks only whether to update `<note>`.
 
 ## Step 3: Pick components
 
@@ -104,9 +105,8 @@ Reply with the note's path and status, its components, and each pick.
 
 - Note ready: build it with rpcn-author ("build the pipeline from
   `<note>`"), then test it with rpcn-test.
-- Note draft: answer each `[blocking]` item, then re-run rpcn-design
-  under a new name.
-- Note exists: re-run with a new name.
+- Note draft: answer each `[blocking]` item in an update.
+- Note exists: ask to update it.
 - Binary missing or old: fix it, re-run.
 
 ## Status block (headless only)

@@ -67,6 +67,8 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash <file>
     |---|---|---|---|---|
     ```
 
+    A re-run instead copies the existing note's rows, as `rerun.md` says.
+
 ## Patterns
 
 `patterns.md` (in this folder), read before Step 3, gives each pattern's
