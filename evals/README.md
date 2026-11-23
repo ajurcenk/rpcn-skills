@@ -15,7 +15,7 @@ Skill tool was called for. Nothing else is graded.
 | 9 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
 | 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 1 sibling negative | `rpcn-author__miss_lint_pipeline/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
-| 4 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
+| 5 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
 | 1 out-of-repo negative | `rpcn-design__miss_kafka_streams/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 2 sibling negatives | `rpcn-design__miss_{write_yaml,lint_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-design` is never called |
 
