@@ -89,8 +89,9 @@ and 4) before Step 5 writes.
 - **"Go ahead"**, or a pick the user accepts: write the pick in its
   section, and in Open decisions as `[non-blocking] <the question>?
   Picked: <the pick>.`, the pick in this file's words (`Picked: no
-  dedupe.`; the failure target as `patterns.md` pattern 1 writes it). The
-  note stays ready. A request that already says to go ahead with your
+  dedupe.`). The failure target's line is exactly `[non-blocking] Where
+  do failed messages go? Picked: <the DLQ> — the request named none.`
+  (`patterns.md` pattern 1). The note stays ready. A request that already says to go ahead with your
   picks is that answer for every open ask: ask nothing, and write.
 
 ## A choice left open

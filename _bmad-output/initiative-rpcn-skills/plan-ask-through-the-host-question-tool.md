@@ -51,6 +51,9 @@ context: ['/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn
 - **Smoke** (`T/runs/20261124-124410`, both pins): every `rpcn-design__ask_*`, `rpcn-design__rerun_ask`, `rpcn-author__ask_*` and `rpcn-author__assume_headless` scenario, 9/9 PASS.
 - Validator no warnings; `tools/tests skills` 146 passed.
 
+- **First record failed** (2026-11-24, $68.82; the failed file is kept in the scratchpad): 60/61 scenarios passed 2/2, at accuracy 1.0. `rpcn-design__ask_go_ahead` was 1/2: the failure-target pick line dropped pattern 1's fixed ending "— the request named none.".
+- **Fix (user: "fix wording, smoke, rerun"):** Design's "Go ahead" rule now gives the exact line, `[non-blocking] Where do failed messages go? Picked: <the DLQ> — the request named none.`. Smoke: `ask_go_ahead` 3/3 on both pins.
+
 ## Review Triage Log
 
 Quick pass: 0 high, 3 medium, 3 low, 0 false. All six patched.
