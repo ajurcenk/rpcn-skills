@@ -96,12 +96,22 @@ exit 2 before any paid step, naming the failed tests), the skills hash, the
 trigger suite above, the gate (with `--cases-dir` set to this `evals/`), and
 the `rpcn-test-skills` pass scenarios (`run_scenarios.py --source local:<this
 repo>`). `--with-compare` adds the comparison scenarios (`[compare] enabled =
-true`: `rpcn-test__compare_lint`, `rpcn-test__compare_diagnose` and
-`rpcn-author__compare_write`, about +$12, so about $55 in all). Each is scored
-the same way in every arm: its `score` is the known causes the reply names
-(`[[compare.errors]]`) plus points on the file the arm writes
+true`, four of them: `rpcn-test__compare_lint`, `rpcn-test__compare_diagnose`,
+`rpcn-author__compare_write` and, from story 3.9, the Design comparison
+`rpcn-design__compare_design`, about $4.70 for a 1-run smoke across its four
+arms and the judge (story 3.9: $0.46, $1.05, $1.09, $0.57 and $1.51 the judge,
+about 12 minutes); the four are about +$20 at 2 runs, so about $79 in all).
+Each is scored the same way in every arm: its `score` is the known causes the
+reply names (`[[compare.errors]]`) plus points on the file the arm writes
 (`[[compare.files]]`: lints clean, a bounded run gives the expected outputs,
-contains a string), with this repo's `rpcn_check.py` on both pinned binaries;
+contains a string, holds one of several phrasings in any case (`any_of`), or
+names components that `rpcn_check list` reports and claims none it doesn't), with
+this repo's `rpcn_check.py` on both pinned binaries. The Design comparison
+scores the design note each arm writes, not its format: one `any_of` point per
+pattern the request calls for (the DLQ topic, retries with a count, per-key
+ordering, dedupe), and one `components` point when the expected components are
+named and listed on both pins and no component it claims in a component
+position (next to a kind word, or beside a kind cell in a table) is invented; no pattern counts twice;
 ties go to the blind judge's rank, then cost (the test project's README has the
 details). The record's `compare` maps each comparison scenario to its winner.
 A passing run writes
