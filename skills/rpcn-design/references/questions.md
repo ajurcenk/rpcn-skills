@@ -3,10 +3,13 @@
 Read this before Step 5 writes the note, in every run. An existing note
 that the request doesn't ask to change stops at Step 2: headless with no
 question; interactive with one question, whether to update `<note>` (by
-its path), and nothing written. That question is not one of the two
-rounds below. A yes to it is a request to change the note: a re-run
-(`rerun.md`) with the original request as the change, which asks only
-what the change leaves open.
+its path), and nothing written. With a question tool (see Rounds), ask
+it as one question with two options, update it or leave it: "leave it"
+ends the run with nothing written, and "update it" goes straight on to
+the re-run. That question is not one of the two rounds below. A yes to
+it is a request to change the note: a re-run (`rerun.md`) with the
+original request as the change, which asks only what the change leaves
+open.
 
 ## The four asks
 
@@ -59,6 +62,18 @@ At most two short rounds, after Steps 1 to 4 and before Step 5 writes:
 
   Then stop: write no file, and end the reply with the questions. No
   status block.
+
+  When the host offers a question tool (`AskUserQuestion`), ask round 1
+  with it instead, in one call: one question per open ask, its header the
+  label (`Failure`, `Delivery`, `Ordering`, `Duplicates`), 2 to 4 options
+  with your pick first and labelled `(My pick)`, each with a one-line
+  description, single choice. Read each answer, a chosen option or free
+  text (an "Other" choice), as you would a typed reply: "After the
+  answers" and "A choice left open" apply as written, so a "go ahead" is
+  a pick and "not decided" or a skipped ask is left open. Don't stop:
+  apply the answers, ask round 2 the same way only if an answer raised a
+  new question, then write. Where no question tool is offered (a
+  subagent, `claude -p`), use the numbered list and stop, as above.
 - **Round 2** only for a new question an answer raised (such as a DLQ on
   a system the request hasn't described), in the same form. Never repeat
   a round 1 question. After round 2, write.

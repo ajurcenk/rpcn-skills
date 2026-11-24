@@ -66,6 +66,17 @@ Asking (interactive):
   alike), each followed by `My pick: <the answer you would use>`.
 - Then stop: write no file, run no lint, and end the reply with the
   questions.
+- When the host offers a question tool (`AskUserQuestion`), ask the round
+  with it instead: at most 4 questions per call (more calls in the same
+  round if there are more), each with a header of at most 12 characters,
+  2 to 4 options with your pick first and labelled `(My pick)`, each
+  with a one-line description, single choice. Read each answer, a chosen
+  option or free text, as you would a typed reply, under the rules
+  below: one left open or answered "go ahead" takes your pick, named as
+  an assumption, but an existing file is still never written over, and
+  only a name the user gives is used. Don't stop: apply the answers and
+  write. Where no question tool is offered (a subagent, `claude -p`), use
+  the numbered list and stop, as above.
 - One round only. After the answer, write. For a question the user leaves
   open, or answers "go ahead", use your pick and name it in the reply as an
   assumption.
