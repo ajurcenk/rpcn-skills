@@ -3,7 +3,7 @@ title: 'rpcn-design fits beside rpcn-author and rpcn-test'
 type: 'feature'
 ticket: '7'
 created: '2026-11-23'
-status: 'built'
+status: 'done'
 baseline_revision: 'c22157cc782f07897d442f7057413974f8bf76da'
 route: 'full'
 route_source: 'auto'
@@ -93,6 +93,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 
 - **Final verification (2026-11-23, after the review patches):** validator no warnings; `sync_shared --check` clean; `tools/tests skills` 146 passed; `rpcn_check` on both pins 193 passed. Sizes: rpcn-author 4,803, rpcn-test 4,709, rpcn-design 4,802. The descriptions are unchanged since the trigger gate run, which passed at accuracy 1.0 with both new negatives silent. Smoke: every `rpcn-test__*` scenario once, 21/21, checking the moved status-block template (`T/runs/20261123-165018`). After the patches: `rpcn-design__rerun_bad_header`, `rpcn-test__design_mismatch` and `rpcn-author__design_not_ready`, each 1/1 (`T/runs/20261123-171215`).
 - **Not done here:** the record (3.9's `--with-compare` run, which covers 3.6–3.9) and the push.
+
+- **Pushed:** `72cf82a..560f483`, with 3.6–3.9 together. CI run 45450913995 was green. The record is `evals/results/2026-11-23-d38b0a5cc8a4.json`. T commits stay local.
 
 ## Plan Change Log
 

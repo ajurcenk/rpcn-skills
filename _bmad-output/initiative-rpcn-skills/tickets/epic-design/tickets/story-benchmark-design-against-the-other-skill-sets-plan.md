@@ -3,7 +3,7 @@ title: 'Benchmark Design against the other skill sets'
 type: 'feature'
 ticket: '9'
 created: '2026-11-23'
-status: 'built'
+status: 'done'
 baseline_revision: '0afd001ffdb5e2623839fa4d589216763a98bb71'
 route: 'full'
 route_source: 'auto'
@@ -191,6 +191,8 @@ Quick pass 2 (2026-11-23, rebuild with decision 2a): 0 high, 2 medium, 6 low, 0 
   - `compare_write`: skills-repo wins (4/4 tie, judge); ours 4/4, judge rank 4.
   - `compare_diagnose`: connect-plugin wins (3/3 tie, judge); ours 3/3, judge rank 4.
   - `compare_lint`: bare wins (4/4 tie, judge); ours 4/4, judge rank 3.
+
+- **Pushed:** `72cf82a..560f483`, with 3.6–3.9 together. CI run 45450913995 was green. The record is `evals/results/2026-11-23-d38b0a5cc8a4.json`. T commits stay local.
 
 ## Plan Change Log
 

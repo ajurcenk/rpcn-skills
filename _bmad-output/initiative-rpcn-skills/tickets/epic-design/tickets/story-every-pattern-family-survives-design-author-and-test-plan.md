@@ -3,7 +3,7 @@ title: 'Every pattern family survives Design, Author and Test'
 type: 'feature'
 ticket: '6'
 created: '2026-11-23'
-status: 'built'
+status: 'done'
 baseline_revision: 'afd2c776063f9660660a54a2361cfe3d60c0c4f4'
 route: 'full'
 route_source: 'auto'
@@ -120,6 +120,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 
 - **Final smoke (2026-11-23, the final text):** all 25 `rpcn-design__*` scenarios once each, 25/25 PASS (`T/runs/20261123-151852`, about $16). The run includes the four family chains. Checks: validator no warnings; `sync_shared --check` clean; `tools/tests skills` 146 passed; `rpcn_check` on both pins 193 passed; T 380 passed.
 - **Not done here:** the record (3.9's `--with-compare` run) and the push, both together with 3.8 and 3.9.
+
+- **Pushed:** `72cf82a..560f483`, with 3.6–3.9 together. CI run 45450913995 was green. The record is `evals/results/2026-11-23-d38b0a5cc8a4.json`. T commits stay local.
 
 ## Plan Change Log
 

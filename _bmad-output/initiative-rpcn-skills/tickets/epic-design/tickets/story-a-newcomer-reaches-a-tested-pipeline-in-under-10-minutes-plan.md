@@ -3,7 +3,7 @@ title: 'A newcomer reaches a tested pipeline in under 10 minutes'
 type: 'feature'
 ticket: '8'
 created: '2026-11-23'
-status: 'built'
+status: 'done'
 baseline_revision: '78c42113057223e4e08aabf457d6ca3da47de645'
 route: 'full'
 route_source: 'auto'
@@ -102,6 +102,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.m
 
 - **Final state (2026-11-23):** `newcomer_e2e` 3/3 (`T/runs/20261123-183631`: 188, 177, 173 s, about $1.46 a run). After the review patches, every chain and every `rpcn-test__dry_run_*` scenario passed once (`T/runs/20261123-180603`). Validator no warnings; `sync_shared --check` clean; `tools/tests skills` 146 passed; `rpcn_check` on both pins 195 passed; T 388 passed. 3.8's smoke runs cost about $55 in total.
 - **Not done here:** the record (3.9's `--with-compare` run, which covers 3.6 to 3.9) and the push.
+
+- **Pushed:** `72cf82a..560f483`, with 3.6–3.9 together. CI run 45450913995 was green. The record is `evals/results/2026-11-23-d38b0a5cc8a4.json`. T commits stay local.
 
 ## Plan Change Log
 
