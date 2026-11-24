@@ -54,6 +54,9 @@ context: ['/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn
 - **First record failed** (2026-11-24, $68.82; the failed file is kept in the scratchpad): 60/61 scenarios passed 2/2, at accuracy 1.0. `rpcn-design__ask_go_ahead` was 1/2: the failure-target pick line dropped pattern 1's fixed ending "— the request named none.".
 - **Fix (user: "fix wording, smoke, rerun"):** Design's "Go ahead" rule now gives the exact line, `[non-blocking] Where do failed messages go? Picked: <the DLQ> — the request named none.`. Smoke: `ask_go_ahead` 3/3 on both pins.
 
+- **Second record failed** (2026-11-24, $68.12; the failed file is in the scratchpad): 60/61 scenarios passed 2/2. `rpcn-design__newcomer_e2e` was 1/2 because rpcn-author changed `email` with `merge` and made it an array. This is the 3.8 defect again; the question-tool change didn't cause it.
+- **Fix (user: "prove + rule, smoke, rerun"):** new real-binary test `test_pattern_merge_makes_a_shared_key_an_array_assignment_replaces` (both pins) and a SOURCES row. rpcn-author's `questions.md` now says to change a field by assignment, never with `merge`. Smoke: `newcomer_e2e` 3/3, `rpcn-author__implied_required` 1/1.
+
 ## Review Triage Log
 
 Quick pass: 0 high, 3 medium, 3 low, 0 false. All six patched.

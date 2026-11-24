@@ -2763,6 +2763,25 @@ class RealBinaryCommandsTest(unittest.TestCase):
             self.assertEqual(sorted(out["data"]["outputs"]),
                              ['not json|true', '{"email":"a@x.com","id":"a"}|false'])
 
+    def test_pattern_merge_makes_a_shared_key_an_array_assignment_replaces(self) -> None:
+        """`root = this.merge({"email": <new>})` on a message that already has
+        `email` turns `email` into an array of both values, while
+        `root.email = <new>` (assignment) replaces it with the new string."""
+        head = "logger:\n  level: none\ninput:\n  stdin: {}\npipeline:\n  processors:\n"
+        merge = head + (
+            "    - mapping: 'root = this.merge({\"email\": this.email.lowercase()})'\n"
+            "output:\n  stdout: {}\n")
+        assign = head + (
+            "    - mapping: |\n        root = this\n"
+            "        root.email = this.email.lowercase()\n"
+            "output:\n  stdout: {}\n")
+        lines = ['{"id":"a","email":"A@X.COM"}']
+        for b in self.each():
+            out = self._run_pattern(b, "merge_shared", merge, lines)
+            self.assertEqual(out["data"]["outputs"], ['{"email":["A@X.COM","a@x.com"],"id":"a"}'])
+            out = self._run_pattern(b, "assign_field", assign, lines)
+            self.assertEqual(out["data"]["outputs"], ['{"email":"a@x.com","id":"a"}'])
+
     def test_pattern_retry_then_fallback(self) -> None:
         """A `retry` output tries its output again up to `max_retries` times
         (1 + max_retries attempts), then fails, so a surrounding `fallback`
