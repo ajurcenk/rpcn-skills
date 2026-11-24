@@ -172,6 +172,26 @@ Quick pass 2 (2026-11-23, rebuild with decision 2a): 0 high, 2 medium, 6 low, 0 
 | 7 | The README cost figures don't match the recorded smoke | low | patch | Use the `runs/20261123-192330` figures and adjust the totals. |
 | 8 | A failed `list` call reads as an invented component | low | patch | Report the error (as `not_on` does) and don't call the token invented. |
 
+- **Eval record (2026-11-24):** `evals/results/2026-11-23-d38b0a5cc8a4.json` passed with `dirty: false` on the first run, at $87.06 (`T/runs/20261123-212320`). It is the record for 3.6, 3.7, 3.8 and 3.9. Trigger accuracy was 1.0, and all 65 scenarios passed 2/2 on 4.100.0 and 4.117.0, with sessions on 4.117.0.
+- **Design comparison, winner `ours` on score:**
+
+  | arm | score | judge rank | cost/run | time/run | point lost |
+  |---|---|---|---|---|---|
+  | ours | 5/5 | 4 | $0.53 | 51 s | — |
+  | connect-plugin | 4.5/5 | 3 | $0.80 | 193 s | components: "invented" `seen_orders`, a cache resource label (the README's known false positive) |
+  | skills-repo | 4.5/5 | 2 | $1.95 | 401 s | components: no `http_client` (fair) |
+  | bare | 4.5/5 | 1 | $0.67 | 203 s | components: `seen_orders` (false positive) and `kafka_franz` (not listed on 4.117.0; fair) |
+
+  **Caveat:** the margin is half a point. connect-plugin's loss comes only from the documented label false positive, and the judge ranks `ours` last. The judge's evidence against `ours`:
+  - a `retry` output wrapped around `http_client`, which has retries of its own, so attempts multiply;
+  - the 5-minute dedupe window, accepted as is;
+  - a replayed order lost to dedupe, accepted, where skills-repo records an id only after a successful post;
+  - only the note was written; the other arms also wrote and tested YAML.
+- **Other comparisons in the record:**
+  - `compare_write`: skills-repo wins (4/4 tie, judge); ours 4/4, judge rank 4.
+  - `compare_diagnose`: connect-plugin wins (3/3 tie, judge); ours 3/3, judge rank 4.
+  - `compare_lint`: bare wins (4/4 tie, judge); ours 4/4, judge rank 3.
+
 ## Plan Change Log
 
 - 2026-11-23, review loop 1 (bad_plan). **Trigger:** findings 2–4. The scoring can't detect an invented component, the patterns are case-sensitive substrings, and two patterns count twice. **Amended:** the Code Map below, per the user's decision in the Intent. **Known-bad state avoided:** a Design score that rewards five prose words and misses correct wording. **First build kept for reference only:** `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/3.9-try1-T.patch` and `/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn-skills/e8f28587-8692-460b-9a36-56b1bb18132f/scratchpad/3.9-try1-R.patch`. Re-derive from this plan.
