@@ -1,6 +1,6 @@
 ---
 name: rpcn-design
-description: 'Designs Redpanda Connect pipelines before any YAML is written. From a plain request, writes a <name>.design.md design note (inputs, outputs, components the installed binary reports, error handling, DLQ, retries, ordering, idempotency, batching, open decisions) that rpcn-author builds from and rpcn-test checks against. Use when the user says "design a Redpanda Connect pipeline", "design a pipeline that reads from … and writes to …", "write a design note for my pipeline", "plan my Redpanda Connect pipeline", "how should this data flow handle failures", "where should failed messages go", "update my design note" or "rpcn-design", and when the user wants a pipeline''s components, error handling or DLQ decided before it is built, or an existing note updated. Not for writing the pipeline YAML (use rpcn-author), or linting and testing it (use rpcn-test), or deploying it.'
+description: 'Designs Redpanda Connect pipelines before any YAML is written. From a plain request, writes a <name>.design.md design note (inputs, outputs, components the installed binary reports, error handling, DLQ, retries, ordering, idempotency, batching, open decisions) that rpcn-author builds from and rpcn-test checks against. Use when the user says "design a Redpanda Connect pipeline", "design a pipeline that reads from … and writes to …", "write a design note for my pipeline", "describe my pipeline orders.yaml", "plan my Redpanda Connect pipeline", "how should this data flow handle failures", "where should failed messages go", "update my design note" or "rpcn-design", and when the user wants a pipeline''s components, error handling or DLQ decided before it is built, or an existing note updated. Not for writing the pipeline YAML (use rpcn-author), or linting and testing it (use rpcn-test), or deploying it.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -46,7 +46,8 @@ given (`flows/`), or nothing (project root).
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
-- Exit 2 with a not-found error: no note yet, go on.
+- Exit 2 with a not-found error: no note yet, go on. A named existing
+  pipeline and a request for its design: `references/describe.md`.
 - Other exit 2: stop as Step 1 says.
 - Else a note exists. A request to change it (update, revise, re-run,
   a stated change) follows `references/rerun.md`. Else write nothing:

@@ -15,7 +15,7 @@ Skill tool was called for. Nothing else is graded.
 | 9 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
 | 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 2 sibling negatives | `rpcn-author__miss_{lint_pipeline,design_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
-| 5 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
+| 6 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
 | 1 out-of-repo negative | `rpcn-design__miss_kafka_streams/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
 | 2 sibling negatives | `rpcn-design__miss_{write_yaml,lint_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-design` is never called |
 
@@ -148,8 +148,8 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $59 for a default run at 2 runs (trigger suite ~$5.90, the
-  sixty-one pass scenarios x 2 ~$53.10; it was about $47 at 3 runs with forty: one
+- **Cost:** about $63 for a default run at 2 runs (trigger suite ~$6.00, the
+  sixty-six pass scenarios x 2 ~$57.20; it was about $47 at 3 runs with forty: one
   pass of thirty-eight of them at `--runs 1` cost $12.39 in story 3.1, plus about
   $0.40 for the two added after it, story 3.2's five `rpcn-design__pattern_*`
   scenarios cost about $0.42 a run each, and story 3.3's five
@@ -162,7 +162,11 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `rpcn-design__chain_tracer` about $1.25 a run, and story 3.6's four
   three-step `rpcn-design__chain_<family>` chains are the largest at about
   $1.60 a run each, with story 3.8's three-step `rpcn-design__newcomer_e2e`
-  about $1.25 a run). The record's `cost_usd` holds the measured total.
+  about $1.25 a run, and story 8.1's `rpcn-design__describe_pipeline` about
+  $0.60 a run, `rpcn-design__describe_unlisted` about $0.43,
+  `rpcn-design__describe_no_target` about $0.47,
+  `rpcn-design__describe_missing` about $0.37 and
+  `rpcn-design__describe_existing_note` about $0.18). The record's `cost_usd` holds the measured total.
 
 ## The gate
 
@@ -188,5 +192,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $5.90 for the full 42 cases x 2 runs ($8.80 at 3).
+About $0.07 and 7 s per run, so roughly $6.00 for the full 43 cases x 2 runs ($9.00 at 3).
 These evals run locally only, never in CI (CI holds no Claude credentials).

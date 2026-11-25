@@ -36,7 +36,9 @@ delivery guarantee (at-least-once); "drop" or "log and drop" answers both
 ("we haven't decided where failed messages go") has left it open: don't
 ask it (see "A choice left open"). The same inferences hold for an answer
 given in a round (a named DLQ answers delivery; "at-most-once" answers
-the failure target): only an ask nothing settles is left open.
+the failure target): only an ask nothing settles is left open. In
+describe mode (`describe.md`), the config's settings also answer an ask,
+as that file's "The four asks, from the config" says.
 
 Ask nothing else. Every other choice (a retry count, a cache, a batch
 size, a file name) gets its default from `patterns.md` or
@@ -98,14 +100,15 @@ and 4) before Step 5 writes.
 ## A choice left open
 
 In both modes. Interactive: the user skips an ask, says it isn't
-decided, or the request says so. Headless: nothing in the request settles
-the ask (by the inferences in "The four asks"):
+decided, or the request says so. Headless: nothing in the request (in describe mode, or the
+config) settles the ask (by the inferences in "The four asks"):
 
 - **The failure target or the delivery guarantee** changes components (a
   DLQ output, a `fallback`). Write it as `[blocking] <the question>.` in
   Open decisions, and the note is `draft`. Interactive, name no
   destination; headless, the question may suggest the pattern 1 default
   (`[blocking] Where do failed messages go? (Suggested: <the DLQ>.)`).
+  In describe mode, no Suggested destination: the config names none.
   Add no component for it: no DLQ output and no `fallback` row for an
   open failure target. Its section says the choice is open (see Open
   decisions).
@@ -117,7 +120,8 @@ the ask (by the inferences in "The four asks"):
 ## Headless
 
 Never ask: the rounds and "After the answers" don't apply. Settle each of
-the four asks from the request alone, by the inferences in "The four
+the four asks from the request alone (in describe mode, or the
+config), by the inferences in "The four
 asks", then apply "A choice left open" to each one nothing settles: an
 open failure target or delivery guarantee is `[blocking]` and the note is
 `draft`; ordering or the idempotency key gets its pick as
