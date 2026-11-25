@@ -3,14 +3,14 @@ title: 'Refactor sweep (epic 3)'
 type: 'refactor'
 ticket: '10'
 created: '2026-11-24'
-status: 'in-progress'
+status: 'built'
 baseline_revision: '886580eaa5824c5a1887d4089a5ca95a959af946'
 route: 'full'
 route_source: 'auto'
 risk: 'low'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'quick'
+review_source: 'pinned'
+lenses_ran: ['quick']
 review_loop_iteration: 0
 context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-design/epic-design.md']
 ---
@@ -107,6 +107,14 @@ Epic 3 deferred only two items, and neither is cleanup: multi-turn scenarios are
 ## Plan Change Log
 
 ## Review Triage Log
+
+Quick pass (2026-11-24): 0 high, 2 medium, 1 low, 1 rejected. The implementation agent had committed `8ffe45b` and started the record before review. That record was stopped (nothing written) and the fixes go on top.
+- medium: a new parenthetical in `questions.md` let an interactive run write the `(Suggested: …)` line. Dropped; the bullet matches its earlier text.
+- medium: pattern 1's `accepts ("go ahead")` narrowed acceptance, and `note-writing.md`'s copy no longer matched. Restored "an interactive pick the user accepted".
+- low: the moved Step 6 loop ran `hash --check` a second time, under the heading "Before Step 6". It now starts from Step 6's result, the heading is "Step 6: checking the note", and the pointers in `SKILL.md` and `rerun.md` are updated.
+- rejected: the stale plan checkbox (fixing it edits the plan).
+
+After the fixes: a 7-scenario smoke passed 7/7 (`T/runs/20261124-230907`). Validator no warnings; `tools/tests skills` 146 and `rpcn_check` 196 passed on both pins. `SKILL.md`: rpcn-author 4,615 and rpcn-design 4,644 characters.
 
 ## Verification
 

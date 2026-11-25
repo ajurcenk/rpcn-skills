@@ -103,11 +103,9 @@ the ask (by the inferences in "The four asks"):
 
 - **The failure target or the delivery guarantee** changes components (a
   DLQ output, a `fallback`). Write it as `[blocking] <the question>.` in
-  Open decisions (the failure target's line may instead end `…?
-  (Suggested: <the DLQ>.)`, as below), and the note is `draft`.
-  Interactive, name no destination; headless, the question may suggest
-  the pattern 1 default (`[blocking] Where do failed messages go?
-  (Suggested: <the DLQ>.)`).
+  Open decisions, and the note is `draft`. Interactive, name no
+  destination; headless, the question may suggest the pattern 1 default
+  (`[blocking] Where do failed messages go? (Suggested: <the DLQ>.)`).
   Add no component for it: no DLQ output and no `fallback` row for an
   open failure target. Its section says the choice is open (see Open
   decisions).

@@ -93,8 +93,8 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
 A `ready` note must exit 0 with `data.ready: true`. A `draft` note exits
-1, its only error the `status` line. Then follow "Before Step 6" in
-`references/note-writing.md`: header fixes, then the Readiness list.
+1, its only error the `status` line. Then follow "Step 6: checking the
+note" in `references/note-writing.md`: header, then Readiness list.
 
 Reply with the note's path and status, its components, and each pick.
 

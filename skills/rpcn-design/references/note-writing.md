@@ -133,13 +133,13 @@ A detail the request leaves out that changes nothing in the pipeline (a
 rate, a message size) is not an open decision: leave it out of its
 section, or write `None.`
 
-## Before Step 6
+## Step 6: checking the note
 
 Step 6 checks the note in this order, as SKILL.md says:
 
-1. Run the `hash --check`. A `ready` note must exit 0 with `data.ready:
-   true`. A `draft` note exits 1, and its only error is the `status` line.
-   On any other error, fix the header (`handoff-header.md`, Syntax) and
-   check again, at most 2 times.
+1. Start from the result of SKILL.md Step 6's `hash --check`. A `ready`
+   note must exit 0 with `data.ready: true`. A `draft` note exits 1, and
+   its only error is the `status` line. On any other error, fix the header
+   (`handoff-header.md`, Syntax) and check again, at most 2 times.
 2. Then read the note against `design-format.md`'s Readiness list, and fix
    any item that fails.

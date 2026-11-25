@@ -35,8 +35,8 @@ for headless and interactive runs apply to the rewrite as to a new note.
 - **Step 5:** write the whole note in one Write call, as `note-writing.md`
   says, except the header and Deviations below. An open decision the
   request answers leaves Open decisions; one it leaves open stays.
-- **Step 6:** check as for a new note (`note-writing.md`, "Before Step
-  6").
+- **Step 6:** check as for a new note (`note-writing.md`, "Step 6:
+  checking the note").
 
 ## Header
 

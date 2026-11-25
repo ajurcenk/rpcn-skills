@@ -39,9 +39,9 @@ adds up with `retry`). Building the chain is rpcn-author's job.
   (Suggested: <the DLQ>.)`
   The default DLQ is a `[non-blocking]` pick, and the note stays ready, in
   two cases: a DLQ asked for without a name ("failed messages go to a
-  dead-letter topic"), and an interactive pick the user accepts ("go
-  ahead"). Its line is exactly `[non-blocking] Where do failed messages
-  go? Picked: <the DLQ> — the request named none.`
+  dead-letter topic"), and an interactive pick the user accepted. Its line
+  is exactly `[non-blocking] Where do failed messages go? Picked: <the
+  DLQ> — the request named none.`
 - **Note (Error handling):** the DLQ destination by name, and that a
   message the sink fails to take goes there. Say nothing about what the
   DLQ copy carries (no `fallback_error`, no metadata) unless the request
