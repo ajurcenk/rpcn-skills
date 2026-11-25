@@ -1,6 +1,8 @@
 # Before writing: required fields and questions
 
-Read this before Step 5 writes any file, in every run.
+Read this before Step 5 writes any file, in every run: a field the
+processing needs is required, and all questions go in one message, before
+writing.
 
 ## Required fields
 
@@ -37,13 +39,19 @@ passes with a made-up value:
   (`meta error = error()`), never a `mapping` with `root = this`: on a
   non-JSON payload that mapping fails and the metadata is lost.
 
-These facts are proved on 4.100.0 and 4.117.0: the `.lowercase()` and
-`.string()` behaviour by `RealBinaryCommandsTest.test_run_deleted_root_and_missing_field`,
-and `errored()` by `test_run_bounded` and `test_run` (the processor error
-handling row), the non-JSON payload by `test_pattern_non_json_deleted_by_match_failed_by_parse_json`,
-`merge` on a shared key by `test_pattern_merge_makes_a_shared_key_an_array_assignment_replaces`,
-and the failure-path metadata by `test_pattern_dlq_metadata_with_mutation_not_mapping`,
-all in `SOURCES.md`.
+These facts are proved on both pins, 4.100.0 and 4.117.0, each by a
+`RealBinaryCommandsTest` test with a `SOURCES.md` row:
+
+- the `.lowercase()` and `.string()` behaviour:
+  `test_run_deleted_root_and_missing_field`;
+- `errored()`: `test_run_bounded` and `test_run` (the processor error
+  handling row);
+- the non-JSON payload:
+  `test_pattern_non_json_deleted_by_match_failed_by_parse_json`;
+- `merge` on a shared key:
+  `test_pattern_merge_makes_a_shared_key_an_array_assignment_replaces`;
+- the failure-path metadata:
+  `test_pattern_dlq_metadata_with_mutation_not_mapping`.
 
 ## One round of questions
 
@@ -75,12 +83,12 @@ Asking (interactive):
   round if there are more), each with a header of at most 12 characters,
   2 to 4 options with your pick first and labelled `(My pick)`, each
   with a one-line description, single choice. Read each answer, a chosen
-  option or free text, as you would a typed reply, under the rules
-  below: one left open or answered "go ahead" takes your pick, named as
-  an assumption, but an existing file is still never written over, and
-  only a name the user gives is used. Don't stop: apply the answers and
-  write. Where no question tool is offered (a subagent, `claude -p`), use
-  the numbered list and stop, as above.
+  option or free text (an "Other" choice), as you would a typed reply,
+  under the rules below: one left open or answered "go ahead" takes your
+  pick, named as an assumption, but an existing file is still never
+  written over, and only a name the user gives is used. Don't stop: apply
+  the answers and write. Where no question tool is offered (a subagent,
+  `claude -p`), use the numbered list and stop, as above.
 - One round only. After the answer, write. For a question the user leaves
   open, or answers "go ahead", use your pick and name it in the reply as an
   assumption.
@@ -94,8 +102,7 @@ Never ask. Use each pick, write the files, and put one line per pick in
 `open_questions`, the question in brackets, such as `Assumed: a message
 without referrer passes (is referrer required?)` or `Assumed: a failed
 message is logged and dropped (failure path: where does it go?)`. These
-picks never block: the run ends `complete`. These still end `blocked`, as
-before, with nothing written:
-an existing pipeline (Step 2 stops there), an existing resources or
-`.blobl` file, and no listed component that fits (never write one that
-doesn't), as `status-block.md` says.
+picks never block: the run ends `complete`. These still end `blocked`,
+with nothing written: an existing pipeline (Step 2 stops there), an
+existing resources or `.blobl` file, and no listed component that fits
+(never write one that doesn't), as `status-block.md` says.

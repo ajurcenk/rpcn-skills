@@ -91,8 +91,9 @@ and 4) before Step 5 writes.
   Picked: <the pick>.`, the pick in this file's words (`Picked: no
   dedupe.`). The failure target's line is exactly `[non-blocking] Where
   do failed messages go? Picked: <the DLQ> — the request named none.`
-  (`patterns.md` pattern 1). The note stays ready. A request that already says to go ahead with your
-  picks is that answer for every open ask: ask nothing, and write.
+  (`patterns.md` pattern 1). The note stays ready. A request that already
+  says to go ahead with your picks is that answer for every open ask: ask
+  nothing, and write.
 
 ## A choice left open
 
@@ -102,9 +103,11 @@ the ask (by the inferences in "The four asks"):
 
 - **The failure target or the delivery guarantee** changes components (a
   DLQ output, a `fallback`). Write it as `[blocking] <the question>.` in
-  Open decisions, and the note is `draft`. Interactive, name no
-  destination; headless, the question may suggest the pattern 1 default
-  (`[blocking] Where do failed messages go? (Suggested: <the DLQ>.)`).
+  Open decisions (the failure target's line may instead end `…?
+  (Suggested: <the DLQ>.)`, as below), and the note is `draft`.
+  Interactive, name no destination; headless, the question may suggest
+  the pattern 1 default (`[blocking] Where do failed messages go?
+  (Suggested: <the DLQ>.)`).
   Add no component for it: no DLQ output and no `fallback` row for an
   open failure target. Its section says the choice is open (see Open
   decisions).

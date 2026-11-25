@@ -74,17 +74,15 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py fields <category> <component>
 Set only `data.fields[].path` paths (`tls.enabled`, `a[].b`),
 and each field with `required: true`. On exit 1, `data.components` holds
 close matches: pick one that fits, else ask in Step 5's round
-(headless: `open_questions`). Never write a component the binary doesn't list.
+(headless: `blocked`). Never write a component the binary doesn't list.
 
 ## Step 5: Ask, then write
 
-First follow `references/questions.md`: a field the processing needs is
-required, and all questions go in one message, before writing.
-
-Then write `<dir>/<pipeline>`: plain YAML, no comment block. Secrets, addresses
-and credentials are always `${ENV_VAR}`, never inline. For a resource, env
-var or mapping over 3 lines, follow `references/pipeline-files.md`
-(with `references/blobl-files.md`).
+First follow `references/questions.md`. Then write `<dir>/<pipeline>`:
+plain YAML, no comment block. Secrets, addresses and credentials are
+always `${ENV_VAR}`, never inline. For a resource, env var or mapping over
+3 lines, follow `references/pipeline-files.md` (with
+`references/blobl-files.md`).
 
 ## Step 6: Lint
 
@@ -103,11 +101,9 @@ Reply with the files, components and lint result.
 
 ## Step 7: Apply a test report
 
-Run Step 2's `hash --check` on `<file>` = `<dir>/<name>.test-report.md`
-(`<dir>/` its folder); go on only on exit 0 with `data.ready: true`, else
-stop as on exit 2 (`state: changed` means stale).
-
-Follow `references/apply-report.md`, with `references/test-report-format.md`.
+Run Step 2's `hash --check` on `<dir>/<name>.test-report.md` (`<dir>/`
+its folder), then follow `references/apply-report.md` (§1 says when to
+stop), with `references/test-report-format.md`.
 
 ## Next
 

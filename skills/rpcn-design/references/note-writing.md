@@ -25,6 +25,10 @@ updated: <today, YYYY-MM-DD>
 # <name>: design
 ```
 
+`status` follows the Ready rule (`design-format.md`): `ready` only when
+Open decisions holds no `[blocking]` item and every Components row passed
+Step 4; else `draft`.
+
 `inputs` stays `[]` for a plain request. When the request names a file in
 the project that the design is made from (a requirements file, a sample
 message), hash it from the note's folder and copy each pair into `inputs`,
@@ -119,7 +123,9 @@ choice still open that changes the design, pick the answer and write it in:
   - a part of the flow that no listed component fits (Step 4);
   - a failure target or delivery guarantee nothing settles, in either
     mode (`questions.md`, "A choice left open"). Then no DLQ or
-    `fallback` is added for it.
+    `fallback` is added for it. Headless, the failure target's line may
+    suggest the default: `[blocking] Where do failed messages go?
+    (Suggested: <the DLQ>.)`
 
   The note is then `draft`.
 
@@ -129,5 +135,11 @@ section, or write `None.`
 
 ## Before Step 6
 
-Check the note against `design-format.md`'s Readiness list, then run the
-`hash --check`.
+Step 6 checks the note in this order, as SKILL.md says:
+
+1. Run the `hash --check`. A `ready` note must exit 0 with `data.ready:
+   true`. A `draft` note exits 1, and its only error is the `status` line.
+   On any other error, fix the header (`handoff-header.md`, Syntax) and
+   check again, at most 2 times.
+2. Then read the note against `design-format.md`'s Readiness list, and fix
+   any item that fails.

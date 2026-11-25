@@ -31,8 +31,8 @@ and below.
 
 Calls print JSON (`ok`, `binary`, `errors`, `data`). Keep
 `binary.version` and `data.plugin_version` for the header. **Exit 2** in
-any step (but Step 2's and Step 6's checks) means stop: write nothing, show each
-`errors[].message` (headless: `blocked`).
+any step (but Step 2's and Step 6's checks) means stop: write nothing,
+show each `errors[].message` (headless: `blocked`).
 
 ## Step 2: Name the note
 
@@ -83,9 +83,8 @@ doesn't list.
 
 First read `references/questions.md`; ask as it says. Then write
 `<note>` as `references/note-writing.md` says: the header, the title,
-then the eleven sections in order. `status: ready` only when Open
-decisions holds no `[blocking]` item and every Components row passed
-Step 4; else `draft`.
+then the eleven sections in order. `status` follows the Ready rule in
+`references/design-format.md`.
 
 ## Step 6: Check the note
 
@@ -94,10 +93,8 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
 A `ready` note must exit 0 with `data.ready: true`. A `draft` note exits
-1, and its only error is the `status` line. On any other error, fix the
-header (`handoff-header.md`, Syntax) and check again, at most 2 times.
-Then read the note against the Readiness list in `design-format.md`, and
-fix any item that fails.
+1, its only error the `status` line. Then follow "Before Step 6" in
+`references/note-writing.md`: header fixes, then the Readiness list.
 
 Reply with the note's path and status, its components, and each pick.
 

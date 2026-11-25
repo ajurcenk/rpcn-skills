@@ -13,13 +13,13 @@ Each entry gives:
 - **Components:** the rows it adds to Components. Pick and check each one
   with `list` and `fields` (Steps 3 and 4), as for any row.
 - **Basis:** the behaviour fact it rests on. "SOURCES: …" is a
-  `SOURCES.md` row proved by a test on 4.100.0 and the newest pin; "fields:
-  …" is what the binary reports at run time.
+  `SOURCES.md` row proved by a test on both pins, 4.100.0 and 4.117.0;
+  "fields: …" is what the binary reports at run time.
 
 Name a field (such as `max_retries`, `batching.count`, `max_in_flight`)
 only when Step 4's `fields` output for that component lists it; otherwise
 state the value as intent ("retried 3 times", "in batches of 100").
-Describe each failure path as intent: where the message goes. State no
+Describe each failure target as intent: where the message goes. State no
 behaviour beyond an entry's Basis (such as how a sink's own retry field
 adds up with `retry`). Building the chain is rpcn-author's job.
 
@@ -31,14 +31,17 @@ adds up with `retry`). Building the chain is rpcn-author's job.
   the request names (a DLQ, a dead-letter topic, a file). The default DLQ
   is a topic on the input's system when it has topics (`<input
   topic>.dlq`), else a file `<name>.dlq.jsonl`. When nothing settles the
-  failure target (`questions.md`), in either mode, write `[blocking]
-  Where do failed messages go? (Suggested: <the default DLQ>.)` in Open
-  decisions (interactive, with no suggestion), add no `fallback` or DLQ
-  row, and the note is `draft`. Two cases keep the default DLQ instead,
-  written as `[non-blocking] Where do failed messages go? Picked: <the
-  DLQ> — the request named none.`, with the note ready: a request that
-  asks for a DLQ but names none ("failed messages go to a dead-letter
-  topic"), and an interactive pick the user accepted.
+  failure target (`questions.md`, "A choice left open"), in either mode,
+  write it as `[blocking]` in Open decisions, add no `fallback` or DLQ
+  row, and the note is `draft`. Interactive, name no destination:
+  `[blocking] Where do failed messages go?` Headless, the question may
+  suggest the default: `[blocking] Where do failed messages go?
+  (Suggested: <the DLQ>.)`
+  The default DLQ is a `[non-blocking]` pick, and the note stays ready, in
+  two cases: a DLQ asked for without a name ("failed messages go to a
+  dead-letter topic"), and an interactive pick the user accepts ("go
+  ahead"). Its line is exactly `[non-blocking] Where do failed messages
+  go? Picked: <the DLQ> — the request named none.`
 - **Note (Error handling):** the DLQ destination by name, and that a
   message the sink fails to take goes there. Say nothing about what the
   DLQ copy carries (no `fallback_error`, no metadata) unless the request
@@ -102,8 +105,9 @@ adds up with `retry`). Building the chain is rpcn-author's job.
 - **Basis:** SOURCES: `batching.count`. A `broker` output's
   `batching.count` delivers messages in groups of that size, and an
   `archive` processor (`format: lines` or `json_array`) in its
-  `batching.processors` joins each group into one payload. That another output has the same `batching` block is read
-  from its `fields` at run time.
+  `batching.processors` joins each group into one payload. That another
+  output has the same `batching` block is read from its `fields` at run
+  time.
 
 ## 5. Idempotency
 
@@ -142,8 +146,9 @@ deduplicates on `id`), say that, and add no `dedupe`.
   the order they were produced"). Then, when `fields` lists `max_in_flight`
   for the output on that path, recommend `max_in_flight: 1`, giving the
   description Step 4 printed for that field as the reason. Say no more
-  about order than that description: don't claim the field guarantees it. When `fields`
-  lists no `max_in_flight`, write the order as intent only.
+  about order than that description: don't claim the field guarantees
+  it. When `fields` lists no `max_in_flight`, write the order as intent
+  only.
 - **Components:** no new row. The output's role may say "one at a time".
 - **Basis:** fields: `max_in_flight`. The recommendation's basis is the
   description Step 4 printed for that field on that output.

@@ -7,7 +7,11 @@ may have the verdict `pass` or `fail`.
 
 ## 1. Check the readiness list
 
-Read the report and check the readiness list in `test-report-format.md`
+First, Step 7's `hash --check` on `<file>` = `<dir>/<name>.test-report.md`
+(`<dir>/` its folder): go on only on exit 0 with `data.ready: true`, else
+stop as on exit 2 (`state: changed` means stale).
+
+Then read the report and check the readiness list in `test-report-format.md`
 (in this folder): the sections in order (seven for `format: test-report@2`;
 six for `test-report@1`, which has no Dry run), a `**Verdict:**` line, and
 each section that did not run says `Not run` and why. Both formats are read
@@ -30,8 +34,8 @@ The report's `inputs` are relative to the report's folder `<dir>/`:
 
 Proposed changes holds numbered items, each a title, a `Cause:` line and
 a fenced `diff` block, or `None.`. An older item with one line on why in
-place of the title and `Cause:` line is applied the same way. With `None.` there is nothing to apply: change no
-file, say so, and skip lint.
+place of the title and `Cause:` line is applied the same way. With
+`None.` there is nothing to apply: change no file, say so, and skip lint.
 
 Apply an item, of any kind (a lint fix, a design fix or any other change),
 only when its diff is against one of these files:
