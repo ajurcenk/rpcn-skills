@@ -9,6 +9,7 @@ companions: [_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/archit
 after: []
 refined: true
 risk: medium
+status: done
 ---
 
 # Design skill
@@ -59,6 +60,8 @@ A developer new to RPCN goes from a described pipeline to a linted, tested one i
 - architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-6, AD-7, AD-9
 
 ## Notes
+
+- Decision (2026-11-25, user): epic closed. All 10 stories are done and pushed (CI green, last run 45549811492). The last records are `2026-11-23-d38b0a5cc8a4` (3.6–3.9, `--with-compare`; Design comparison: ours on score, with the caveats in 3.9's plan) and `2026-11-24-758b81cd589e` (3.10).
 
 - Decision (2026-11-20, user): refined with the picks agreed:
   - **Asking:** R4 and R5. This settles the earlier open question on how `rpcn-design` asks.

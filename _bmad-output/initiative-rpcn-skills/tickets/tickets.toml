@@ -24,12 +24,20 @@ covers = ["R1", "R15"]
 after = [{ epic = 2, needs = "Author reading the design note and Test checking against it" }]
 
 [[epic]]
+id = 8
+slug = "epic-existing-pipelines"
+title = "Existing pipelines"
+description = "A developer with a hand-written pipeline gets a design note describing what it does, and can change the pipeline through a reviewable change: Edits they approve one at a time when interactive, a proposal file with verified diffs when headless, which Author then applies."
+covers = ["R21", "R22"]
+after = [{ epic = 2, needs = "Author's apply step and Test's Design check" }, { epic = 3, needs = "rpcn-design, its re-run and the question tool" }]
+
+[[epic]]
 id = 4
 slug = "epic-release-sync"
 title = "Release sync, versioning and failure modes"
 description = "References regenerate within a week of each RPCN release, CI blocks removed components and invalid skills, releases are version-stamped, and failure-mode entries mined from GitHub issues ship in the skills."
 covers = ["R10", "R11", "R18"]
-after = [{ epic = 1, needs = "plugin layout and CI" }, { epic = 2, needs = "skills with references to regenerate" }, { epic = 3, needs = "the Design skill, so release sync covers every version 1 skill" }]
+after = [{ epic = 1, needs = "plugin layout and CI" }, { epic = 2, needs = "skills with references to regenerate" }, { epic = 3, needs = "the Design skill, so release sync covers every version 1 skill" }, { epic = 8, needs = "change and describe modes, so release sync covers them" }]
 
 [[epic]]
 id = 5

@@ -1,0 +1,67 @@
+# Epic 8, Existing pipelines: stories in build order (one lane: every story edits rpcn-author or rpcn-design).
+
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: rpcn-design describes a hand-written pipeline"
+description = "Adds describe mode to rpcn-design, in a new reference with a short pointer from Step 2. It applies when the request names an existing pipeline and asks for its design.\n\nRead-only, it reads the pipeline, its resources files and its .blobl files, and checks every component with list and fields. It writes <name>.design.md in design@1:\n- Components in config order.\n- Error handling, Delivery and ordering, Idempotency and Batching say what the config does, within AD-15.\n- An open decision for what the config can't show. It is [blocking] only for a four-asks gap such as a sink failure with no target; otherwise [non-blocking] with the config's behaviour as the pick.\n- The pipeline is named in Purpose, not in inputs (the staleness decision).\n- An empty Deviations table.\n\nIt never edits the pipeline. Over an existing note, Step 2's rule applies. Interactive runs ask only the open asks, through the question tool when it is offered. Its own eval record."
+verify = "On both pins, a headless scenario on a hand-written pipeline (a redpanda input, a mapping, and a fallback to http_client and a DLQ), through \"describe my pipeline <path>.yaml\":\n- a ready note with the four components in config order;\n- at-least-once with the DLQ;\n- ordering as a [non-blocking] pick naming the config's setting;\n- every file byte-identical (unchanged).\nA second scenario, with a component the binary doesn't list, gets a [blocking] item and a draft note. The trigger gate passes with a describe positive."
+covers = ["R1", "R2"]
+after = ["3.5"]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 2
+type = "story"
+title = "Author proposes a change as a change@1 file when headless"
+description = "Adds the change@1 hand-off format in tools/shared/formats: the shared hand-off header, with inputs hashing the files the diffs apply to, and numbered items in the test report's Proposed-changes shape (a title, a Cause: line, and a verified unified diff per file).\n\nrpcn_check hash --check learns the new artifact type. The format is synced into rpcn-author.\n\nAuthor's change mode, in a new reference with a pointer from Step 2, applies on an explicit change request. Headless, it reads the pipeline and its files, checks new parts with list and fields, and writes <name>.change.md with diffs verified on a copy. It never edits the pipeline.\n\nAuthor's apply step applies a ready change@1 the same way it applies a test report. The record is shared with story 3."
+verify = "rpcn_check tests on both pins cover the change@1 hash check (ready, stale, bad header).\n\nScenarios on both pins:\n- A headless \"change <path>.yaml to drop test orders\" writes a ready <name>.change.md, and the pipeline is unchanged.\n- Applying it (\"apply <name>.change.md\") gives a pipeline that lints clean.\n- A plain \"write a pipeline\" over the existing name still blocks."
+covers = ["R3"]
+after = [1, "2.5"]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Author changes a pipeline interactively through Edits"
+description = "Interactive change mode makes the requested change with Edit on the existing files, one Edit per change, never a whole-file Write.\n\nIt keeps labels, comments, field order and unrelated parts as they are. An inline mapping isn't moved into a .blobl file unless asked, and .env.example only gains names.\n\nAfter the Edits it lints, up to 3 revisions. If the host refuses an Edit, Author reports what was left out, lints what landed, and doesn't try another way.\n\nQuestions cover only what the change leaves open, through the question tool when offered. A departure from a ready note adds a Deviations row.\n\nT's runner gains a transcript check that no Write touched a named file. The record is shared with story 2."
+verify = "On both pins, an interactive scenario \"change <path>.yaml to retry the API with backoff\":\n- the pipeline changes through Edit only (the new runner check);\n- unrelated lines are byte-identical;\n- lint is clean.\nThe runner check has unit tests. The refused-Edit path is noted as checked in the extension only."
+covers = ["R4"]
+after = [2]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Apply a design change to an existing pipeline"
+description = "With a note that rpcn-design's re-run has changed, \"apply the design change\" brings the pipeline in line through change mode: Edits when interactive, change@1 when headless. A departure adds a Deviations row.\n\nThe record is shared with stories 5 and 6."
+verify = "A headless chain on both pins:\n1. describe a hand-written pipeline;\n2. a Design re-run with a stated change;\n3. Author's \"apply the design change\" (change@1, then apply);\n4. Test, whose Design check reports 0 mismatch.\nThe pipeline carries the change."
+covers = ["R5"]
+after = [3, "2.10"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "The change and describe modes fit beside the siblings"
+description = "rpcn-design's and rpcn-author's descriptions gain the describe and change phrases, within 1,024 characters each, and name each other where triggers collide.\n\nEach skill gets a Next line for its new mode's outcomes.\n\nNew trigger cases:\n- positives for \"describe my pipeline …\" and \"change my pipeline to …\";\n- near-misses for \"design a pipeline …\" (not Author), \"write a pipeline …\" (not Design) and \"test my pipeline …\" (neither).\n\nThe record is shared with stories 4 and 6."
+verify = "The validator shows no warnings for the three skills, and the trigger gate passes at accuracy 1.0 with every new near-miss silent."
+covers = ["R6"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from the plans and review findings this epic deferred. Its record is shared with stories 4 and 5 and closes the epic."
+verify = "All epic checks still pass after the cleanup."
+covers = []
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "low"

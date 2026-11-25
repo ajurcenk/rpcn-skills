@@ -2,7 +2,7 @@
 type: initiative
 title: "RPCN developers design, build, test, tune, scale, deploy and migrate pipelines with binary-checked agent skills"
 parent: none
-sources: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md]
+sources: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md, _bmad-output/initiative-rpcn-skills/change-requests-vscode-extension/change-an-existing-pipeline.md, _bmad-output/initiative-rpcn-skills/change-requests-vscode-extension/describe-an-existing-pipeline.md]
 companions: [_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md, _bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md]
 after: []
 risk: medium
@@ -39,6 +39,8 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 - R18 (brief How the skills are built: Versioning): Each release is stamped with the RPCN release its references were generated from, and a skill warns when the installed binary is newer. Retired and renamed skill names are listed and never reused. A CI validator checks names, descriptions and file references, and blocks a merge that fails.
 - R20 (brief How the skills are built: Benchmark against the existing skill sets): Each comparable scenario (Author, Bloblang and Test work) runs in four arms: our skills, only the `redpanda-data/connect` plugin, only `redpanda-data/skills`, and no skills. The same objective checks (lint, Bloblang output, fields present in the binary) and a quality judgement score every arm. It is met when the results file shows each comparable scenario's winner, and every scenario another arm wins becomes an improvement story.
 - R19 (brief How the skills are built: What next): Each skill closes by naming the next skill for the developer's situation.
+- R21 (change request change-an-existing-pipeline, 2026-11-25): rpcn-author changes an existing pipeline on an explicit request, as a reviewable change. Interactive runs make one Edit per change and never a whole-file Write. Headless runs leave the pipeline untouched and write a proposal file with verified diffs, which Author's apply step can apply. It is met when an interactive change leaves unrelated lines byte-identical and lints clean, and a headless run leaves the pipeline unchanged and writes a proposal that applies.
+- R22 (change request describe-an-existing-pipeline, 2026-11-25): rpcn-design writes a `design@1` note describing what an existing pipeline does, from the pipeline and its resources and `.blobl` files, without editing them. It is met when a hand-written pipeline gets a ready note that lists its components in config order and states its error handling, delivery, ordering, idempotency and batching as the config does, with the pipeline byte-identical afterwards.
 
 ## Constraints
 
@@ -71,12 +73,15 @@ RPCN developers and the DevOps engineers who run their pipelines get configs tha
 
 ## References
 
+- change request — `_bmad-output/initiative-rpcn-skills/change-requests-vscode-extension/change-an-existing-pipeline.md` (R21)
+- change request — `_bmad-output/initiative-rpcn-skills/change-requests-vscode-extension/describe-an-existing-pipeline.md` (R22)
 - brief — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/brief-rpcn-skills.md`, sections The Solution (including Artifacts and hand-offs), Success Criteria, Scope
 - research — `_bmad-output/initiative-rpcn-skills/brief-rpcn-skills/addendum.md`: prior art summary table, landscape, companion product seams, BMAD-METHOD patterns
 - architecture — `_bmad-output/initiative-rpcn-skills/architecture-rpcn-skills/architecture-rpcn-skills.md`: AD-1 to AD-14, conventions, structural seed, deferred list
 
 ## Notes
 
+- Decision (2026-11-25, user): the VS Code extension's two change requests (its AD-26 and epic 8) are in scope as epic 8 \"Existing pipelines\", covering R21 and R22. It is built right after epic 3 and before release sync, which also waits on it.
 - Open question: What capacity model backs Scale, and is there internal benchmark data? R5 waits on this. Deferred until after version 1 and settled when the Scale epic is refined (Decision 2026-10-22).
 - Open question: Should teams get one org-facts file (registry, secret store, naming rules) that every skill reads?
 - Decision (2026-10-22): Failure-mode cases come from `redpanda-data/connect` GitHub issues first. Aleksej curates them and adds more sources and cases later (R10).
