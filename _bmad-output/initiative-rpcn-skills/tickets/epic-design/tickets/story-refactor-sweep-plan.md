@@ -3,7 +3,7 @@ title: 'Refactor sweep (epic 3)'
 type: 'refactor'
 ticket: '10'
 created: '2026-11-24'
-status: 'built'
+status: 'done'
 baseline_revision: '886580eaa5824c5a1887d4089a5ca95a959af946'
 route: 'full'
 route_source: 'auto'
@@ -103,6 +103,9 @@ Epic 3 deferred only two items, and neither is cleanup: multi-turn scenarios are
   `patterns.md` (all now say `<the DLQ>`). Question-tool paragraphs share
   "a chosen option or free text (an "Other" choice)". `patterns.md` "failure
   path" -> "failure target".
+
+- **Eval record:** `evals/results/2026-11-24-758b81cd589e.json` passed with `dirty: false` on the first run, at $57.25. Trigger accuracy was 1.0, and all 61 scenarios passed 2/2 on both pins.
+- **Pushed:** `e5f9586..60f4c75`. CI run 45549811492 was green.
 
 ## Plan Change Log
 
