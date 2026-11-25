@@ -3,7 +3,7 @@ title: 'Design and Author ask through the host question tool when one is offered
 type: 'feature'
 ticket: ''
 created: '2026-11-24'
-status: 'built'
+status: 'done'
 baseline_revision: '560f483909871f4afe9ec239106365c1672d6e42'
 route: 'oneshot'
 route_source: 'auto'
@@ -56,6 +56,9 @@ context: ['/tmp/claude-1000/-home-aleksejjurcenko-projects-clients-personal-rpcn
 
 - **Second record failed** (2026-11-24, $68.12; the failed file is in the scratchpad): 60/61 scenarios passed 2/2. `rpcn-design__newcomer_e2e` was 1/2 because rpcn-author changed `email` with `merge` and made it an array. This is the 3.8 defect again; the question-tool change didn't cause it.
 - **Fix (user: "prove + rule, smoke, rerun"):** new real-binary test `test_pattern_merge_makes_a_shared_key_an_array_assignment_replaces` (both pins) and a SOURCES row. rpcn-author's `questions.md` now says to change a field by assignment, never with `merge`. Smoke: `newcomer_e2e` 3/3, `rpcn-author__implied_required` 1/1.
+
+- **Eval record:** `evals/results/2026-11-24-7ff4db19d8d9.json` passed with `dirty: false` on the third run, at $57.15. Trigger accuracy was 1.0, and all 61 scenarios passed 2/2 on both pins. The two failed attempts are kept in the scratchpad.
+- **Pushed:** `560f483..e5f9586`. CI run 45530220789 was green. Next is to check the tool path in the extension's spike 65.
 
 ## Review Triage Log
 
