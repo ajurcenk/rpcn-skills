@@ -3,7 +3,7 @@ title: 'Tracer: rpcn-design describes a hand-written pipeline'
 type: 'feature'
 ticket: '1'
 created: '2026-11-25'
-status: 'built'
+status: 'done'
 baseline_revision: '9bc1695f0e79282fb159a994c3fee59656c9b5b5'
 route: 'full'
 route_source: 'auto'
@@ -131,6 +131,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-existing-pipelines/e
 
 - **First record failed** (2026-11-25, $73.21; the failed file is in the scratchpad): 65/66 scenarios passed 2/2. `describe_missing` was 1/2, only on `read_lacks`: one Read to see whether the file exists is how Design checks it, and that check was added in review. It was dropped, and T's fix is `64ef6f4`.
 - **Eval record:** `evals/results/2026-11-25-fa87b4f80a78.json` passed with `dirty: false`, at $66.82. Trigger accuracy 1.0, all 66 scenarios 2/2 on both pins.
+
+- **Pushed:** `9bc1695..1483688`. CI run 45742525191 was green. The T commits (`8687729`, `64ef6f4`) stay local.
 
 ## Plan Change Log
 
