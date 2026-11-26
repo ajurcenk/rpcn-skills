@@ -371,8 +371,9 @@ def cmd_lint(args: argparse.Namespace) -> int:
 
 # Hand-off formats this copy can read: artifact -> the majors it knows. Later
 # epics add an entry next to their own `tools/shared/formats/<artifact>-format.md`.
-# test-report@2 added the Dry run section; @1 stays readable.
-KNOWN_FORMATS = {"design": (1,), "test-report": (1, 2)}
+# test-report@2 added the Dry run section; @1 stays readable. change@1 is
+# rpcn-author's change proposal (change-format.md).
+KNOWN_FORMATS = {"design": (1,), "test-report": (1, 2), "change": (1,)}
 
 HANDOFF_SCALAR_KEYS = (
     "artifact", "format", "pipeline", "status", "produced_by", "rpcn_version", "updated",

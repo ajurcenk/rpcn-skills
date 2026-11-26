@@ -15,9 +15,13 @@ Fill it this way:
     Step 2: nothing is written)
   - a component the binary doesn't list, or no listed one that fits
     (`reason` names it)
-  - lint still failing after 3 revisions
-  - a report that is not ready (`reason` says why: draft, or an input
-    changed or missing since it was hashed)
+  - lint still failing after 3 revisions (not in change mode: a diff
+    whose copy still fails is `(unverified)`, the run ends `complete`
+    with `checks.lint: fail`)
+  - a report or change proposal that is not ready (`reason` says why:
+    draft, or an input changed or missing since it was hashed)
+  - a change proposal written as `draft`, with a `[blocking]` item
+    (`change.md`; `reason` names it)
 
   Otherwise `complete`. A pick made in place of a question
   (`questions.md`) never blocks: the run ends `complete`, with each pick
@@ -29,7 +33,9 @@ Fill it this way:
 - `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.
 - `checks.tests`: `skipped`.
 - `artifacts`: every file written or edited, as paths from the project root,
-  or `[]`. Never the test report: rpcn-author doesn't edit it. A design note
+  or `[]`. A change proposal rpcn-author writes is listed (change mode
+  writes only it). Never the test report, or a proposal being applied:
+  rpcn-author doesn't edit them. A design note
   is listed only when Deviations rows were added to it.
 - Questions, and each pick from `questions.md` (`Assumed: …`), go in
   `open_questions`.

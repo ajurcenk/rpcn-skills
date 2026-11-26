@@ -3,8 +3,8 @@
 Skills hand work to each other only through files in the developer's
 project, beside `<name>.yaml` or `<name>.yml` (AD-6). Every Markdown hand-off file, such as
 `<name>.design.md` or `<name>.test-report.md`, starts with the header below.
-Each artifact's own format doc (`design-format.md`, `test-report-format.md`)
-adds its sections and its readiness list.
+Each artifact's own format doc (`design-format.md`, `test-report-format.md`,
+`change-format.md`) adds its sections and its readiness list.
 
 ## One writer per file
 
@@ -18,7 +18,7 @@ Deploy) put a proposed diff in their own report, and rpcn-author applies it.
 
 | Key | Value |
 |---|---|
-| `artifact` | `design`, `test-report`, `capacity`, `deploy`, `tune-report` or `migration-report` |
+| `artifact` | `design`, `test-report`, `change`, `capacity`, `deploy`, `tune-report` or `migration-report` |
 | `format` | `<artifact>@<major>`, for example `test-report@2` |
 | `pipeline` | The pipeline name: `<name>` in `<name>.yaml` (or `<name>.yml`) |
 | `status` | `draft`, `ready` or `superseded` |

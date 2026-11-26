@@ -887,6 +887,70 @@ class HashTest(CheckTestBase):
         self.assertEqual(code, 0, out)
         self.assertTrue(out["data"]["format_known"])
 
+    # --- hash --check: a change@1 proposal (story 8.2) -----------------------
+
+    def change(self, inputs: list[tuple[str, str]] | None = None, **kw: str) -> Path:
+        kw.setdefault("artifact", "change")
+        kw.setdefault("fmt", "change@1")
+        kw.setdefault("body", "# orders: change proposal\n")
+        return self.write("orders.change.md", handoff(inputs, **kw))
+
+    def test_change_ready(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        code, out = self.check(self.change([("orders.yaml", sha(self.PIPE))]))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["errors"], [])
+        self.assertEqual(
+            out["data"],
+            {
+                "artifact": "change",
+                "status": "ready",
+                "format": "change@1",
+                "format_known": True,
+                "inputs": [{"file": "orders.yaml", "recorded": sha(self.PIPE),
+                            "current": sha(self.PIPE), "state": "match"}],
+                "ready": True,
+                "verdict": None,
+                "pipeline_ready": False,
+            },
+        )
+
+    def test_change_stale_input(self) -> None:
+        res = "cache_resources: []\n"
+        self.write("orders.yaml", self.PIPE)
+        self.write("orders.resources.yaml", res)
+        proposal = self.change([("orders.yaml", sha(self.PIPE)), ("orders.resources.yaml", sha(res))])
+        self.write("orders.resources.yaml", res + "# edited\n")
+        code, out = self.check(proposal)
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual([i["state"] for i in out["data"]["inputs"]], ["match", "changed"])
+        self.assertIn("orders.resources.yaml", out["errors"][0]["message"])
+
+    def test_change_draft_not_ready(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        code, out = self.check(self.change([("orders.yaml", sha(self.PIPE))], status="draft"))
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["ready"])
+        self.assertIn("draft", out["errors"][0]["message"])
+
+    def test_change_unknown_major(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        code, out = self.check(self.change([("orders.yaml", sha(self.PIPE))], fmt="change@2"))
+        self.assertEqual(code, 1, out)
+        self.assertFalse(out["data"]["format_known"])
+        self.assertFalse(out["data"]["ready"])
+        self.assertEqual(out["errors"][0]["line"], 3)
+
+    def test_change_missing_header_field(self) -> None:
+        self.write("orders.yaml", self.PIPE)
+        proposal = self.change([("orders.yaml", sha(self.PIPE))])
+        proposal.write_text(proposal.read_text().replace("produced_by: rpcn-test@0.1.0\n", ""))
+        code, out = self.check(proposal)
+        self.assertEqual(code, 2, out)
+        self.assertEqual(out["data"], {})
+        self.assertIn("produced_by", out["errors"][0]["message"])
+
     def test_no_inputs(self) -> None:
         # A design may have no inputs; a test report must start with its pipeline.
         report = self.write("orders.design.md", handoff(artifact="design", fmt="design@1"))
@@ -1204,6 +1268,37 @@ class HashTest(CheckTestBase):
         self.assertFalse(out["data"]["ready"])
         self.assertEqual(out["data"]["inputs"][0]["state"], "changed")
         self.assertFalse(out["data"]["pipeline_ready"])
+
+    def test_doc_example_change_is_ready_applies_then_stale(self) -> None:
+        # change-format.md's example proposal hashes test-report-format.md's
+        # example orders.yaml, and its one diff applies to it on content.
+        pipe = doc_examples(FORMATS / "test-report-format.md")["orders.yaml"]
+        change_ex = doc_examples(FORMATS / "change-format.md")
+        self.assertEqual(set(change_ex), {"orders.change.md"})
+        proposal = change_ex["orders.change.md"]
+        self.write("orders.yaml", pipe)
+        path = self.write("orders.change.md", proposal)
+        code, out = self.check(path)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["data"]["artifact"], "change")
+        self.assertEqual([(i["file"], i["state"]) for i in out["data"]["inputs"]], [("orders.yaml", "match")])
+        body = proposal.split("\n---\n", 1)[1]
+        self.assertEqual(re.findall(r"^## (.+)$", body, re.M), ["Request", "Proposed changes", "Open decisions"])
+        self.assertIn("Cause:", body)
+        hunks = re.findall(r"^```diff\n--- a/orders.yaml\n\+\+\+ b/orders.yaml\n@@ [^\n]*@@\n(.*?)^```$",
+                           body, re.M | re.S)
+        self.assertEqual(len(hunks), 1)
+        lines = hunks[0].splitlines()
+        old = "".join(l[1:] + "\n" for l in lines if l[:1] in (" ", "-"))
+        new = "".join(l[1:] + "\n" for l in lines if l[:1] in (" ", "+"))
+        self.assertEqual(pipe.count(old), 1)
+        patched = pipe.replace(old, new)
+        self.assertIn("deleted()", patched)
+
+        self.write("orders.yaml", patched)
+        code, out = self.check(path)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out["data"]["inputs"][0]["state"], "changed")
 
     def test_header_doc_example_matches_report_example(self) -> None:
         report = doc_examples(FORMATS / "test-report-format.md")["orders.test-report.md"]
@@ -2328,6 +2423,23 @@ class RealBinaryLintTest(unittest.TestCase):
                     first, *rest = per_binary.values()
                     for other in rest:
                         self.assertEqual(other, first)
+
+    def test_change_example_diff_lints_clean(self) -> None:
+        # change-format.md's example diff, applied to test-report-format.md's
+        # example orders.yaml, lints clean on every pin (story 8.2).
+        pipe = doc_examples(FORMATS / "test-report-format.md")["orders.yaml"]
+        body = doc_examples(FORMATS / "change-format.md")["orders.change.md"]
+        hunk = re.search(r"^```diff\n(?:[-+]{3} [^\n]*\n){2}@@ [^\n]*@@\n(.*?)^```$", body, re.M | re.S)
+        lines = hunk.group(1).splitlines()
+        old = "".join(l[1:] + "\n" for l in lines if l[:1] in (" ", "-"))
+        new = "".join(l[1:] + "\n" for l in lines if l[:1] in (" ", "+"))
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "orders.yaml"
+            target.write_text(pipe.replace(old, new))
+            for binary in _real_binaries():
+                with self.subTest(binary=binary):
+                    code, out = self.lint(binary, [str(target)])
+                    self.assertEqual(code, 0, out)
 
     def test_missing_file_not_passed_to_binary(self) -> None:
         for binary in _real_binaries():

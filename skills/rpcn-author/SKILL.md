@@ -1,6 +1,6 @@
 ---
 name: rpcn-author
-description: 'Writes new Redpanda Connect pipelines from a plain request, or builds from a ready <name>.design.md, using only components and fields the installed binary reports, and lints them until clean. Also applies a <name>.test-report.md''s proposed changes. Use when the user says "write me a Redpanda Connect pipeline", "create a pipeline that reads from … and writes to …", "build a Redpanda Connect config", "generate a pipeline YAML", "new pipeline", "build the pipeline from its design note", "apply the test report", "fix my pipeline from its test report" or "rpcn-author", and when the user describes a data flow (source, processing, sink) and asks for its Redpanda Connect config. Not for designing a pipeline before it is built (use rpcn-design), linting or testing it (use rpcn-test), or deploying it.'
+description: 'Writes new Redpanda Connect pipelines from a plain request, or builds from a ready <name>.design.md, using only components and fields the installed binary reports, and lints them until clean. Also applies a <name>.test-report.md''s or <name>.change.md''s proposed changes. Use when the user says "write me a Redpanda Connect pipeline", "create a pipeline that reads from … and writes to …", "build a Redpanda Connect config", "generate a pipeline YAML", "new pipeline", "change my pipeline to …", "build the pipeline from its design note", "apply the test report", "fix my pipeline from its test report" or "rpcn-author", and when the user describes a data flow (source, processing, sink) and asks for its Redpanda Connect config. Not for designing a pipeline before it is built (use rpcn-design), linting or testing it (use rpcn-test), or deploying it.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -22,24 +22,25 @@ or a script reports `data.headless: true`: never ask, put gaps in
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py binary
 ```
 
-Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path, here
-and below.
+Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path.
 
-Calls print JSON (`ok`, `binary`, `errors`, `data`). **Exit 2**
+Calls print JSON (`ok`, `errors`, `data`). **Exit 2**
 in any step (but Step 2's design-note check) means stop: write nothing,
 show each `errors[].message` (headless: `blocked`).
 
 ## Step 2: Name the files
 
-If the user names or asks to apply a `<name>.test-report.md`, go to Step 7.
+If the user names or asks to apply a `<name>.test-report.md` or
+`.change.md`, go to Step 7.
 
 `<pipeline>` is the file the user names, with its extension (`<name>.yaml`
 or `.yml`), else a short snake_case `<name>.yaml`; if only a `.design.md` is
 named, `<name>` is its `pipeline`. `<dir>/` is the named file's folder
 (pipeline or `.design.md`), or nothing (project root).
 
-If `<dir>/<pipeline>` exists, never write over it: ask in Step 5's
-round (headless: stop, `blocked`, question in `open_questions`).
+If `<dir>/<pipeline>` exists: to change it, see `references/change.md`;
+else never write over it: ask in Step 5's round (headless: stop,
+`blocked`, question in `open_questions`).
 
 Check `<file>` = `<dir>/<name>.design.md`:
 
@@ -60,7 +61,7 @@ For each part (input, processors, output, resources):
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py list <category>
 ```
 
-`<category>` is `inputs`, `processors`, `outputs`, `caches`, … Use only
+`<category>` is `inputs`, `processors`, `outputs`, … Use only
 names in `data.components`.
 
 ## Step 4: Check the fields
@@ -99,22 +100,24 @@ lint again, at most 3 revisions. Still failing: report the errors (headless:
 
 Reply with the files, components and lint result.
 
-## Step 7: Apply a test report
+## Step 7: Apply a test report or change proposal
 
-Run Step 2's `hash --check` on `<dir>/<name>.test-report.md` (`<dir>/`
-its folder), then follow `references/apply-report.md` (§1 says when to
-stop), with `references/test-report-format.md`.
+Run Step 2's `hash --check` on `<dir>/<name>.test-report.md` or
+`.change.md` (`<dir>/` its folder), then `references/apply-report.md`
+(§1 says when to stop), with `references/test-report-format.md` or
+`references/change-format.md`.
 
 ## Next
 
 - Lint clean, or report applied: test with rpcn-test.
 - Lint failing: fix it, lint with rpcn-test.
-- Report not ready: re-run rpcn-test.
+- Report or proposal not ready: re-run its writer.
+- Proposal written: review, then apply it.
 - Design note not ready: update it with rpcn-design.
 - File exists: re-run with a new name.
 - Binary missing or old: fix, re-run.
 
 ## Status block (headless only)
 
-End with exactly one fenced `json` block, then nothing, filled as
+End with exactly one fenced `json` block, then nothing, as
 `references/status-block.md` says.
