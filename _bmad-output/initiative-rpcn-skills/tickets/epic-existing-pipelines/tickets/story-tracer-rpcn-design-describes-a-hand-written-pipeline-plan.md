@@ -129,6 +129,9 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-existing-pipelines/e
   - Validator ok with no warnings; T's tests: 423 OK.
 - Not done yet: the commit and the `run_evals.py` record, which wait for review.
 
+- **First record failed** (2026-11-25, $73.21; the failed file is in the scratchpad): 65/66 scenarios passed 2/2. `describe_missing` was 1/2, only on `read_lacks`: one Read to see whether the file exists is how Design checks it, and that check was added in review. It was dropped, and T's fix is `64ef6f4`.
+- **Eval record:** `evals/results/2026-11-25-fa87b4f80a78.json` passed with `dirty: false`, at $66.82. Trigger accuracy 1.0, all 66 scenarios 2/2 on both pins.
+
 ## Plan Change Log
 
 ## Review Triage Log
