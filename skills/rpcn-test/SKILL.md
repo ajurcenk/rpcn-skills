@@ -81,7 +81,7 @@ Then `references/unit-tests.md`:
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py test [--resources <res>] <dir>/<pipeline>
 ```
 
-Then `references/design-check.md`.
+Then, only with a design note, `references/design-check.md`.
 
 ## Step 4: Explain the errors
 
