@@ -92,6 +92,15 @@ to match: if the file doesn't exist, Write it with the `+` lines (prefix
 stripped); if it exists, skip that item, say so, and add it to
 `open_questions`. A created resources file is a `<res>` for lint.
 
+When the host refuses an Edit (or a Write that creates a file), that hunk
+or file doesn't land: never try that change another way, such as a Write
+or a different Edit. Apply no more hunks of that item, and go on with the
+next item. Hunks of the item that landed before the refusal (in that file
+or another) stay applied: never undo them. Report the item as not applied
+when nothing of it landed, else as partly applied, naming what landed and
+what was refused. A lint revision never redoes a refused item, whole or
+part. Lint what landed, as below.
+
 After the edits, lint as in Step 6, but pass `--resources <res>` for each
 resources input found in section 2 (paths from the project root). On a lint
 failure, revise as Step 6 says.
@@ -100,6 +109,7 @@ failure, revise as Step 6 says.
 
 List each item by number with its result: applied (a created file says
 so), skipped (the file and why, such as a file to create that exists) or
-not applied (the hunk that didn't match). Then the files edited and
-the lint result. The run ends `complete` even when some items were not
-applied.
+not applied (the hunk that didn't match, or the Edit the host refused),
+or partly applied (the hunks that landed, and the refused one). Then the
+files edited and the lint result. The run ends `complete` even when some
+items were not applied.
