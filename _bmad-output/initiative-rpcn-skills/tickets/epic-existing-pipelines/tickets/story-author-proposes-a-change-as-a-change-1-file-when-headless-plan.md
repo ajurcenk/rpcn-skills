@@ -3,7 +3,7 @@ title: 'Author proposes a change as a change@1 file when headless'
 type: 'feature'
 ticket: '2'
 created: '2026-11-25'
-status: 'built'
+status: 'done'
 baseline_revision: '64f13c59866d9dd494d4dd1f065b8d6cc91785c7'
 route: 'full'
 route_source: 'auto'
@@ -144,6 +144,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-existing-pipelines/e
 - The architecture's AD-6 writer table and `artifact:` list do not yet name `change` (not in this plan's Code Map).
 
 - **Eval record (shared by 8.2 and 8.3):** `evals/results/2026-11-27-1978440ab31a.json` passed with `dirty: false`, at $76.70. Trigger accuracy 1.0; all 71 scenarios 2/2 on both pins. The first attempt ($75.87, 2026-11-26) failed only on `rpcn-test__dry_run_error`: rpcn-test's `SKILL.md` read `design-check.md` with no note. Fixed in `15aebfb`.
+
+- **Pushed:** `64f13c5..491e126`, 8.2 and 8.3 together. CI run 46060786787 was green. T commits stay local.
 
 ## Plan Change Log
 
