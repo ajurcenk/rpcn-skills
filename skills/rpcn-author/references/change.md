@@ -167,10 +167,11 @@ is still applied: lint decides (`apply-report.md` §3). What
 `apply-report.md` §4 adds to `open_questions` goes in the reply instead:
 interactive runs have no status block.
 
-A refused Edit doesn't land: never try that change another way. Hunks of
-the item that landed before it stay applied; report the item as not
-applied, or as partly applied naming what landed (`apply-report.md` §4).
-Then lint what landed as Step 6 does (with `--resources` the resources
+A refused Edit doesn't land: never try that change another way. Apply no
+more hunks of that item, and go on with the next. Hunks of the item that
+landed before it stay applied; report the item as not applied, or as
+partly applied naming what landed (`apply-report.md` §4). After the last
+item, lint what landed as Step 6 does (with `--resources` the resources
 file when there is one), up to 3 revisions, each one an Edit. A revision
 never redoes a refused item, whole or part.
 

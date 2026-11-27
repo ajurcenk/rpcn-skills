@@ -15,9 +15,9 @@ Fill it this way:
     Step 2: nothing is written)
   - a component the binary doesn't list, or no listed one that fits
     (`reason` names it)
-  - lint still failing after 3 revisions (not in change mode: a diff
-    whose copy still fails is `(unverified)`, the run ends `complete`
-    with `checks.lint: fail`)
+  - lint still failing after 3 revisions (`reason` the first error; not
+    in change mode: a diff whose copy still fails is `(unverified)`, the
+    run ends `complete` with `checks.lint: fail`)
   - a report or change proposal that is not ready (`reason` says why:
     draft, or an input changed or missing since it was hashed)
   - a change proposal written as `draft`, with a `[blocking]` item
@@ -29,10 +29,11 @@ Fill it this way:
   (`questions.md`) never blocks: the run ends `complete`, with each pick
   in `open_questions`. A proposed change that can't be applied doesn't
   block: the run ends `complete`, with that item in `open_questions`.
-  Neither does a design note that is missing or not ready (AD-8), except
-  for a design-change request (above): with a
+  Neither does a design note that is missing or not ready (AD-8): with a
   not-ready note the run ends `complete`, `reason` stays `null`, and
   `open_questions` holds one line saying the note is not ready and why.
+  The one exception is a request to apply a design change, which ends
+  `blocked` (above).
 - `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.
 - `checks.tests`: `skipped`.
 - `artifacts`: every file written or edited, as paths from the project root,

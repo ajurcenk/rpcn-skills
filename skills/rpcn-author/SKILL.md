@@ -26,7 +26,7 @@ Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path.
 
 Calls print JSON (`ok`, `errors`, `data`). **Exit 2**
 in any step (but Step 2's note check) means stop: write nothing,
-show each `errors[].message` (headless: `blocked`).
+show each `errors[].message`.
 
 ## Step 2: Name the files
 
@@ -74,16 +74,15 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py fields <category> <component>
 
 Set only `data.fields[].path` paths (`tls.enabled`, `a[].b`),
 and every `required: true` field. On exit 1, pick a close match in
-`data.components` that fits, else ask in Step 5's round (headless:
-`blocked`). Never write a component the binary doesn't list.
+`data.components` that fits, else ask in Step 5's round. Never write a
+component the binary doesn't list.
 
 ## Step 5: Ask, then write
 
 First follow `references/questions.md`. Then write `<dir>/<pipeline>`:
-plain YAML, no comment block. Secrets, addresses and credentials are
-always `${ENV_VAR}`, never inline. For a resource, env var or mapping over
-3 lines, follow `references/pipeline-files.md` (with
-`references/blobl-files.md`).
+plain YAML, no comment block; secrets, addresses and credentials as
+`${ENV_VAR}`. For a resource, env var or mapping over 3 lines, follow
+`references/pipeline-files.md` (with `references/blobl-files.md`).
 
 ## Step 6: Lint
 
@@ -95,17 +94,15 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py lint <dir>/<pipeline> [--resour
 ```
 
 On exit 1, fix each `errors` entry (new fields: Step 4), lint
-again; at most 3 revisions. Still failing: report the errors (headless:
-`blocked`, `reason` the first).
+again; at most 3 revisions. Still failing: report the errors.
 
 Reply with the files, components and lint result.
 
 ## Step 7: Apply a report or proposal
 
 Run Step 2's `hash --check` on the `.test-report.md` or
-`.change.md` (`<dir>/` its folder), then `references/apply-report.md`
-(§1 says when to stop), with `references/test-report-format.md` or
-`references/change-format.md`.
+`.change.md`, then `references/apply-report.md`, with
+`references/test-report-format.md` or `references/change-format.md`.
 
 ## Next
 

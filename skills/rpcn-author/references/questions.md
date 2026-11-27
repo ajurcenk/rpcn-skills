@@ -63,7 +63,8 @@ one message:
     such as a field it only passes through or copies;
   - where a message that fails processing goes, when the request doesn't
     say.
-- **The asks the skill already has:** the pipeline file exists (Step 2);
+- **The asks the skill already has:** the pipeline file exists on a
+  write request (Step 2; a change request is `change.md`'s);
   a resources file or `.blobl` file it would write exists
   (`pipeline-files.md`); or no listed component clearly fits (Step 4).
   Decide every file name before the round, so each of these is known.
@@ -103,6 +104,7 @@ Never ask. Use each pick, write the files, and put one line per pick in
 without referrer passes (is referrer required?)` or `Assumed: a failed
 message is logged and dropped (failure path: where does it go?)`. These
 picks never block: the run ends `complete`. These still end `blocked`,
-with nothing written: an existing pipeline (Step 2 stops there), an
+with nothing written: an existing pipeline on a write request (Step 2
+stops there; a change request is `change.md`'s), an
 existing resources or `.blobl` file, and no listed component that fits
 (never write one that doesn't), as `status-block.md` says.

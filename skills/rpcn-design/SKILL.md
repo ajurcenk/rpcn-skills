@@ -81,9 +81,7 @@ doesn't list.
 ## Step 5: Write the note
 
 First read `references/questions.md`; ask as it says. Then write
-`<note>` as `references/note-writing.md` says: header, title, then the
-eleven sections in order. `status` follows the Ready rule in
-`references/design-format.md`.
+`<note>` as `references/note-writing.md` says.
 
 ## Step 6: Check the note
 
@@ -91,8 +89,7 @@ eleven sections in order. `status` follows the Ready rule in
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
-Follow "Step 6: checking the note" in `references/note-writing.md`: the
-exit (`ready` 0, `draft` 1), then the Readiness list.
+Follow "Step 6: checking the note" in `references/note-writing.md`.
 
 Reply with the note's path and status, its components, and each pick.
 

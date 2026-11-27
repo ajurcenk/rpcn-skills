@@ -45,8 +45,11 @@ for headless and interactive runs apply to the rewrite as to a new note.
 - `updated`: today.
 - `inputs`: as `handoff-header.md` says. Keep each file the note lists,
   with its hash taken again ("Writing the hashes"), and add a file the
-  request names that the design is now made from. `inputs: []` stays `[]`
-  for a plain request.
+  request names that the design is now made from. Never add a pipeline
+  or any of its files (resources file, `.blobl` files, `.env.example`),
+  even when the request names one: as `describe.md` says, they are never
+  hashed, so a later change doesn't make the note stale. `inputs: []`
+  stays `[]` for a plain request, and for one that names only such files.
 - `artifact`, `format` and `pipeline`: unchanged.
 
 ## Deviations

@@ -21,7 +21,8 @@ Read the note and check each item of the readiness list in
 - say in the reply that the note is not ready, and why (the item that failed)
 - in headless mode the run is still `complete`, with that line in
   `open_questions`. A note is never a required input, so a missing or
-  not-ready note never blocks (AD-8)
+  not-ready note never blocks a build (AD-8). A request to apply a design
+  change is the one exception: it needs a ready note (`change.md` §1)
 
 ## 2. Build from the note
 

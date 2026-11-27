@@ -135,7 +135,7 @@ section, or write `None.`
 
 ## Step 6: checking the note
 
-Step 6 checks the note in this order, as SKILL.md says:
+Step 6 checks the note in this order:
 
 1. Start from the result of SKILL.md Step 6's `hash --check`. A `ready`
    note must exit 0 with `data.ready: true`. A `draft` note exits 1, and

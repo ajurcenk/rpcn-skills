@@ -59,7 +59,8 @@ samples. A mapping of 3 lines or less, such as `root = this`, stays inline.
   one round (`questions.md`), or in headless mode stop with `blocked` as
   for the pipeline.
 - Never move an existing pipeline's inline mapping into a `.blobl` file,
-  unless a test report proposes it.
+  unless a test report proposes it or a change request asks for it
+  (`change.md`).
 - rpcn-test writes `<name>.samples.json`; rpcn-author never writes it.
 
 ## Env vars and `.env.example`
