@@ -143,6 +143,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-existing-pipelines/e
   - the other 17 `rpcn-author__*` scenarios once: all PASS.
 - The architecture's AD-6 writer table and `artifact:` list do not yet name `change` (not in this plan's Code Map).
 
+- **Eval record (shared by 8.2 and 8.3):** `evals/results/2026-11-27-1978440ab31a.json` passed with `dirty: false`, at $76.70. Trigger accuracy 1.0; all 71 scenarios 2/2 on both pins. The first attempt ($75.87, 2026-11-26) failed only on `rpcn-test__dry_run_error`: rpcn-test's `SKILL.md` read `design-check.md` with no note. Fixed in `15aebfb`.
+
 ## Plan Change Log
 
 ## Review Triage Log

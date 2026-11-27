@@ -112,6 +112,8 @@ context: ['_bmad-output/initiative-rpcn-skills/tickets/epic-existing-pipelines/e
   - Deviation: `bash_lacks` on the pipeline's file name would always fail, because every run lints `depot/order_relay.yaml` by name. It is `[">", "uv run python", "uv run --with", "uv run sh", "uv run bash"]` instead: shell-write shapes no legitimate `rpcn_check.py` call holds.
   - Smoke after the fixes (sessions on 4.117.0, `RPCN_TEST_BINARIES` absolute, 4.100.0 first): `change_edit` PASS 2/2 ($0.31 a run; 1 Write to `/tmp`, 1 Edit of the pipeline); the other 21 `rpcn-author__*` PASS 1/1. Validator clean; T's tests 433 passed, 4 skipped.
 
+- **Eval record (shared by 8.2 and 8.3):** `evals/results/2026-11-27-1978440ab31a.json` passed with `dirty: false`, at $76.70. Trigger accuracy 1.0; all 71 scenarios 2/2 on both pins. The first attempt ($75.87, 2026-11-26) failed only on `rpcn-test__dry_run_error`: rpcn-test's `SKILL.md` read `design-check.md` with no note. Fixed in `15aebfb`.
+
 ## Plan Change Log
 
 ## Review Triage Log
