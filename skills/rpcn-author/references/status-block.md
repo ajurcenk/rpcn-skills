@@ -22,12 +22,15 @@ Fill it this way:
     draft, or an input changed or missing since it was hashed)
   - a change proposal written as `draft`, with a `[blocking]` item
     (`change.md`; `reason` names it)
+  - a request to apply a design change with no ready note (`change.md`
+    §1; `reason` says no note, or not ready and why)
 
   Otherwise `complete`. A pick made in place of a question
   (`questions.md`) never blocks: the run ends `complete`, with each pick
   in `open_questions`. A proposed change that can't be applied doesn't
   block: the run ends `complete`, with that item in `open_questions`.
-  Neither does a design note that is missing or not ready (AD-8): with a
+  Neither does a design note that is missing or not ready (AD-8), except
+  for a design-change request (above): with a
   not-ready note the run ends `complete`, `reason` stays `null`, and
   `open_questions` holds one line saying the note is not ready and why.
 - `checks.lint`: `pass`, `fail`, or `skipped` when lint did not run.

@@ -74,7 +74,8 @@ row (or after the separator row when it has none):
 
 Use the Edit tool: `old_string` is the table's current last line,
 `new_string` is that line, a newline, and the new rows. Then set the
-header's `updated:` line to today, in one more Edit. Change nothing else:
+header's `updated:` line to today, in one more Edit (none when it already
+says today). Change nothing else:
 no other line, no blank line, no trailing text after the table.
 
 The note's `inputs` is `[]` or lists files other than the note, so it still

@@ -24,8 +24,9 @@ each section that did not run says `Not run` and why. Both formats are read
 the same way otherwise: the Dry run section only informs, and its fixes, if
 any, are Proposed changes items like any other. A proposal's readiness
 list is in `change-format.md` (in this folder): its three sections, the
-pipeline as `inputs[0]`, at least one item, and no `[blocking]` Open
-decision (so a `draft` is never applied). If an item fails, treat the
+pipeline as `inputs[0]`, at least one item, a diff against the design note
+that only appends Deviations rows and sets `updated`, and no `[blocking]`
+Open decision (so a `draft` is never applied). If an item fails, treat the
 report as not ready: change nothing, say which item failed, and in
 headless mode report `blocked` with that as `reason`.
 
@@ -41,7 +42,7 @@ The report's `inputs` are relative to the report's folder `<dir>/`:
 
 A proposal's files are found the same way: `inputs[0]` is the pipeline,
 and each resources input is a `<res>` for lint, whether a diff changes it
-or not.
+or not. A `<name>.design.md` input is the design note, never a `<res>`.
 
 ## 3. Pick the changes
 
@@ -57,12 +58,21 @@ or any other change), only when its diff is against one of these files:
 - a resources file listed in the report's `inputs`
 - that pipeline's own Bloblang files, `<name>.<label>.blobl`
 - `.env.example` in `<dir>/`
+- for a proposal only: its design note `<name>.design.md` in `<dir>/`,
+  listed in its `inputs`, when every hunk of the diff either appends
+  Deviations table rows after the table's last line (only `+` lines, each a
+  table row) or changes the header's `updated:` line (one `-` and one `+`
+  line, both `updated:`). Any other hunk against the note fails the
+  readiness list: the proposal is not ready, change nothing (§1). Skip the
+  item when the item it records (its `Cause:`
+  names it) was not applied, or only partly: name it in the reply. Apply
+  it as §4 says, Edits only; it needs no lint.
 
 Skip every other target and name it in the reply, with why: the test
 report or proposal itself, `<name>_benthos_test.yaml`, a samples file or
-any other file rpcn-test owns (rpcn-test applies its own files), another
-pipeline, or any file not in the list above. Never edit the report or
-proposal.
+any other file rpcn-test owns (rpcn-test applies its own files), a design
+note (but a proposal's Deviations item, above), another pipeline, or any
+file not in the list above. Never edit the report or proposal.
 
 A proposal's diff may create a file (`--- /dev/null`): the pipeline's own
 `<name>.resources.yaml` (`.resources.yml`), a `<name>.<label>.blobl`, or
@@ -108,7 +118,7 @@ failure, revise as Step 6 says.
 ## 5. Reply
 
 List each item by number with its result: applied (a created file says
-so), skipped (the file and why, such as a file to create that exists) or
+so; a note item names its Deviations row: section, what, why), skipped (the file and why, such as a file to create that exists) or
 not applied (the hunk that didn't match, or the Edit the host refused),
 or partly applied (the hunks that landed, and the refused one). Then the
 files edited and the lint result. The run ends `complete` even when some

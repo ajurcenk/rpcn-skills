@@ -148,8 +148,8 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $65 for a default run at 2 runs (trigger suite ~$6.00, the
-  seventy-one pass scenarios x 2 ~$59.30; it was about $47 at 3 runs with forty: one
+- **Cost:** about $74.50 for a default run at 2 runs (trigger suite ~$6.00, the
+  seventy-seven pass scenarios x 2 ~$68.48; it was about $47 at 3 runs with forty: one
   pass of thirty-eight of them at `--runs 1` cost $12.39 in story 3.1, plus about
   $0.40 for the two added after it, story 3.2's five `rpcn-design__pattern_*`
   scenarios cost about $0.42 a run each, and story 3.3's five
@@ -170,7 +170,13 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `rpcn-author__change_propose` about $0.24 a run,
   `rpcn-author__change_apply` about $0.17, `rpcn-author__change_stale`
   about $0.13 and `rpcn-author__change_unlisted` about $0.20, and story
-  8.3's `rpcn-author__change_edit` about $0.30). The record's `cost_usd` holds the measured total.
+  8.3's `rpcn-author__change_edit` about $0.30, and story 8.4's
+  `rpcn-author__chain_design_change` about $2.26,
+  `rpcn-author__chain_change_departs` about $1.22 and
+  `rpcn-author__change_departs_edit` about $0.35,
+  `rpcn-author__design_change_edit` about $0.31,
+  `rpcn-author__design_change_none` about $0.26 and
+  `rpcn-author__design_change_no_note` about $0.19). The record's `cost_usd` holds the measured total.
 
 ## The gate
 

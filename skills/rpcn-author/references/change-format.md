@@ -31,8 +31,13 @@ major they do not know, through `rpcn_check.py hash --check`.
     changes it, recorded relative to the proposal's folder (such as
     `<name>.resources.yaml` or `../resources.yaml`).
 
+  - then the design note `<name>.design.md` when a diff changes it (a
+    departure's Deviations row, below), recorded relative to the
+    proposal's folder.
+
   A file a diff creates (`--- /dev/null`) is not an input: there is nothing
-  to hash. A design note the change was read against is not an input either.
+  to hash. A design note the change was only read against, with no diff
+  against it, is not an input either.
 
 When any input changes, `hash --check` reports the proposal as not ready,
 so a proposal is never applied to a file it was not made against.
@@ -57,7 +62,9 @@ After a `# <name>: change proposal` title, the body has exactly these three
 2. **Proposed changes**: one numbered item per change, in the item shape of
    `test-report-format.md`'s Proposed changes:
    - a title line saying what changes;
-   - a cause line, `Cause: <the part of the request it carries out>`;
+   - a cause line, `Cause: <the part of the request it carries out>`; for
+     a request to apply a design change, the note's section and what it
+     says;
    - a fenced `diff` block in unified format against the file to change
      (`--- a/<file>`, `+++ b/<file>`, relative to the proposal's folder),
      with three lines of context. A new file is `--- /dev/null` and
@@ -71,14 +78,25 @@ After a `# <name>: change proposal` title, the body has exactly these three
    or that can't be checked, ends its title with `(unverified)`. With no
    diff at all, the section is `None.` and the proposal is `draft`. A
    request the pipeline already meets gets no proposal at all.
+
+   A change that departs from a ready design note (it does what a section
+   says otherwise) is recorded as one more item, right after the item that
+   departs: a diff against `<name>.design.md` with only two kinds of hunk,
+   one that appends the Deviations row (`design-format.md`) after the
+   table's last row, and one that sets the header's `updated:` line (left
+   out when that line already says today, so the item may hold only the
+   row hunk). Its
+   cause line names the item that departs, the note's section and what it
+   says. Nothing else in the note changes.
 3. **Open decisions**: one bullet per choice the request leaves open, or
    `None.`:
    - `[blocking] <what>`: a part of the request with no diff, and why (a
      component the binary doesn't list, a field none fits). Any such item
      makes the proposal `draft`.
    - `[non-blocking] <question> Picked: <the choice the diffs make>`: a
-     choice made in place of a question, and a departure from a ready
-     design note, which names the note's section. These leave it `ready`.
+     choice made in place of a question. These leave it `ready`. A
+     departure from a ready design note is not an Open decision: it is a
+     note item, as Proposed changes says.
 
 ## Readiness list
 
@@ -93,6 +111,8 @@ every reader checks:
 - [ ] Every file a diff changes, other than a file it creates, is in
       `inputs`, and so is every resources and `.blobl` file the pipeline
       loads.
+- [ ] A diff against the design note only appends Deviations rows and
+      sets `updated`.
 - [ ] Open decisions has no `[blocking]` item.
 
 If any item fails, the reader treats the proposal as not ready and applies
