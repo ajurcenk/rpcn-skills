@@ -1,6 +1,6 @@
 ---
 name: rpcn-design
-description: 'Designs Redpanda Connect pipelines before any YAML is written. From a plain request, writes a <name>.design.md design note (inputs, outputs, components the installed binary reports, error handling, DLQ, retries, ordering, idempotency, batching, open decisions) that rpcn-author builds from and rpcn-test checks against. Use when the user says "design a Redpanda Connect pipeline", "design a pipeline that reads from … and writes to …", "write a design note for my pipeline", "describe my pipeline orders.yaml", "plan my Redpanda Connect pipeline", "how should this data flow handle failures", "where should failed messages go", "update my design note" or "rpcn-design", and when the user wants a pipeline''s components, error handling or DLQ decided before it is built, or an existing note updated. Not for writing the pipeline YAML (use rpcn-author), or linting and testing it (use rpcn-test), or deploying it.'
+description: 'Designs Redpanda Connect pipelines before any YAML is written. From a plain request, writes a <name>.design.md design note (inputs, outputs, components the binary reports, error handling, DLQ, retries, ordering, idempotency, batching, open decisions) that rpcn-author builds from and rpcn-test checks against. Use when the user says "design a Redpanda Connect pipeline", "design a pipeline that reads from … and writes to …", "write a design note for my pipeline", "describe my pipeline orders.yaml", "plan my Redpanda Connect pipeline", "how should this data flow handle failures", "where should failed messages go", "update my design note" or "rpcn-design", and when the user wants a pipeline''s components, error handling or DLQ decided before it is built, or an existing note updated. Not for writing the pipeline YAML, changing an existing pipeline or applying a design change to it (use rpcn-author), linting or testing it (use rpcn-test), or deploying it.'
 compatibility: "Requires rpk with Redpanda Connect >= 4.100.0, and uv."
 license: Apache-2.0
 metadata:
@@ -9,16 +9,16 @@ metadata:
 
 # rpcn-design
 
-Writes one file, the design note `<dir>/<name>.design.md`, in `design@1`
+Writes one file, the note `<dir>/<name>.design.md`, in `design@1`
 (`references/design-format.md`, header as `references/handoff-header.md`
 says). Never write pipeline YAML or any other file.
 
-Run one `uv run …/rpcn_check.py` command per Bash call: no `cd`, `&&`, `;`,
+One `uv run …/rpcn_check.py` command per Bash call: no `cd`, `&&`, `;`,
 variables, `cat` or heredocs. Use Read and Write for files.
 
 **Headless** when the prompt says unattended, headless or
 non-interactive, or a script reports `data.headless: true`: never ask,
-and end with the status block. Else ask first (Step 5).
+end with the status block. Else ask first (Step 5).
 
 ## Step 1: Check the binary
 
@@ -26,8 +26,7 @@ and end with the status block. Else ask first (Step 5).
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py binary
 ```
 
-Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path, here
-and below.
+Unexpanded `${CLAUDE_SKILL_DIR}`: use this folder's absolute path.
 
 Calls print JSON (`ok`, `binary`, `errors`, `data`). Keep
 `binary.version` and `data.plugin_version` for the header. **Exit 2** in
@@ -36,7 +35,7 @@ show each `errors[].message` (headless: `blocked`).
 
 ## Step 2: Name the note
 
-`<name>` comes from the file the user names (`<name>.yaml`, `.yml` or
+`<name>` comes from the named file (`<name>.yaml`, `.yml` or
 `.design.md`) or path with no extension (`flows/order_relay`), else a
 short snake_case name for the flow. `<dir>/` is that path's folder as
 given (`flows/`), or nothing (project root).
@@ -46,8 +45,8 @@ given (`flows/`), or nothing (project root).
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
-- Exit 2 with a not-found error: no note yet, go on. A named existing
-  pipeline and a request for its design: `references/describe.md`.
+- Exit 2, not found: no note yet, go on. A named existing pipeline
+  and a request for its design: `references/describe.md`.
 - Other exit 2: stop as Step 1 says.
 - Else a note exists. A request to change it (update, revise, re-run,
   a stated change) follows `references/rerun.md`. Else write nothing:
@@ -56,8 +55,7 @@ uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ## Step 3: Pick components
 
 First read `references/patterns.md`: each pattern the request calls for
-adds parts. For each part of the flow (input, processors, output, the DLQ,
-resources):
+adds parts. For each part (input, processors, output, DLQ, resources):
 
 ```bash
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py list <category>
@@ -74,17 +72,17 @@ For each component:
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py fields <category> <component>
 ```
 
-Exit 0: the component is checked; keep the field paths the design names
-(such as a retry count). Exit 1: `data.components` holds close matches.
-Pick one that fits and check it, else leave it out and write a
-`[blocking]` open decision naming it. Never write a component the binary
+Exit 0: checked; keep the field paths the design names (such as a
+retry count). Exit 1: pick a close match in `data.components` that fits
+and check it, else leave it out and write a `[blocking]` open decision
+naming it. Never write a component the binary
 doesn't list.
 
 ## Step 5: Write the note
 
 First read `references/questions.md`; ask as it says. Then write
-`<note>` as `references/note-writing.md` says: the header, the title,
-then the eleven sections in order. `status` follows the Ready rule in
+`<note>` as `references/note-writing.md` says: header, title, then the
+eleven sections in order. `status` follows the Ready rule in
 `references/design-format.md`.
 
 ## Step 6: Check the note
@@ -93,22 +91,25 @@ then the eleven sections in order. `status` follows the Ready rule in
 uv run ${CLAUDE_SKILL_DIR}/scripts/rpcn_check.py hash --check <note>
 ```
 
-A `ready` note must exit 0 with `data.ready: true`. A `draft` note exits
-1, its only error the `status` line. Then follow "Step 6: checking the
-note" in `references/note-writing.md`: header, then Readiness list.
+Follow "Step 6: checking the note" in `references/note-writing.md`: the
+exit (`ready` 0, `draft` 1), then the Readiness list.
 
 Reply with the note's path and status, its components, and each pick.
 
 ## Next
 
-- Note ready: build it with rpcn-author ("build the pipeline from
-  `<note>`"), then test it with rpcn-test.
+- Note ready, pipeline not built: build it with rpcn-author ("build
+  the pipeline from `<note>`"), then test with rpcn-test.
+- Note changed for a built pipeline: "apply the design change" with
+  rpcn-author.
+- Note describes a pipeline: to change it, update the note, or change
+  it with rpcn-author.
 - Note draft: answer each `[blocking]` item in an update.
 - Note exists: ask to update it.
 - Note can't be read: fix it by hand, re-run.
-- Binary missing or old: fix it, re-run.
+- Binary missing or old: fix, re-run.
 
 ## Status block (headless only)
 
-End with exactly one fenced `json` block, then nothing, written and
-filled as `references/status-block.md` says.
+End with exactly one fenced `json` block, then nothing, as
+`references/status-block.md` says.

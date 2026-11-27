@@ -11,13 +11,13 @@ Skill tool was called for. Nothing else is graded.
 |---|---|---|---|
 | 12 positives | `rpcn-test__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-test` |
 | 5 out-of-repo negatives | `rpcn-test__miss_<slug>/` | `graders/not-fired.md` (`min: 0`, `max: 0`, `arm: both`) | no `rpcn-*` skill is ever called |
-| 3 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report,design_note}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
-| 9 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
+| 4 sibling negatives | `rpcn-test__miss_{write_new_pipeline,apply_report,design_note,change_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-test` is never called |
+| 11 positives | `rpcn-author__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-author` |
 | 3 out-of-repo negatives | `rpcn-author__miss_{deploy_k8s,kafka_connect,python_consumer}/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
-| 2 sibling negatives | `rpcn-author__miss_{lint_pipeline,design_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
-| 6 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
+| 4 sibling negatives | `rpcn-author__miss_{lint_pipeline,design_pipeline,describe_pipeline,test_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-author` is never called |
+| 7 positives | `rpcn-design__trigger_<slug>/` | `graders/fired.md` | `Skill` is called with `rpcn-design` |
 | 1 out-of-repo negative | `rpcn-design__miss_kafka_streams/` | `graders/not-fired.md` (same bounds) | no `rpcn-*` skill is ever called |
-| 2 sibling negatives | `rpcn-design__miss_{write_yaml,lint_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-design` is never called |
+| 5 sibling negatives | `rpcn-design__miss_{write_yaml,lint_pipeline,change_pipeline,apply_design_change,test_pipeline}/` | `graders/not-fired.md` (same bounds) | `rpcn-design` is never called |
 
 There are two kinds of near-miss negative (decision 2026-11-06):
 
@@ -27,11 +27,15 @@ There are two kinds of near-miss negative (decision 2026-11-06):
   (`input_match: '"skill"\s*:\s*"(?:[\w-]+:)?rpcn-[\w-]+"'`): a sibling
   skill picking one up is as wrong as the case's own skill doing so.
 - **Sibling** near-misses are a request that belongs to the sibling: a write
-  request, a request to apply a test report's proposed changes or a design
-  note request (`rpcn-design`'s) for `rpcn-test`, a lint request or a request
-  to design a pipeline before it is written (`rpcn-design`'s) for
-  `rpcn-author`, and a request for the
-  pipeline YAML (`rpcn-author`'s) or a lint (`rpcn-test`'s) for `rpcn-design`. They assert only
+  request, a request to apply a test report's proposed changes, a design
+  note request (`rpcn-design`'s) or a request to change an existing pipeline
+  (`rpcn-author`'s) for `rpcn-test`; a lint request, a request to test a
+  pipeline against its design note (`rpcn-test`'s), or a request to design a
+  pipeline before it is written or to describe an existing one as a design
+  note (`rpcn-design`'s) for `rpcn-author`; and a request for the pipeline
+  YAML, to change an existing pipeline or to apply a design change to it
+  (`rpcn-author`'s), or a lint or a test against the design note
+  (`rpcn-test`'s) for `rpcn-design`. They assert only
   that their own skill stayed silent (`input_match` on that skill's name). The
   sibling firing is the right answer, and the sibling's own positives cover it.
 
@@ -57,6 +61,15 @@ are new phrasings, so read the results with that in mind:
 | `trigger_dry_run` | contains "dry-run my pipeline" verbatim |
 | `trigger_unit_tests` | contains "write rpk connect unit tests" verbatim |
 | `trigger_design_check` | contains "check my pipeline against its design note" verbatim |
+
+The change and describe positives (stories 8.1 and 8.5) are listed the same way:
+
+| Case | Relation to the description |
+|---|---|
+| `rpcn-author__trigger_change_pipeline` | close paraphrase of "change my pipeline to …" (the file named after "my pipeline") |
+| `rpcn-author__trigger_apply_design_change` | contains "apply the design change …" verbatim |
+| `rpcn-design__trigger_describe_pipeline` | close paraphrase of "describe my pipeline orders.yaml" ("describe my Redpanda Connect pipeline `pipes/orders.yaml`") |
+| `rpcn-design__trigger_describe_existing` | new phrasing ("what does my pipeline `pipes/orders.yaml` do? Write it up as a design note") |
 
 ## Run it
 
@@ -148,7 +161,7 @@ can hit it; `--concurrency 1 --jobs 1` is the old sequential run.
   `skills/` (path, NUL, file sha256, newline, in path order; no
   `__pycache__/`, nothing gitignored). Edits to `evals/`, `tools/` or docs
   don't change it, so they need no new record. Any byte under `skills/` does.
-- **Cost:** about $74.50 for a default run at 2 runs (trigger suite ~$6.00, the
+- **Cost:** about $75.80 for a default run at 2 runs (trigger suite ~$7.30, the
   seventy-seven pass scenarios x 2 ~$68.48; it was about $47 at 3 runs with forty: one
   pass of thirty-eight of them at `--runs 1` cost $12.39 in story 3.1, plus about
   $0.40 for the two added after it, story 3.2's five `rpcn-design__pattern_*`
@@ -202,5 +215,5 @@ means changing the skill's description, which is a separate decision.
 
 ## Cost
 
-About $0.07 and 7 s per run, so roughly $6.00 for the full 43 cases x 2 runs ($9.00 at 3).
+About $0.07 and 7 s per run, so roughly $7.30 for the full 52 cases x 2 runs ($10.90 at 3).
 These evals run locally only, never in CI (CI holds no Claude credentials).

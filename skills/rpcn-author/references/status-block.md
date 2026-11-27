@@ -10,7 +10,7 @@ nothing:
 Fill it this way:
 
 - `status`: `blocked` (with `reason`) only after:
-  - an exit 2, except from Step 2's design-note check (not ready, below)
+  - an exit 2, except from Step 2's note check (not ready, below)
   - an existing file on a write request (an existing pipeline stops at
     Step 2: nothing is written)
   - a component the binary doesn't list, or no listed one that fits
