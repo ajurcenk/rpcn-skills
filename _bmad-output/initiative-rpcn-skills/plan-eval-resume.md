@@ -3,7 +3,7 @@ title: 'Resume an interrupted eval record'
 type: 'feature'
 ticket: ''
 created: '2026-11-28'
-status: 'built'
+status: 'done'
 baseline_revision: 'df8ef846c1cbc01f0e0f409cd5c6a2f5205ce655'
 route: 'full'
 route_source: 'auto'
@@ -145,3 +145,5 @@ Everything else runs again. The record says it was resumed and where each reused
 - From T: `uv run tests/test_run_scenarios.py`: expected all pass.
 - `uv run tools/run_evals.py --help`: shows `--resume`.
 - The first real use is the shared 8.4–8.6 record, run by the orchestrator after review.
+- **Pushed:** `9ed7b07..1a8bb56`, with 8.4, 8.5, 8.6 and `run_evals --resume` together; record `2026-11-28-eb28fcbb4e92.json` (accuracy 1.0, 77 scenarios 2/2). CI run 46165299566 was green. T commits stay local.
+

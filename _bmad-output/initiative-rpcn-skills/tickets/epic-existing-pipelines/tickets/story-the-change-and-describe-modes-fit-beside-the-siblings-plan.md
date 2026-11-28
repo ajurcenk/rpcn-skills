@@ -3,7 +3,7 @@ title: 'The change and describe modes fit beside the siblings'
 type: 'feature'
 ticket: '5'
 created: '2026-11-27'
-status: 'built'
+status: 'done'
 baseline_revision: '38d34863e60d79e64efa006723f6ecdf596d822f'
 route: 'full'
 route_source: 'auto'
@@ -129,3 +129,5 @@ No trigger case covers the change phrases, and neither skill's Next points to th
 - Smoke (implementer): from T, run `uv run run_scenarios.py --runs 1` on `rpcn-author__change_propose`, `rpcn-author__chain_design_change` and `rpcn-design__describe_pipeline`, to confirm the reworded SKILL.md files still route their modes. Expected: pass.
 
 - Trigger gate (orchestrator, 2026-11-27): `claude plugin eval . --ablation none --runs 2 --tag trigger --no-publish`, then `eval_gate.py`: accuracy 1.0, 104/104 runs (60 positive, 44 negative), no failed runs.
+- **Pushed:** `9ed7b07..1a8bb56`, with 8.4, 8.5, 8.6 and `run_evals --resume` together; record `2026-11-28-eb28fcbb4e92.json` (accuracy 1.0, 77 scenarios 2/2). CI run 46165299566 was green. T commits stay local.
+

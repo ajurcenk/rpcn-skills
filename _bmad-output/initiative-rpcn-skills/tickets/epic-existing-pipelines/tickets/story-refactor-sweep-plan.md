@@ -3,7 +3,7 @@ title: 'Refactor sweep'
 type: 'refactor'
 ticket: '6'
 created: '2026-11-27'
-status: 'built'
+status: 'done'
 baseline_revision: '4fb03b638f6c7052b599dc7a844d18a90435c4e2'
 route: 'full'
 route_source: 'auto'
@@ -112,3 +112,5 @@ context:
 - `RPCN_TEST_BINARIES=<abs 4.100.0>:<abs 4.117.0> uv run --with pytest pytest tools/shared/rpcn_check/tests tools/tests -q`: expected all pass.
 - `uv run tools/validate_skills.py` and `uv run tools/sync_shared.py --check`: expected clean, with no warnings.
 - Smoke (implementer), from T with `--runs 1 --jobs 4`, sessions on 4.117.0: run `rpcn-author__change_*`, `rpcn-author__chain_*`, `rpcn-author__design_change_*`, `rpcn-author__design_note`, `rpcn-author__design_deviation`, `rpcn-author__apply_report`, `rpcn-author__write_*` (or the write-pipeline scenario names), `rpcn-design__describe_*`, `rpcn-design__rerun_*` and `rpcn-design__chain_tracer`. Expected: all pass. The shared record (8.4 to 8.6) runs after review.
+- **Pushed:** `9ed7b07..1a8bb56`, with 8.4, 8.5, 8.6 and `run_evals --resume` together; record `2026-11-28-eb28fcbb4e92.json` (accuracy 1.0, 77 scenarios 2/2). CI run 46165299566 was green. T commits stay local.
+

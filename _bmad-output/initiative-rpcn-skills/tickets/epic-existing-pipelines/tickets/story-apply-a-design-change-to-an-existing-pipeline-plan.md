@@ -3,7 +3,7 @@ title: 'Apply a design change to an existing pipeline'
 type: 'feature'
 ticket: '4'
 created: '2026-11-27'
-status: 'built'
+status: 'done'
 baseline_revision: '9ed7b070a03934caca2efe6adf123d882828a93d'
 route: 'full'
 route_source: 'auto'
@@ -155,3 +155,5 @@ context:
 - `RPCN_TEST_BINARIES=<abs 4.100.0>:<abs 4.117.0> uv run --with pytest pytest tools/shared/rpcn_check/tests tools/tests -q`: expected all pass.
 - `uv run tools/sync_shared.py --check` and `uv run tools/validate_skills.py`: expected clean.
 - From T, smoke once on 4.117.0: run the three new scenarios, plus `rpcn-author__change_propose`, `change_apply`, `change_edit`, `design_deviation` and `apply_report`. Expected: all pass. No record here; it is shared with 8.5 and 8.6.
+- **Pushed:** `9ed7b07..1a8bb56`, with 8.4, 8.5, 8.6 and `run_evals --resume` together; record `2026-11-28-eb28fcbb4e92.json` (accuracy 1.0, 77 scenarios 2/2). CI run 46165299566 was green. T commits stay local.
+
