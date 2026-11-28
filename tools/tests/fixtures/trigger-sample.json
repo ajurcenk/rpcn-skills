@@ -1,0 +1,473 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.332",
+  "startedAt": "2026-11-27T21:29:08.424Z",
+  "durationSeconds": 748,
+  "costUsd": 0.912348,
+  "partial": false,
+  "suite": {
+    "root": "/repo",
+    "ablation": "none",
+    "tagFilters": [
+      "trigger"
+    ],
+    "threshold": 1,
+    "concurrency": 1,
+    "plugins": [
+      {
+        "name": "rpcn-skills",
+        "version": "0.1.0",
+        "path": "/repo"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "rpcn-author__miss_deploy_k8s",
+      "dir": "evals/rpcn-author__miss_deploy_k8s",
+      "source": "prose",
+      "promptMarkdown": "Deploy my existing Redpanda Connect pipeline pipes/orders.yaml to our Kubernetes cluster as a Deployment with two replicas.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 2,
+      "graders": [
+        {
+          "name": "not-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?rpcn-[\\w-]+\"",
+            "min": 0,
+            "max": 0,
+            "arm": "both"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0679458,
+            "judgeCostUsd": 0,
+            "durationSeconds": 6,
+            "startedAt": "2026-11-27T21:29:08.562Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "not-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0749744,
+            "judgeCostUsd": 0,
+            "durationSeconds": 10,
+            "startedAt": "2026-11-27T21:29:14.537Z",
+            "error": null,
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "not-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "rpcn-author__miss_describe_pipeline",
+      "dir": "evals/rpcn-author__miss_describe_pipeline",
+      "source": "prose",
+      "promptMarkdown": "Describe my pipeline `pipes/orders.yaml` as a design note.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 2,
+      "graders": [
+        {
+          "name": "not-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?rpcn-author\"",
+            "min": 0,
+            "max": 0,
+            "arm": "both"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0734958,
+            "judgeCostUsd": 0,
+            "durationSeconds": 4,
+            "startedAt": "2026-11-27T21:29:24.752Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "not-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.07813300000000001,
+            "judgeCostUsd": 0,
+            "durationSeconds": 5,
+            "startedAt": "2026-11-27T21:29:28.352Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "not-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "rpcn-author__miss_design_pipeline",
+      "dir": "evals/rpcn-author__miss_design_pipeline",
+      "source": "prose",
+      "promptMarkdown": "Design a Redpanda Connect pipeline that reads orders from a Kafka topic and writes them to S3, before we write it. I want the error handling, DLQ and retries decided first, no YAML yet.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 2,
+      "graders": [
+        {
+          "name": "not-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?rpcn-author\"",
+            "min": 0,
+            "max": 0,
+            "arm": "both"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0824178,
+            "judgeCostUsd": 0,
+            "durationSeconds": 7,
+            "startedAt": "2026-11-27T21:29:33.687Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "not-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.07596119999999999,
+            "judgeCostUsd": 0,
+            "durationSeconds": 4,
+            "startedAt": "2026-11-27T21:29:40.834Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "not-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "rpcn-author__trigger_apply_design_change",
+      "dir": "evals/rpcn-author__trigger_apply_design_change",
+      "source": "prose",
+      "promptMarkdown": "Apply the design change in `pipes/orders.design.md` to my pipeline.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 2,
+      "graders": [
+        {
+          "name": "fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?rpcn-author\""
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0777172,
+            "judgeCostUsd": 0,
+            "durationSeconds": 5,
+            "startedAt": "2026-11-27T21:30:38.598Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..\u221e)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0751818,
+            "judgeCostUsd": 0,
+            "durationSeconds": 4,
+            "startedAt": "2026-11-27T21:30:43.350Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..\u221e)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "rpcn-author__trigger_apply_report",
+      "dir": "evals/rpcn-author__trigger_apply_report",
+      "source": "prose",
+      "promptMarkdown": "Apply the fixes in orders.test-report.md to my Redpanda Connect pipeline orders.yaml.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 2,
+      "graders": [
+        {
+          "name": "fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?rpcn-author\""
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.07891139999999999,
+            "judgeCostUsd": 0,
+            "durationSeconds": 5,
+            "startedAt": "2026-11-27T21:30:47.236Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..\u221e)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0752114,
+            "judgeCostUsd": 0,
+            "durationSeconds": 4,
+            "startedAt": "2026-11-27T21:30:52.482Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..\u221e)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    },
+    {
+      "name": "rpcn-author__trigger_build_config",
+      "dir": "evals/rpcn-author__trigger_build_config",
+      "source": "prose",
+      "promptMarkdown": "Build a Redpanda Connect config that polls https://api.example.com/orders every 30 seconds and publishes each order to a Redpanda topic called orders.",
+      "runsPerCase": 3,
+      "timeoutSeconds": 300,
+      "maxTurns": 2,
+      "graders": [
+        {
+          "name": "fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "\"skill\"\\s*:\\s*\"(?:[\\w-]+:)?rpcn-author\""
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.07740160000000001,
+            "judgeCostUsd": 0,
+            "durationSeconds": 5,
+            "startedAt": "2026-11-27T21:30:56.118Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..\u221e)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.07499700000000001,
+            "judgeCostUsd": 0,
+            "durationSeconds": 4,
+            "startedAt": "2026-11-27T21:31:01.110Z",
+            "error": "exit 1: Reached maximum number of turns (2)",
+            "tracePath": "/tmp/claude-eval-XXXXXX/out/trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..\u221e)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 6,
+    "casesPassed": 6,
+    "overallScore": 1,
+    "overallPassRate": 1
+  }
+}

@@ -100,7 +100,7 @@ record exists for the exact skill content.
 
 ```
 uv run tools/run_evals.py [--test-project ../rpcn-test-skills] [--runs 2] [--with-compare]
-                          [--concurrency 4] [--jobs 4]
+                          [--concurrency 4] [--jobs 4] [--resume]
 ```
 
 It runs, in order: the `rpcn-test-skills` runner's own unit tests
@@ -138,6 +138,38 @@ scenario runs.
 
 A record can pass only with `--runs` 2 or more, because the gate requires 2
 runs per trigger case. `--runs 1` is a smoke run that never passes.
+
+**Resume.** A record takes 45 to 100 minutes and about $76, so an interrupted
+one (Ctrl-C, a dead session) need not start again from the first case:
+`uv run tools/run_evals.py --resume` (with the same flags) continues the last
+run for the current skills hash. Every run keeps its state in
+`evals/results/.resume/<skills-hash12>/` (gitignored, never committed):
+`state.json`, written atomically, and the trigger JSON. A resume reuses only
+work that is provably the same, and keeps it whether it passed or failed, so it
+never retries a failure away:
+
+- each trigger case with `--runs` complete runs (each with its grader
+  results) in the saved trigger JSON. Only the other cases run, one
+  `claude plugin eval --case <name>` each (still `--no-publish`), merged into
+  that JSON with `costUsd` summed and `partial` false only once every case is
+  complete, so the gate scores it like a single run. With no readable saved
+  JSON, or no complete case in it, the whole trigger stage runs again.
+- each finished scenario run: `run_scenarios.py --resume <the earlier
+  runs/<timestamp>>` copies every full record in unchanged (it keeps its
+  `dir`) and runs only the crashed, half-written and missing runs, in a new
+  runs folder. A comparison scenario is reused only when its whole comparison
+  finished. `results.json` is saved atomically.
+
+It refuses with exit 2, naming each mismatch and before any paid step, when
+the full skills hash, the `rpcn-test-skills` HEAD or its `git status
+--porcelain`, `--runs`, `--with-compare`, the scenario list, the trigger case
+list or a trigger case's files (`prompt.md`, `graders/*`: one hash per case
+folder) differ from the saved state; when there is no state for this hash
+("nothing to resume"); or when the earlier `results.json` is unreadable. It
+never silently starts over: run without `--resume` for that, which overwrites
+the state. A resumed record has a `resumed` object (`state_dir`, `runs_dir`
+relative to the test project, `trigger_cases` and `scenario_runs` reused); `schema` stays 1 and
+`eval_record_check.py` takes it like any other record.
 
 **Run time and parallelism.** One session at a time, a full default run
 took about 58 minutes (story 2.8: 954 s for the trigger gate's 90 sessions,
